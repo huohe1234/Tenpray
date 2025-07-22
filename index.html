@@ -803,18 +803,16 @@
             border-radius: 25px 25px 5px 25px;
         }
 
-        /* --- 毛玻璃 (A类) --- */
-        #app-container.app-bubble-style-frosted-glass .bubble {
-            backdrop-filter: blur(15px);
-            -webkit-backdrop-filter: blur(15px);
+        /* --- 简约os (A类) --- */
+        #app-container.app-bubble-style-simple-os .bubble {
             border: 1px solid rgba(255, 255, 255, 0.2);
             box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
         }
-        #app-container.app-bubble-style-frosted-glass .bubble.received {
+        #app-container.app-bubble-style-simple-os .bubble.received {
             background-color: color-mix(in srgb, var(--friend-bubble-bg) 60%, transparent); /* 增加不透明度 */
             color: var(--friend-bubble-text-color);
         }
-        #app-container.app-bubble-style-frosted-glass .bubble.sent {
+        #app-container.app-bubble-style-simple-os .bubble.sent {
             background-color: color-mix(in srgb, var(--player-bubble-bg) 60%, transparent); /* 增加不透明度 */
             color: var(--player-bubble-text-color);
         }
@@ -11946,7 +11944,7 @@ if (entity && entity.autoSummaryEnabled && chatMetadata.totalPlayerTurns > 0 && 
                 'stripes': { name: '柔和条纹', type: 'A', style: 'background-color: var(--player-bubble-bg); background-image: repeating-linear-gradient(45deg, rgba(255, 255, 255, 0.2), rgba(255, 255, 255, 0.2) 15px, rgba(255, 255, 255, 0.1) 15px, rgba(255, 255, 255, 0.1) 30px);' },
                 'grid': { name: '网格', type: 'A', style: 'background-image: linear-gradient(rgba(0, 0, 0, 0.1) 1px, transparent 1px), linear-gradient(90deg, rgba(0, 0, 0, 0.1) 1px, transparent 1px); background-color: color-mix(in srgb, var(--player-bubble-bg) 80%, transparent);' },
                 'cute': { name: '可爱风', type: 'A', style: 'background: transparent; border: 2px solid var(--player-bubble-bg); border-radius: 25px 25px 5px 25px;' },
-                'frosted-glass': { name: '毛玻璃', type: 'A', style: 'background-color: color-mix(in srgb, var(--player-bubble-bg) 25%, transparent); backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px); border: 1px solid rgba(255, 255, 255, 0.2);' },
+                'simple-os': { name: '简约os', type: 'A', style: 'background-color: color-mix(in srgb, var(--player-bubble-bg) 60%, transparent); border: 1px solid rgba(255, 255, 255, 0.2); box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);' },
                 'neumorphic-2': { name: '拟态2', type: 'B', style: 'background: #F0F0F3; box-shadow: -5px -5px 9px rgba(255, 255, 255, 0.9), 5px 5px 9px rgba(174, 174, 192, 0.4);' },
                 'ancient': { name: '古风', type: 'B', style: 'background: #f5f0e1; color: #5d4037; border: 2px solid #8d6e63;' },
                 'chinese': { name: '国风', type: 'B', style: 'background: #c81e1e; border: 1px solid #f9d56e; color: #f9d56e;' },
