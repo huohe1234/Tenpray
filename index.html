@@ -13262,8 +13262,11 @@ if (entity && entity.autoSummaryEnabled && chatMetadata.totalPlayerTurns > 0 && 
                         </div>
                         <div class="form-group">
                             <label for="api-model-select">模型</label>
-                            <select id="api-model-select"></select>
-                            <input type="text" id="api-model-input" value="${config.model}" placeholder="输入自定义模型名称" style="display:none;">
+                            <div style="display: flex; gap: 10px; align-items: center;">
+                                <select id="api-model-select" style="flex-grow: 1;"></select>
+                                <input type="text" id="api-model-input" value="${config.model}" placeholder="输入自定义模型名称" style="display:none; flex-grow: 1;">
+                                <button id="fetch-models-btn" class="modal-btn btn-secondary" style="padding: 8px 15px; flex-shrink: 0;">获取</button>
+                            </div>
                         </div>
                         <div class="form-group">
                             <label for="temperature">温度 (0-1)</label>
@@ -13301,6 +13304,96 @@ if (entity && entity.autoSummaryEnabled && chatMetadata.totalPlayerTurns > 0 && 
                             });
                         }}
                     ]
+                });
+
+                // 获取可用模型按钮的逻辑
+                $('#fetch-models-btn').addEventListener('click', async () => {
+                    const apiUrlBase = $('#api-url').value.trim();
+                    const apiKey = $('#api-key').value.trim();
+                    const modelSelect = $('#api-model-select');
+                    const modelInput = $('#api-model-input');
+                    const fetchBtn = $('#fetch-models-btn');
+
+                    if (!apiUrlBase || !apiKey) {
+                        UIManager.showToast("请先填写API URL和API Key");
+                        return;
+                    }
+
+                    const originalBtnText = fetchBtn.innerHTML;
+                    fetchBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+                    fetchBtn.disabled = true;
+                    UIManager.showToast("正在获取模型列表...");
+
+                    // 辅助函数，用来填充下拉列表
+                    const populateModels = (data) => {
+                        // API返回的数据结构可能是 data.data 或直接就是 data
+                        const models = data.data || data;
+                        
+                        if (!Array.isArray(models) || models.length === 0) {
+                            throw new Error("API返回了空或无效的模型列表");
+                        }
+
+                        modelSelect.innerHTML = ''; // 清空旧选项
+                        models.forEach(model => {
+                            // 模型ID可能在 model.id 或直接是 model (如果返回的是字符串数组)
+                            const modelId = typeof model === 'object' ? model.id : model;
+                            if (modelId) {
+                                const option = document.createElement('option');
+                                option.value = modelId;
+                                option.textContent = modelId;
+                                modelSelect.appendChild(option);
+                            }
+                        });
+
+                        modelSelect.style.display = 'block';
+                        modelInput.style.display = 'none';
+                        UIManager.showToast(`成功获取 ${models.length} 个模型！`);
+                    };
+
+                    // 尝试从给定URL获取
+                    const tryFetch = async (url) => {
+                        console.log("正在尝试从URL获取:", url);
+                        const response = await fetch(url, {
+                            method: 'GET',
+                            headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' }
+                        });
+
+                        if (!response.ok) {
+                            throw new Error(`请求失败，状态码: ${response.status}`);
+                        }
+                        return await response.json();
+                    };
+
+                    // 构造几种可能的模型列表URL
+                    const base = apiUrlBase.replace(/\/chat\/completions\/?$/, '');
+                    const potentialEndpoints = [
+                        `${base}/v1/models`,
+                        `${base}/models`,
+                        `${base.replace(/\/v1\/?$/, '')}/models`
+                    ];
+                     if (base.endsWith('/v1')) {
+                         potentialEndpoints.push(`${base}/models`);
+                    }
+                    const uniqueEndpoints = [...new Set(potentialEndpoints)]; // 去重
+
+                    let success = false;
+                    for (const endpoint of uniqueEndpoints) {
+                        try {
+                            const data = await tryFetch(endpoint);
+                            populateModels(data);
+                            success = true;
+                            break; 
+                        } catch (error) {
+                            console.warn(`从 ${endpoint} 获取失败:`, error.message);
+                        }
+                    }
+
+                    if (!success) {
+                        UIManager.showToast(`获取失败: 尝试了多种方式，都未能获取到模型列表。请检查URL或联系API提供商。`);
+                    }
+
+                    fetchBtn.innerHTML = originalBtnText;
+                    fetchBtn.disabled = false;
                 });
                 
                 const toggleBtn = $('#toggle-api-key-visibility');
