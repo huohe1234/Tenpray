@@ -937,7 +937,7 @@
             line-height: 1.4;
             font-size: 0.85em;
             border-radius: 8px;
-            color: var(--text-color-dark); /* 新增：确保文字颜色 */
+            color: color-mix(in srgb, currentColor 80%, transparent); /* 修改：颜色比当前字体颜色稍浅 */
         }
         .quote-block .quoted-name { font-weight: bold; }
 
@@ -2837,6 +2837,7 @@
         .forwarded-moment-card-content .card-title {
             font-size: 0.9rem;
             font-weight: 500;
+            color: var(--text-color-dark) !important;
         }
         .forwarded-moment-card-content .card-preview {
             font-size: 0.8rem;
@@ -3669,6 +3670,178 @@
             color: #D32F2F;
         }
 
+        /* --- 21. 聊天记录转发 (新) --- */
+        #page-chat.selection-mode-active .message-row,
+        #page-chat.selection-mode-active .narrator-notice {
+            padding-left: 45px;
+            position: relative;
+        }
+        .message-selector {
+            position: absolute;
+            left: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 20px;
+            height: 20px;
+            display: none;
+        }
+        #page-chat.selection-mode-active .message-selector {
+            display: block;
+        }
+        .message-select-checkbox {
+            width: 100%;
+            height: 100%;
+            accent-color: var(--accent-color);
+        }
+
+        #chat-selection-bar {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background-color: var(--bg-light);
+            backdrop-filter: blur(5px);
+            border-top: 1px solid var(--border-color);
+            padding: 10px 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transform: translateY(100%);
+            transition: transform 0.3s ease-in-out;
+            z-index: 200;
+            min-height: 100px; /* 新增：设置一个最小高度来覆盖输入区 */
+            box-sizing: border-box; /* 新增：确保内边距不会影响总高度 */
+        }
+        #chat-selection-bar.visible {
+            transform: translateY(0);
+        }
+        #chat-selection-bar .selection-info {
+            font-size: 0.9rem;
+            color: var(--text-color-medium);
+        }
+        #chat-selection-bar .selection-actions {
+            display: flex;
+            gap: 10px;
+        }
+
+        .bubble.forwarded-history-bubble {
+            padding: 0;
+            background: none;
+            border: none;
+            box-shadow: none;
+            cursor: pointer;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+            max-width: 250px;
+        }
+        .bubble.forwarded-history-bubble:hover {
+            transform: translateY(-3px) scale(1.02);
+            box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12);
+        }
+        /* --- 核心修复：针对所有主题，强制重置特殊消息的气泡样式 --- */
+        #app-container[class*="app-bubble-style-"] .bubble.forwarded-history-bubble {
+            background: none !important;
+            border: none !important;
+            box-shadow: none !important;
+            padding: 0 !important;
+        }
+        .forwarded-history-card-content {
+            background-color: var(--text-color-white);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 12px 15px;
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+        .forwarded-history-card-content .card-title {
+            font-size: 0.9rem;
+            font-weight: 500;
+            color: var(--text-color-dark) !important;
+        }
+        .forwarded-history-card-content .card-preview {
+            font-size: 0.8rem;
+            color: var(--text-color-light);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .forwarded-history-card-content .card-footer {
+            font-size: 0.75rem;
+            color: var(--text-color-light);
+            border-top: 1px solid var(--border-color);
+            padding-top: 8px;
+            margin-top: 8px;
+        }
+
+        #page-forwarded-history .page-content {
+            background-color: var(--theme-color-1);
+            padding: 20px 15px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        #page-forwarded-history .message-row {
+            max-width: 80%;
+        }
+        #page-forwarded-history .bubble-and-tag-wrapper {
+            padding-bottom: 20px; /* 为时间戳留出空间 */
+        }
+        #page-forwarded-history .message-timestamp {
+            position: absolute;
+            bottom: 4px;
+            left: 12px;
+            font-size: 0.7rem;
+            color: var(--text-color-light);
+        }
+        #page-forwarded-history .message-row.sent .message-timestamp {
+            left: auto;
+            right: 12px;
+        }
+        .forward-target-search-bar {
+            width: 100%;
+            padding: 10px 15px;
+            border: 1px solid var(--border-color);
+            border-radius: 20px;
+            margin-bottom: 10px;
+            font-size: 1rem;
+        }
+        #chat-input-area {
+            position: relative; /* 为遮罩层提供定位基准 */
+        }
+        #chat-selection-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(240, 240, 240, 0.85);
+            backdrop-filter: blur(2px);
+            z-index: 150;
+            display: none;
+            justify-content: center;
+            align-items: center;
+            font-size: 1rem;
+            color: var(--text-color-medium);
+            cursor: not-allowed;
+        }
+        #page-chat.selection-mode-active #chat-selection-overlay {
+            display: flex;
+        }
+        #page-forwarded-history .message-name {
+            display: flex;
+            align-items: baseline;
+            gap: 8px;
+        }
+        #page-forwarded-history .message-name .sender-id {
+            font-size: 0.7rem;
+            color: var(--text-color-light);
+            font-weight: normal;
+        }
+        
+        #page-forwarded-history .page-content {
+            background-color: var(--bg-main);
+            background-image: none;
+        }
     </style>
 </head>
 <body>
@@ -3849,6 +4022,19 @@
                     </div>
                 </div>
             </div>
+
+                <div id="chat-selection-overlay">
+                    <span>请先完成或取消转发</span>
+                </div>
+
+                <!-- 聊天选择操作栏 (新) -->
+                <div id="chat-selection-bar">
+                    <span id="selection-info" class="selection-info">已选择 0 条</span>
+                    <div class="selection-actions">
+                        <button id="cancel-forward-btn" class="modal-btn btn-secondary" style="padding: 8px 15px;">取消</button>
+                        <button id="confirm-forward-btn" class="modal-btn btn-primary" style="padding: 8px 15px;">转发</button>
+                    </div>
+                </div>
 
             <!-- 自定义提示词页面 -->
             <div id="page-prompts" class="page">
@@ -4057,6 +4243,17 @@
 
         </main>
 
+            <!-- 转发历史页面 (新) -->
+            <div id="page-forwarded-history" class="page">
+                <div class="page-header">
+                    <div id="forwarded-history-back-btn" class="header-icon"><i class="fas fa-chevron-left"></i></div>
+                    <h1 id="forwarded-history-title">聊天记录</h1>
+                </div>
+                <div class="page-content" id="forwarded-history-content">
+                    <!-- 转发的消息将在这里渲染 -->
+                </div>
+            </div>
+
         <!-- 底部导航 -->
         <nav id="bottom-nav">
             <div class="nav-item active" data-page="messages">
@@ -4143,6 +4340,7 @@
             'theme-settings': $('#page-theme-settings'), 
             chat: $('#page-chat'),
             prompts: $('#page-prompts'),
+            'forwarded-history': $('#page-forwarded-history'),
         };
 
         
@@ -4185,6 +4383,10 @@
             longPressTimer: null,
             friendSelectionMode: false,
             groupSelectionMode: false,
+            selectionMode: { // 新增：用于聊天记录转发
+                active: false,
+                messageIds: [],
+            },
             cardCoverLibrary: [
                 'https://z.wiki/u/fHMKzJ',
                 'https://z.wiki/u/hmSAIR',
@@ -4504,6 +4706,42 @@
                     };
                 });
             },
+            async findLastMessagesBySenderAndTypes(chatId, senderId, typesToFind) {
+                return new Promise((resolve, reject) => {
+                    const transaction = this.db.transaction(['messages'], 'readonly');
+                    const store = transaction.objectStore('messages');
+                    const index = store.index('by_chat_and_sender');
+                    const range = IDBKeyRange.only([chatId, senderId]);
+            
+                    const results = {};
+                    let foundCount = 0;
+                    const typesSet = new Set(typesToFind);
+            
+                    index.openCursor(range, 'prev').onsuccess = (e) => {
+                        const cursor = e.target.result;
+                        if (cursor) {
+                            const message = cursor.value;
+                            const msgType = message.segmentType;
+            
+                            if (typesSet.has(msgType) && !results[msgType]) {
+                                results[msgType] = message;
+                                foundCount++;
+                            }
+            
+                            // 如果所有需要的类型都找到了，就提前结束
+                            if (foundCount === typesToFind.length) {
+                                resolve(results);
+                            } else {
+                                cursor.continue();
+                            }
+                        } else {
+                            // 游标结束，返回已找到的结果
+                            resolve(results);
+                        }
+                    };
+                    transaction.onerror = (e) => reject(`findLastMessagesBySenderAndTypes error: ${e.target.error}`);
+                });
+            },
         };
 
         
@@ -4627,7 +4865,7 @@
             if (!pages[pageId]) return;
 
             
-            if (['chat', 'prompts', 'moments', 'tutorial', 'pomodoro', 'gifts'].includes(pageId)) { 
+            if (['chat', 'prompts', 'moments', 'tutorial', 'pomodoro', 'gifts', 'forwarded-history'].includes(pageId)) { 
                 bottomNav.style.display = 'none';
             } else {
                 bottomNav.style.display = 'flex';
@@ -4994,7 +5232,7 @@
             } else {
                 target = await DBHelper.get('contacts', chatId);
             }
-
+        
             if (!target) {
                 this.showModal({
                     title: "错误",
@@ -5003,50 +5241,28 @@
                 });
                 return;
             }
-
+        
             chatTitle.textContent = isGroup ? target.name : (target.remark || target.name);
-
-            // --- 优化：标记已读 ---
-            const chatData = await DBHelper.get('chats', chatId) || { chatId, history: [], lastAiReplyTimestamp: 0 };
+        
+            // --- 优化：直接更新元数据以标记为已读，不再加载全部历史记录 ---
             const metadata = await DBHelper.get('chatMetadata', chatId) || { chatId, unreadCount: 0 };
-            
             if (metadata.unreadCount > 0) {
-                let madeChanges = false;
-                chatData.history.forEach(msg => {
-                    if (msg.isUnread) {
-                        msg.isUnread = false;
-                        madeChanges = true;
-                    }
-                });
-                if (madeChanges) {
-                    await DBHelper.put('chats', chatData);
-                }
-                await this.updateChatMetadata(chatId, null, -1); // -1 signifies reset
+                // -1 表示重置未读计数为 0
+                await this.updateChatMetadata(chatId, null, -1);
             }
-            
+        
+            // 如果是群聊，也一并清除所有成员的私聊未读角标
             if (isGroup) {
                 for (const memberId of target.members) {
-                    const privateChat = await DBHelper.get('chats', memberId);
-                    if (privateChat && privateChat.history) {
-                        let privateChatMadeChanges = false;
-                        privateChat.history.forEach(msg => {
-                            if (msg.isUnread && msg.isPrivateInGroup) {
-                                msg.isUnread = false;
-                                privateChatMadeChanges = true;
-                            }
-                        });
-                        if (privateChatMadeChanges) {
-                            await DBHelper.put('chats', privateChat);
-                        }
-                    }
+                    await this.updateChatMetadata(memberId, null, -1);
                 }
             }
-
+        
             await this.refreshChatView();
             this.navigateTo('chat');
             await UIManager.applyChatBackground(chatId);
             
-            // AI主动回复逻辑 (已更新)
+            // AI主动回复逻辑 (已修复)
             if (!isGroup && target.allowActiveReply === false) {
                 console.log(`已为角色 ${target.name} 关闭主动回复功能。`);
             } else {
@@ -5055,10 +5271,19 @@
                 const lastAiTimestamp = metadata.lastAiReplyTimestamp || 0;
                 const now = Date.now();
                 const elapsedHours = (now - lastAiTimestamp) / (1000 * 60 * 60);
-
+        
                 if (intervalHours > 0 && lastAiTimestamp > 0 && elapsedHours >= intervalHours) {
                     console.log(`距离上次AI回复已过去 ${elapsedHours.toFixed(2)} 小时，已达到设定的 ${intervalHours} 小时，触发主动回复。`);
                     setTimeout(() => AIHandler.handleActiveReplyRequest(lastAiTimestamp), 500);
+                } else {
+                    // 新增：恢复未触发时的日志提示，便于调试
+                    if (intervalHours <= 0) {
+                        console.log("主动回复功能已在聊天设置中关闭 (间隔为0)。");
+                    } else if (lastAiTimestamp === 0) {
+                        console.log("这是你们的第一次互动，暂不触发主动回复。");
+                    } else {
+                        console.log(`距离上次AI回复 ${elapsedHours.toFixed(2)} 小时，未达到设定的 ${intervalHours} 小时，不触发主动回复。`);
+                    }
                 }
             }
         },
@@ -5189,7 +5414,7 @@
             }
         },
 
-        async createMessageElement(msg, senderInfo, isTyping = false, isAnimating = false) {
+        async createMessageElement(msg, senderInfo, isTyping = false, isReadOnly = false) {
             const messageRow = document.createElement('div');
             messageRow.className = `message-row ${msg.type}`;
             
@@ -5364,6 +5589,16 @@
                             </div>
                         `;
                         break;
+                    case 'forwarded_history':
+                        bubbleClass += ' forwarded-history-bubble';
+                        bubbleContent = `
+                            <div class="forwarded-history-card-content">
+                                <h4 class="card-title">${msg.cardData.title}</h4>
+                                <p class="card-preview">${msg.cardData.preview}</p>
+                                <div class="card-footer">聊天记录</div>
+                            </div>
+                        `;
+                        break;
                     case 'forward_custom':
                         bubbleClass += ' forwarded-moment-bubble';
                         bubbleContent = `
@@ -5408,7 +5643,11 @@
                 timestampHtml = `<div class="message-timestamp">${msg.displayTimestamp}<span class="auto-reply-tag">未读</span></div>`;
             }
 
-            if (!isTyping && !['transfer-receipt'].includes(msg.segmentType)) {
+            if (isReadOnly) {
+                const chatEntity = await DBHelper.get(isGroup ? 'groups' : 'contacts', appState.currentChatId);
+                const nameColorStyle = chatEntity?.nameColor ? `style="color: ${chatEntity.nameColor};"` : '';
+                displayNameHtml = `<div class="message-name" ${nameColorStyle}>${senderInfo.name}</div>`;
+            } else if (!isTyping && !['transfer-receipt'].includes(msg.segmentType)) {
                 const chatEntity = await DBHelper.get(isGroup ? 'groups' : 'contacts', appState.currentChatId);
                 const nameColorStyle = chatEntity?.nameColor ? `style="color: ${chatEntity.nameColor};"` : '';
 
@@ -5420,17 +5659,33 @@
                 }
             }
             
-            messageRow.innerHTML = `<img src="${avatarSrc}" alt="avatar" class="${avatarClass}"><div class="message-content">${displayNameHtml}<div class="bubble-and-tag-wrapper"><div class="${bubbleClass}">${bubbleContent}</div>${detailContent}${timestampHtml}</div></div>`;
+            messageRow.innerHTML = `<div class="message-selector"><input type="checkbox" class="message-select-checkbox"></div><img src="${avatarSrc}" alt="avatar" class="${avatarClass}"><div class="message-content">${displayNameHtml}<div class="bubble-and-tag-wrapper"><div class="${bubbleClass}">${bubbleContent}</div>${detailContent}${timestampHtml}</div></div>`;
 
             const avatarEl = messageRow.querySelector('.message-avatar');
-            if (!isTyping) {
+            if (!isTyping && !isReadOnly) { // 增加 isReadOnly 判断
                 avatarEl.style.cursor = 'pointer';
-                if (msg.type === 'received') {
-                    avatarEl.addEventListener('click', () => this.showPersonaModal(msg.senderId));
-                } else if (msg.type === 'sent') {
-                    avatarEl.addEventListener('click', () => AIHandler.handleRegenerateRequest(msg.messageId));
+                avatarEl.addEventListener('click', (e) => {
+                    if (appState.selectionMode.active) { // 增加选择模式判断
+                        const checkbox = messageRow.querySelector('.message-select-checkbox');
+                        if (checkbox) checkbox.checked = !checkbox.checked;
+                        EventManager.handleMessageSelection({ target: checkbox });
+                        return;
+                    }
+                    if (msg.type === 'received') {
+                        this.showPersonaModal(msg.senderId);
+                    } else if (msg.type === 'sent') {
+                        AIHandler.handleRegenerateRequest(msg.messageId);
+                    }
+                });
+            }
+
+            if (isReadOnly) {
+                const nameContainer = messageRow.querySelector('.message-name');
+                if (nameContainer) {
+                    // For forwarded history, we don't need the extra (id) part
                 }
             }
+            
             return messageRow;
         },
 
@@ -5472,13 +5727,15 @@
         async createNarratorNoticeElement(msg) {
             const notice = document.createElement('div');
             notice.id = msg.messageId;
+            notice.dataset.messageId = msg.messageId; // 添加dataset以便于选择
 
             const isGroup = appState.currentChatId.startsWith('group-');
             const entity = await DBHelper.get(isGroup ? 'groups' : 'contacts', appState.currentChatId);
             const narratorStyle = entity?.narratorStyle || 'grey'; // 默认使用灰色样式
 
             notice.className = `narrator-notice narrator-style-${narratorStyle}`;
-            notice.textContent = msg.content;
+            // 内部包裹一层，以便于和选择器对齐
+            notice.innerHTML = `<div class="message-selector"><input type="checkbox" class="message-select-checkbox"></div><span>${msg.content}</span>`;
             return notice;
         },
         
@@ -5530,13 +5787,17 @@
             async showPersonaModal(contactId) {
                 const contact = await DBHelper.get('contacts', contactId);
                 if (!contact) return;
-
-                const personaMessages = await DBHelper.getMessagesBySender(appState.currentChatId, contactId);
-                const relevantMessages = personaMessages.filter(m => m.segmentType === 'inner_voice' || m.segmentType === 'essay');
-                
-                const lastInnerVoice = relevantMessages.filter(m => m.segmentType === 'inner_voice').pop();
-                const lastEssay = relevantMessages.filter(m => m.segmentType === 'essay').pop();
-
+        
+                // 使用新的高效方法反向查找最新的 "心声" 和 "随笔"
+                const lastSpecialMessages = await DBHelper.findLastMessagesBySenderAndTypes(
+                    appState.currentChatId, 
+                    contactId, 
+                    ['inner_voice', 'essay']
+                );
+        
+                const lastInnerVoice = lastSpecialMessages.inner_voice;
+                const lastEssay = lastSpecialMessages.essay;
+        
                 let bodyHtml = `
                     <div style="display: flex; align-items: center; gap: 15px; margin-bottom: 20px;">
                         <img src="${contact.avatar}" style="width: 70px; height: 70px; border-radius: 12px; object-fit: cover;">
@@ -5546,15 +5807,15 @@
                         </div>
                     </div>
                 `;
-
+        
                 if (lastInnerVoice) {
                     bodyHtml += `<div class="persona-modal-card"><h4>心声</h4><p>${lastInnerVoice.content}</p></div>`;
                 }
-
+        
                 if (lastEssay) {
                      bodyHtml += `<div class="persona-modal-card note-paper"><h4>随笔</h4><p>${lastEssay.content}</p></div>`;
                 }
-
+        
                 this.showModal({
                     title: "角色洞察",
                     body: bodyHtml,
@@ -6175,6 +6436,11 @@
     <span>自动总结</span>
     <i class="fas fa-chevron-right"></i>
 </div>
+<div class="setting-item" id="sidebar-forward-chat">
+                                <i class="fas fa-share-square"></i>
+                                <span>多选消息</span>
+                                <i class="fas fa-chevron-right"></i>
+                            </div>
                             <div class="setting-item" id="sidebar-leave-group">
                                 <i class="fas ${isMyGroup ? 'fa-dumpster-fire' : 'fa-door-open'}"></i>
                                 <span>${isMyGroup ? '解散群聊' : '退出群聊'}</span>
@@ -6250,6 +6516,10 @@
                 $('#sidebar-opening-scene').addEventListener('click', () => EventManager.handleOpeningSceneSettings(group.id, true));
                 $('#sidebar-chat-background').addEventListener('click', () => EventManager.handleChatBackgroundSettings(group.id, true));
                 $('#sidebar-auto-summary').addEventListener('click', () => EventManager.handleAutoSummarySettings(group.id, true));
+                $('#sidebar-forward-chat').addEventListener('click', () => {
+                    UIManager.hideSidebar();
+                    EventManager.toggleSelectionMode();
+                });
                 $('#sidebar-leave-group').addEventListener('click', () => {
                     this.confirmDeleteGroup(group.id, isMyGroup, () => this.showGroupManagementSidebar(group));
                 });
@@ -6348,6 +6618,11 @@
     <span>自动总结</span>
     <i class="fas fa-chevron-right"></i>
 </div>
+                            <div class="setting-item" id="sidebar-forward-chat-friend">
+                                <i class="fas fa-share-square"></i>
+                                <span>多选消息</span>
+                                <i class="fas fa-chevron-right"></i>
+                            </div>
                             <div class="setting-item" id="sidebar-delete-friend">
                                 <i class="fas fa-user-times"></i>
                                 <span>删除好友</span>
@@ -6387,6 +6662,10 @@
                 $('#sidebar-opening-scene-friend').addEventListener('click', () => EventManager.handleOpeningSceneSettings(contact.id, false));
                 $('#sidebar-chat-background').addEventListener('click', () => EventManager.handleChatBackgroundSettings(contact.id, false));
                 $('#sidebar-auto-summary').addEventListener('click', () => EventManager.handleAutoSummarySettings(contact.id, false));
+                $('#sidebar-forward-chat-friend').addEventListener('click', () => {
+                    UIManager.hideSidebar();
+                    EventManager.toggleSelectionMode();
+                });
                 $('#sidebar-delete-friend').addEventListener('click', async () => {
                     const groups = await DBHelper.getAll('groups');
                     const isInGroup = groups.some(g => g.members.includes(contact.id));
@@ -6677,11 +6956,9 @@ async showAutoSummaryModal(entityId, isGroup) {
                         <div class="post-footer">
                             <span class="post-timestamp">${Utils.formatTimestampSmartly(moment.timestamp)}</span>
                         <div class="action-buttons-wrapper">
-                            ${isMyPost ? `
                             <button class="post-action-icon-btn" data-action="delete-moment" title="删除">
                                 <i class="fas fa-trash-alt"></i>
                             </button>
-                            ` : ''}
                             <button class="post-action-icon-btn" data-action="forward" title="转发">
                                 <i class="fas fa-share"></i>
                             </button>
@@ -6983,6 +7260,7 @@ async showAutoSummaryModal(entityId, isGroup) {
                         case 'forward_custom': return msg.content;
                         case 'system': return msg.forAi ? `<系统>${msg.content}</系统>`: '';
                         case 'narrator': return `<旁白>${msg.content}</旁白>`;
+                        case 'forwarded_history': return msg.content; // 直接使用已格式化的内容
                         case 'card':
                             if (msg.type === 'sent') {
                                 return `『${myName}|${msg.cardData.shareType}|${msg.cardData.title}|${msg.cardData.summary}|${msg.cardData.details}』`;
@@ -8583,8 +8861,8 @@ async handleAutoSummaryRequest(chatId) {
 6.  你可以让角色互相评论，也可以让圈子里的额外好友（${circle.extraMembers || '无'}）参与评论。
 7.  动态内容要符合角色人设，可以图文并茂（用文字描述图片），也可以只是纯文字。
 8.  生成1到4条不等的动态，内容不能重复。
-9.  作者和评论者的角色名必须是角色的名字（例如：${selectedMembers.map(m=>m.name).join(', ')}）、额外好友的名字或玩家的名字。
-10. **严禁OOC，严禁生成格式之外的内容，严禁代替玩家进行评论或回复**。
+9.  作者和评论者的角色名必须是角色的名字（例如：${selectedMembers.map(m=>m.name).join(', ')}）、额外好友的名字。
+10. **严禁OOC，严禁生成格式之外的内容，严禁代替玩家进行评论、回复或者点赞**。
 11.举例：
 <朋友圈>
 【33：今天天气真不错，有没有要一起出去玩的？|7/3 8:36】
@@ -9370,7 +9648,32 @@ async handleAutoSummaryRequest(chatId) {
                 });
 
                 $('#moments-list').addEventListener('touchstart', e => this.handleMomentCommentInteractionStart(e, 'touch'));
+                // --- 新增：为转发历史页面添加专属点击事件 ---
+                $('#page-forwarded-history').addEventListener('click', async (e) => {
+                    const unclickableBubble = e.target.closest('.transfer-or-red-packet-bubble, .gift-bubble, .forwarded-moment-bubble, .forwarded-history-bubble');
+                    if (unclickableBubble) {
+                        UIManager.showToast('当前状态无法查看');
+                        return;
+                    }
 
+                    const voiceBubble = e.target.closest('.voice-message-bubble');
+                    if (voiceBubble) {
+                        const wrapper = voiceBubble.closest('.bubble-and-tag-wrapper');
+                        const transcript = wrapper.querySelector('.voice-transcript');
+                        if (transcript) transcript.classList.toggle('show');
+                        return;
+                    }
+
+                    const cardWrapper = e.target.closest('.card-message-wrapper');
+                    if (cardWrapper) {
+                        const messageRow = cardWrapper.closest('.message-row');
+                        if (!messageRow) return;
+                        const cardId = `card-detail-${messageRow.dataset.messageId}`;
+                        const detailElement = document.getElementById(cardId);
+                        if (detailElement) detailElement.classList.toggle('visible');
+                        return;
+                    }
+                });
 
                 
                 // --- 礼物功能事件监听 ---
@@ -9671,6 +9974,10 @@ async handleAutoSummaryRequest(chatId) {
                 
                 
                 chatBackBtn.addEventListener('click', async () => {
+                    if (appState.selectionMode.active) {
+                        UIManager.showToast('请先取消多选模式');
+                        return;
+                    }
                     const chatId = appState.currentChatId;
                     if (chatId) {
                         const chatData = await DBHelper.get('chats', chatId);
@@ -9762,8 +10069,25 @@ async handleAutoSummaryRequest(chatId) {
                 chatArea.addEventListener('mousedown', (e) => this.handleInteractionStart(e, 'mouse'));
                 chatArea.addEventListener('touchstart', (e) => this.handleInteractionStart(e, 'touch'));
                 cancelQuoteBtn.addEventListener('click', () => this.resetQuoteState());
+                $('#forwarded-history-back-btn').addEventListener('click', () => UIManager.navigateTo('chat'));
+                $('#cancel-forward-btn').addEventListener('click', () => this.toggleSelectionMode());
+                $('#confirm-forward-btn').addEventListener('click', () => this.showForwardTargetModal());
 
                 chatArea.addEventListener('click', async (e) => {
+                    // 如果是选择模式，所有点击都只触发选择逻辑
+                    if (appState.selectionMode.active) {
+                        const messageElement = e.target.closest('[data-message-id]');
+                        if (messageElement) {
+                            const checkbox = messageElement.querySelector('.message-select-checkbox');
+                            if (checkbox && e.target !== checkbox) {
+                                checkbox.checked = !checkbox.checked;
+                            }
+                            // Manually trigger our selection handler
+                            this.handleMessageSelection({ target: checkbox });
+                        }
+                        return; // 阻止后续所有点击事件
+                    }
+
                     const messageRow = e.target.closest('.message-row');
                     if (!messageRow) return;
                     const messageId = messageRow.dataset.messageId;
@@ -9814,9 +10138,14 @@ async handleAutoSummaryRequest(chatId) {
                     }
                     const giftBubble = e.target.closest('.gift-bubble');
                     if (giftBubble) {
-    this.showGiftDetailsModal(messageId);
-    return;
-    }
+                        this.showGiftDetailsModal(messageId);
+                        return;
+                    }
+                    const forwardedHistoryBubble = e.target.closest('.forwarded-history-bubble');
+                    if (forwardedHistoryBubble) {
+                        this.openForwardedHistoryPage(messageId);
+                        return;
+                    }
                 });
                 chatArea.addEventListener('scroll', () => {
                     if (chatArea.scrollTop < 50 && !appState.isHistoryLoading) {
@@ -10508,22 +10837,25 @@ if (entity && entity.autoSummaryEnabled && chatMetadata.totalPlayerTurns > 0 && 
             
             
             handleInteractionStart(e, type) {
-                const bubble = e.target.closest('.bubble');
-                if (!bubble) return;
+                if (appState.selectionMode.active) return; // 选择模式下禁用长按
 
-                const messageRow = bubble.closest('.message-row');
+                const targetElement = e.target.closest('.bubble, .narrator-notice');
+                if (!targetElement) return;
+
+                const messageRow = targetElement.closest('.message-row, .narrator-notice');
                 if (!messageRow || !messageRow.dataset.messageId) return;
 
                 clearTimeout(appState.longPressTimer);
 
                 const startAction = () => {
-                    
                     const existingButton = $('.retract-button-wrapper.show');
                     if (existingButton) {
                         existingButton.remove();
                     }
                     
-                    if (messageRow.classList.contains('received')) {
+                    if (messageRow.classList.contains('narrator-notice')) {
+                        this.showMessageOptions(messageRow, 'narrator');
+                    } else if (messageRow.classList.contains('received')) {
                         this.showMessageOptions(messageRow, 'received');
                     } else if (messageRow.classList.contains('sent')) {
                         this.showMessageOptions(messageRow, 'sent');
@@ -10574,19 +10906,20 @@ if (entity && entity.autoSummaryEnabled && chatMetadata.totalPlayerTurns > 0 && 
                 wrapper.className = 'retract-button-wrapper';
 
                 let buttonsHtml = '';
-                if (messageType === 'sent') {
+                if (messageType === 'narrator') {
+                    buttonsHtml = `<button class="retract-btn" data-action="delete"><i class="fas fa-trash"></i> 删除</button>`;
+                } else if (messageType === 'sent') {
                     buttonsHtml = `
                         <button class="retract-btn" data-action="delete"><i class="fas fa-trash"></i> 删除</button>
                         <button class="retract-btn" data-action="retract"><i class="fas fa-undo"></i> 撤回</button>
                     `;
-                } else { 
+                } else { // received
                     buttonsHtml = `
                         <button class="retract-btn" data-action="delete"><i class="fas fa-trash"></i> 删除</button>
                         <button class="retract-btn" data-action="quote"><i class="fas fa-quote-left"></i> 引用</button>
                     `;
                 }
                 wrapper.innerHTML = buttonsHtml;
-                
                 
                 wrapper.addEventListener('click', async (e) => {
                     e.stopPropagation();
@@ -10619,9 +10952,16 @@ if (entity && entity.autoSummaryEnabled && chatMetadata.totalPlayerTurns > 0 && 
                     }
                 });
 
-                const bubbleWrapper = messageRowElement.querySelector('.bubble-and-tag-wrapper');
-                if (bubbleWrapper) {
-                    bubbleWrapper.appendChild(wrapper);
+                let attachTarget;
+                if (messageType === 'narrator') {
+                    attachTarget = messageRowElement;
+                    messageRowElement.style.position = 'relative';
+                } else {
+                    attachTarget = messageRowElement.querySelector('.bubble-and-tag-wrapper');
+                }
+
+                if (attachTarget) {
+                    attachTarget.appendChild(wrapper);
                     setTimeout(() => wrapper.classList.add('show'), 10);
                 }
 
@@ -13096,14 +13436,34 @@ if (entity && entity.autoSummaryEnabled && chatMetadata.totalPlayerTurns > 0 && 
 
                             const moment = await DBHelper.get('moments', momentId);
                             const momentAuthor = await this.getMomentAuthor(moment.authorId, moment.circleId);
-                            
-                            const aiContent = await this.buildForwardedMomentAIContent(moment, momentAuthor, targetChatId);
+
+                            // --- 核心修复开始 ---
+                            // 1. 复用朋友圈页面那段被验证过的、获取正确玩家人设的逻辑
+                            const circle = await DBHelper.get('circles', moment.circleId);
+                            const baseProfile = await DBHelper.get('profile', 'myProfile');
+                            let correctCircleProfile = { ...baseProfile };
+                            if (circle && circle.boundPersonaPresetId) {
+                                const presets = baseProfile.presets || [];
+                                const boundPreset = presets.find(p => p.presetId === circle.boundPersonaPresetId);
+                                if (boundPreset) {
+                                    correctCircleProfile = { ...baseProfile, ...boundPreset };
+                                }
+                            }
+
+                            // 2. 准备给AI的提示词内容，传入这个正确的人设
+                            const aiContent = await this.buildForwardedMomentAIContent(moment, momentAuthor, correctCircleProfile);
+
+                            // 3. 准备给用户看的预览卡片，明确判断作者并使用正确的人设名
+                            const finalAuthorNameForCard = (moment.authorId === 'myProfile')
+                                ? correctCircleProfile.name  // 如果是玩家的动态，使用刚刚获取的正确人设名
+                                : momentAuthor.name;      // 如果是AI的动态，使用AI的名字
 
                             const cardData = {
                                 momentId: moment.id,
-                                authorName: momentAuthor.name,
+                                authorName: finalAuthorNameForCard, // 使用修正后的名字
                                 preview: moment.content,
                             };
+                            // --- 核心修复结束 ---
 
                             const message = {
                                 messageId: Utils.generateId('msg'),
@@ -13159,34 +13519,75 @@ if (entity && entity.autoSummaryEnabled && chatMetadata.totalPlayerTurns > 0 && 
                 return { name: authorId, avatar: Utils.createAvatarDataUrl('#ccc') };
             },
 
-            async buildForwardedMomentAIContent(moment, author, targetChatId) {
+            async buildForwardedMomentAIContent(moment, author, myProfile) {
                 const allContacts = await DBHelper.getAll('contacts');
-                const myProfile = await this.getPlayerProfileForContext(targetChatId);
+                const circle = await DBHelper.get('circles', moment.circleId);
+
+                // 这段逻辑直接从 renderMomentsPage 复制，确保获取到页面上显示的正确玩家人设
+                const baseProfile = await DBHelper.get('profile', 'myProfile');
+                let correctMyProfile = { ...baseProfile }; // 先用基础人设作为默认值
+                if (circle && circle.boundPersonaPresetId) {
+                    const presets = baseProfile.presets || [];
+                    const boundPreset = presets.find(p => p.presetId === circle.boundPersonaPresetId);
+                    if (boundPreset) {
+                        // 如果找到了绑定的预设，就用它覆盖默认人设
+                        correctMyProfile = { ...baseProfile, ...boundPreset };
+                    }
+                }
+
+                // 准备一个包含所有可能用过的玩家名称的列表，用于识别和替换
+                const allPlayerNames = [baseProfile.name];
+                if (baseProfile.presets && Array.isArray(baseProfile.presets)) {
+                    baseProfile.presets.forEach(p => {
+                        if (p && p.name) allPlayerNames.push(p.name);
+                    });
+                }
+                const uniquePlayerNames = [...new Set(allPlayerNames)];
+
+                let likesText = '无';
+                if (moment.likes && moment.likes.length > 0) {
+                    const updatedLikes = moment.likes.map(likerName => {
+                        // 如果点赞者是任何一个曾用过的玩家名，都替换成当前正确的人设名
+                        if (uniquePlayerNames.includes(likerName)) {
+                            return correctMyProfile.name;
+                        }
+                        return likerName;
+                    });
+                    // 去重后输出
+                    likesText = [...new Set(updatedLikes)].join(', ');
+                }
 
                 let commentsText = '无';
                 if (moment.comments && moment.comments.length > 0) {
                     commentsText = '\n' + moment.comments.map(c => {
                         let cAuthorName = '未知';
-                        if (c.authorId === myProfile.id) {
-                            cAuthorName = myProfile.name;
+                        if (c.authorId === correctMyProfile.id) {
+                            cAuthorName = correctMyProfile.name;
                         } else {
                             const contact = allContacts.find(con => con.id === c.authorId);
-                            cAuthorName = contact ? contact.name : c.authorId;
+                            cAuthorName = contact ? (contact.name || c.authorId) : c.authorId;
                         }
-                        const replyText = c.replyTo ? ` 回复 ${c.replyTo}` : '';
+
+                        let replyToName = c.replyTo || '';
+                        // 如果回复的对象是任何一个曾用过的玩家名，也替换成当前正确的人设名
+                        if (replyToName && uniquePlayerNames.includes(replyToName)) {
+                            replyToName = correctMyProfile.name;
+                        }
+
+                        const replyText = replyToName ? ` 回复 ${replyToName}` : '';
                         return `${cAuthorName}${replyText}: ${c.content}`;
                     }).join('\n');
                 }
 
-                const imageDescription = moment.images && moment.images.length > 0 
+                const imageDescription = moment.images && moment.images.length > 0
                     ? ` [图片：包含${moment.images.length}张图片的动态]`
                     : '';
-                
+
                 return `<转发动态>
 动态作者：${author.name}
 动态内容：${moment.content}${imageDescription}
 动态时间：${Utils.formatTimestampSmartly(moment.timestamp)}
-点赞情况：${moment.likes && moment.likes.length > 0 ? moment.likes.join(', ') : '无'}
+点赞情况：${likesText}
 评论区：${commentsText}
 </转发动态>`;
             },
@@ -13199,8 +13600,37 @@ if (entity && entity.autoSummaryEnabled && chatMetadata.totalPlayerTurns > 0 && 
                 }
 
                 const allContacts = await DBHelper.getAll('contacts');
-                const myProfile = await DBHelper.get('profile', 'myProfile');
-                const author = await this.getMomentAuthor(moment.authorId, moment.circleId);
+
+                // --- 核心修复：复用朋友圈页面显示正确人设的逻辑 ---
+                const circle = await DBHelper.get('circles', moment.circleId);
+                const baseProfile = await DBHelper.get('profile', 'myProfile');
+                let correctMyProfile = { ...baseProfile }; // 先用基础人设作为默认值
+                if (circle && circle.boundPersonaPresetId) {
+                    const presets = baseProfile.presets || [];
+                    const boundPreset = presets.find(p => p.presetId === circle.boundPersonaPresetId);
+                    if (boundPreset) {
+                        // 如果找到了绑定的预设，就用它覆盖默认人设
+                        correctMyProfile = { ...baseProfile, ...boundPreset };
+                    }
+                }
+                // 现在 correctMyProfile 存储的是当前圈子正确的玩家人设
+
+                // 使用新获取的人设来判断作者
+                let author;
+                if (moment.authorId === 'myProfile') {
+                    author = { name: correctMyProfile.name, avatar: correctMyProfile.avatar };
+                } else {
+                    // 对于AI角色，沿用旧的逻辑
+                    const contactAuthor = allContacts.find(c => c.id === moment.authorId);
+                    if (contactAuthor) {
+                        author = contactAuthor;
+                    } else if (circle && circle.extraMembers && circle.extraMembers.includes(moment.authorId)) {
+                        author = { id: moment.authorId, name: moment.authorId, avatar: Utils.createAvatarDataUrl(Utils.getRandomColor()) };
+                    } else {
+                        author = { id: moment.authorId, name: '未知用户', avatar: Utils.createAvatarDataUrl('#ccc') };
+                    }
+                }
+                // --- 修复结束 ---
 
                 let likesHtml = '';
                 if (moment.likes && moment.likes.length > 0) {
@@ -13211,8 +13641,9 @@ if (entity && entity.autoSummaryEnabled && chatMetadata.totalPlayerTurns > 0 && 
                 if (moment.comments && moment.comments.length > 0) {
                     commentsHtml = moment.comments.map(comment => {
                         let cAuthorName = '未知用户';
-                        if (comment.authorId === myProfile.id) {
-                            cAuthorName = myProfile.name;
+                        // --- 核心修复：在判断评论作者时，也使用 correctMyProfile ---
+                        if (comment.authorId === correctMyProfile.id) {
+                            cAuthorName = correctMyProfile.name;
                         } else {
                             const contact = allContacts.find(c => c.id === comment.authorId);
                             cAuthorName = contact ? contact.name : comment.authorId;
@@ -13265,21 +13696,71 @@ if (entity && entity.autoSummaryEnabled && chatMetadata.totalPlayerTurns > 0 && 
                     return;
                 }
 
+                // --- 新增：获取发送者信息用于页脚 ---
+                const myProfile = await this.getPlayerProfileForContext(msg.chatId);
+                let sender;
+                if (msg.type === 'sent') {
+                    sender = myProfile;
+                } else {
+                    sender = await DBHelper.get('contacts', msg.senderId) || { name: '未知发件人' };
+                }
+
                 const { title, content } = msg.cardData;
 
-                // 使用 marked.js 解析Markdown内容
-                const parsedContent = marked.parse(content);
+                const parsedContent = marked.parse(content, { breaks: true });
 
                 const modalBody = `
-                    <div class="moment-detail-wrapper" style="padding-top: 10px;">
-                        <div class="post-content-full" style="white-space: normal; line-height: 1.7;">
+                    <style>
+                        .forward-detail-card {
+                            background: rgba(247, 248, 250, 0.8);
+                            backdrop-filter: blur(5px);
+                            border: 1px solid var(--border-color);
+                            border-radius: 16px;
+                            padding: 20px;
+                            margin: -10px; /* 抵消一些默认的modal内边距，让卡片感更强 */
+                        }
+                        .forward-detail-title {
+                            text-align: center;
+                            font-size: 1.2rem; /* 字体变小 */
+                            font-weight: 600;
+                            color: var(--text-color-dark);
+                            margin-bottom: 15px;
+                        }
+                        .forward-detail-separator {
+                            height: 1px;
+                            background: var(--border-color);
+                            margin: 15px auto;
+                            width: 80%;
+                        }
+                        .forward-detail-content {
+                            line-height: 1.8;
+                            font-size: 0.95rem;
+                            color: var(--text-color-medium);
+                            white-space: normal;
+                        }
+                        .forward-detail-footer {
+                            text-align: right;
+                            font-size: 0.75rem;
+                            color: var(--text-color-light);
+                            margin-top: 20px;
+                            border-top: 1px solid var(--border-color);
+                            padding-top: 10px;
+                        }
+                    </style>
+                    <div class="forward-detail-card">
+                        <h3 class="forward-detail-title">${title}</h3>
+                        <div class="forward-detail-separator"></div>
+                        <div class="forward-detail-content">
                             ${parsedContent}
+                        </div>
+                        <div class="forward-detail-footer">
+                            <span>来自 ${sender.name} 的转发</span>
                         </div>
                     </div>
                 `;
 
                 UIManager.showModal({
-                    title: title, // 弹窗标题就是转发的标题
+                    title: `转发`, // 弹窗标题改为通用提示
                     body: modalBody,
                     actions: [{ text: '关闭', class: 'btn-primary', handler: () => UIManager.hideModal() }]
                 });
@@ -16399,6 +16880,229 @@ async showGiftDetailsModal(messageId) {
                         }
                     });
                 }
+            },
+            toggleSelectionMode() {
+                const pageChat = $('#page-chat');
+                const selectionBar = $('#chat-selection-bar');
+                const selectionInfo = $('#selection-info');
+                const confirmBtn = $('#confirm-forward-btn');
+                const selectionOverlay = $('#chat-selection-overlay');
+
+                appState.selectionMode.active = !appState.selectionMode.active;
+                appState.selectionMode.messageIds = [];
+
+                pageChat.classList.toggle('selection-mode-active', appState.selectionMode.active);
+                selectionBar.classList.toggle('visible', appState.selectionMode.active);
+                
+                if (appState.selectionMode.active) {
+                    selectionInfo.textContent = '已选择 0 条';
+                    confirmBtn.disabled = true;
+                } else {
+                    // Uncheck all
+                    $$('.message-select-checkbox').forEach(cb => cb.checked = false);
+                }
+            },
+
+            handleMessageSelection(e) {
+                const checkbox = e.target.closest('.message-select-checkbox');
+                if (!checkbox) return;
+
+                const messageElement = checkbox.closest('[data-message-id]');
+                const messageId = messageElement.dataset.messageId;
+                
+                // 新增：检查是否为转发记录气泡，如果是则阻止选择
+                if (messageElement.querySelector('.forwarded-history-bubble')) {
+                    checkbox.checked = false;
+                    UIManager.showToast("不能选择转发记录类型的消息");
+                    return;
+                }
+
+                const selectedIds = appState.selectionMode.messageIds;
+                const index = selectedIds.indexOf(messageId);
+
+                if (checkbox.checked) {
+                    if (index === -1) {
+                        if (selectedIds.length >= 50) {
+                            UIManager.showToast('一次最多只能选择50条消息');
+                            checkbox.checked = false; // Prevent selection
+                            return;
+                        }
+                        selectedIds.push(messageId);
+                    }
+                } else {
+                    if (index > -1) {
+                        selectedIds.splice(index, 1);
+                    }
+                }
+                
+                const count = selectedIds.length;
+                $('#selection-info').textContent = `已选择 ${count} 条`;
+                $('#confirm-forward-btn').disabled = count === 0;
+            },
+
+            async showForwardTargetModal() {
+                const contacts = await DBHelper.getAll('contacts');
+                const groups = await DBHelper.getAll('groups');
+
+                const allTargets = [
+                    ...contacts.map(c => ({ id: c.id, name: c.remark || c.name, avatar: c.avatar, type: 'contact' })),
+                    ...groups.map(g => ({ id: g.id, name: g.name, avatar: g.avatar, type: 'group' }))
+                ];
+
+                const targetListHtml = allTargets.map(item => `
+                    <label class="member-select-item" data-name="${item.name.toLowerCase()}">
+                        <input type="radio" name="forward-target" value="${item.id}">
+                        <img src="${item.avatar}" class="contact-item-avatar" style="width:40px;height:40px;margin-right:10px;">
+                        <span>${item.name}</span>
+                    </label>
+                `).join('');
+
+                UIManager.showModal({
+                    title: '转发给',
+                    body: `
+                        <input type="text" id="forward-target-search" class="forward-target-search-bar" placeholder="搜索联系人或群聊...">
+                        <div class="member-select-list" style="max-height: 40vh;">${targetListHtml}</div>
+                    `,
+                    actions: [
+                        { text: '取消', class: 'btn-secondary', handler: () => UIManager.hideModal() },
+                        { text: '发送', class: 'btn-primary', handler: () => {
+                            const selected = $('input[name="forward-target"]:checked');
+                            if (!selected) return UIManager.showToast("请选择要转发的对象");
+                            this.handleForwarding(selected.value);
+                        }}
+                    ]
+                });
+
+                $('#forward-target-search').addEventListener('input', (e) => {
+                    const searchTerm = e.target.value.toLowerCase();
+                    $$('.member-select-item').forEach(item => {
+                        item.style.display = item.dataset.name.includes(searchTerm) ? 'flex' : 'none';
+                    });
+                });
+            },
+
+            async _saveMessageToDbAndUpdateMetadata(chatId, message, profile) {
+                message.chatId = chatId;
+                await DBHelper.put('messages', message);
+                await UIManager.updateChatMetadata(chatId, message);
+            },
+            
+            async handleForwarding(targetChatId) {
+                const sourceChatId = appState.currentChatId;
+                const selectedMessageIds = [...appState.selectionMode.messageIds];
+
+                const selectedMessages = (await Promise.all(
+                    selectedMessageIds.map(id => DBHelper.get('messages', id))
+                )).filter(Boolean);
+                selectedMessages.sort((a, b) => a.timestamp - b.timestamp);
+
+                const sourceIsGroup = sourceChatId.startsWith('group-');
+                const sourceEntity = await DBHelper.get(sourceIsGroup ? 'groups' : 'contacts', sourceChatId);
+                let title;
+                if (sourceIsGroup) {
+                    title = `${sourceEntity.name}的聊天记录`;
+                } else {
+                    const playerPersona = await this.getPlayerProfileForContext(sourceChatId);
+                    title = `${sourceEntity.remark || sourceEntity.name}和${playerPersona.name}的聊天记录`;
+                }
+
+                const allContacts = await DBHelper.getAll('contacts');
+                const myProfile = await this.getPlayerProfileForContext(sourceChatId);
+                const formatTime = (ts) => new Date(ts).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
+                
+                let preview = '';
+                const aiContentParts = [];
+
+                for (const msg of selectedMessages) {
+                    const sender = (msg.type === 'sent') ? myProfile : (allContacts.find(c => c.id === msg.senderId) || { name: '未知' });
+                    const senderName = sender.remark || sender.name;
+                    const time = formatTime(msg.timestamp);
+
+                    let contentPart = '';
+                    switch(msg.segmentType) {
+                        case 'text':
+                            contentPart = `[${senderName}|${msg.content}|${time}]`;
+                            if (!preview) preview = `${senderName}: ${msg.content}`;
+                            break;
+                        case 'emoji-image':
+                            contentPart = `<${senderName}|${msg.content}|${time}>`;
+                            if (!preview) preview = `${senderName}: [表情]`;
+                            break;
+                        default:
+                            contentPart = `[${senderName}|[消息]|${time}]`;
+                            if (!preview) preview = `${senderName}: [消息]`;
+                            break;
+                    }
+                    aiContentParts.push(contentPart);
+                }
+
+                const aiContent = `<消息记录>\n${aiContentParts.join('\n')}\n</消息记录>`;
+
+                const message = {
+                    messageId: Utils.generateId('msg'),
+                    content: aiContent,
+                    timestamp: Date.now(),
+                    type: 'sent',
+                    segmentType: 'forwarded_history',
+                    cardData: {
+                        title: title,
+                        preview: preview,
+                        messageIds: selectedMessageIds,
+                        sourceChatId: sourceChatId
+                    }
+                };
+                
+                const targetProfile = await this.getPlayerProfileForContext(targetChatId);
+                await this._saveMessageToDbAndUpdateMetadata(targetChatId, message, targetProfile);
+                
+                UIManager.hideModal();
+                this.toggleSelectionMode();
+                UIManager.showToast("转发成功！");
+                if (appState.currentPage === 'messages') {
+                    await UIManager.renderMessagesListPage();
+                }
+            },
+
+            async openForwardedHistoryPage(messageId) {
+                const forwardedMsg = await DBHelper.get('messages', messageId);
+                if (!forwardedMsg) return;
+
+                const { title, messageIds, sourceChatId } = forwardedMsg.cardData;
+
+                const messages = (await Promise.all(
+                    messageIds.map(id => DBHelper.get('messages', id))
+                )).filter(Boolean);
+                messages.sort((a, b) => a.timestamp - b.timestamp);
+
+                $('#forwarded-history-title').textContent = title;
+                const contentArea = $('#forwarded-history-content');
+                contentArea.innerHTML = '';
+                
+                const allContacts = await DBHelper.getAll('contacts');
+                // 使用源聊天的上下文来获取正确的人设
+                const myProfile = await this.getPlayerProfileForContext(sourceChatId);
+
+                for (const msg of messages) {
+                    const sender = (msg.type === 'sent') ? myProfile : (allContacts.find(c => c.id === msg.senderId) || { name: msg.senderId, remark: msg.senderId });
+                    
+                    const tempMsg = { ...msg };
+                    delete tempMsg.isAutoReply;
+                    
+                    // 使用 isReadOnly 参数来渲染
+                    const messageElement = await UIManager.createMessageElement(tempMsg, sender, false, true);
+                    
+                    const wrapper = messageElement.querySelector('.bubble-and-tag-wrapper');
+                    if (wrapper) {
+                        const timeElement = document.createElement('div');
+                        timeElement.className = 'message-timestamp';
+                        timeElement.textContent = new Date(msg.timestamp).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
+                        wrapper.appendChild(timeElement);
+                    }
+                    
+                    contentArea.appendChild(messageElement);
+                }
+
+                UIManager.navigateTo('forwarded-history');
             },
         };
         
