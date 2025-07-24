@@ -12445,39 +12445,154 @@ if (entity && entity.autoSummaryEnabled && chatMetadata.totalPlayerTurns > 0 && 
                 });
             },
 
+            async generateExportFile(entity, isGroup, authorName, authorWords, historyOption) {
+                UIManager.showModal({
+                    title: '正在生成文件...',
+                    body: '<div style="text-align:center; padding: 20px;"><div class="loader-spinner" style="width: 30px; height: 30px; border-width: 3px; display: inline-block;"></div><p style="margin-top: 15px;">请稍候，数据正在处理中...</p></div>',
+                    actions: []
+                });
+
+                await new Promise(resolve => setTimeout(resolve, 100)); // 等待UI更新
+
+                let exportData;
+                let chatId;
+                const targetEntity = isGroup ? entity.groupData : entity;
+
+                targetEntity.author = authorName;
+                targetEntity.authorWords = authorWords;
+                
+                if (isGroup) {
+                    exportData = { type: 'group', ...entity };
+                    chatId = targetEntity.id;
+                } else {
+                    exportData = { type: 'contact', contactData: targetEntity };
+                    chatId = targetEntity.id;
+                }
+
+                if (historyOption !== 'none') {
+                    const allContacts = await DBHelper.getAll('contacts');
+                    const myProfile = await this.getPlayerProfileForContext(chatId);
+                    
+                    // 获取所有消息来构建轮次
+                    const allMessages = await DBHelper.getMessages(chatId, Number.MAX_SAFE_INTEGER);
+                    const allTurns = AIHandler.buildTurnsFromHistory(allMessages, allContacts, myProfile);
+
+                    let turnsToExport = [];
+                    if (historyOption === 'all') {
+                        turnsToExport = allTurns;
+                    } else {
+                        const turnCount = parseInt(historyOption, 10);
+                        turnsToExport = allTurns.slice(-turnCount);
+                    }
+                    
+                    // 从轮次反向推导出需要导出的消息
+                    const exportedMessageIds = new Set();
+                    // buildTurnsFromHistory 返回的是对象数组，我们需要找到原始消息
+                    // 这是一个简化的处理，实际需要更精确地映射回原始消息
+                    // 我们直接导出筛选后的消息对象数组
+                    const messagesToExport = [];
+                    let lastTurnRole = null;
+                    let currentTurnMessages = [];
+
+                    for(const msg of allMessages) {
+                        const role = msg.type === 'sent' ? 'player' : 'ai';
+                        if (role !== lastTurnRole && currentTurnMessages.length > 0) {
+                            if(turnsToExport.some(turn => turn.time === Utils.formatTimestampForPrompt(currentTurnMessages[0].timestamp))) {
+                                messagesToExport.push(...currentTurnMessages);
+                            }
+                            currentTurnMessages = [];
+                        }
+                        currentTurnMessages.push(msg);
+                        lastTurnRole = role;
+                    }
+                    if(currentTurnMessages.length > 0 && turnsToExport.some(turn => turn.time === Utils.formatTimestampForPrompt(currentTurnMessages[0].timestamp))) {
+                       messagesToExport.push(...currentTurnMessages);
+                    }
+
+                    // 为了简单起见，我们直接获取最近的消息条数作为近似值
+                    let messagesForExport;
+                    if(historyOption === 'all') {
+                        messagesForExport = allMessages;
+                    } else {
+                        // 粗略估计每轮平均2条消息
+                        const approxMsgCount = parseInt(historyOption, 10) * 2.5; 
+                        messagesForExport = allMessages.slice(-approxMsgCount);
+                    }
+                    
+                    const chatHistory = { history: messagesForExport };
+
+                    if (chatHistory.history.length > 0) {
+                        const participants = {};
+                        participants[myProfile.id] = myProfile;
+
+                        for (const msg of chatHistory.history) {
+                            if (msg.senderId && !participants[msg.senderId]) {
+                                const senderInfo = allContacts.find(c => c.id === msg.senderId);
+                                if (senderInfo) {
+                                    participants[msg.senderId] = senderInfo;
+                                }
+                            }
+                            delete msg.senderInfo; 
+                        }
+                        
+                        exportData.chatHistory = chatHistory;
+                        exportData.participants = Object.values(participants);
+                    }
+                }
+
+                const filename = `${targetEntity.name}_${new Date().toISOString().slice(0, 10)}.json`;
+                const jsonString = JSON.stringify(exportData, null, 2);
+                const blob = new Blob([jsonString], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                
+                UIManager.showModal({
+                    title: '文件已生成',
+                    body: `
+                        <p>请点击下面的链接下载文件。</p>
+                        <a href="${url}" download="${filename}" class="modal-btn btn-primary" style="display: block; text-align: center; margin-top: 20px;">
+                            点击下载 ${filename}
+                        </a>
+                        <p style="font-size: 0.8rem; color: #aaa; text-align: center; margin-top: 15px;">(下载后此链接将失效)</p>
+                    `,
+                    actions: [{
+                        text: '关闭',
+                        class: 'btn-secondary',
+                        handler: () => {
+                            URL.revokeObjectURL(url); 
+                            UIManager.hideModal();
+                        }
+                    }]
+                });
+            },
+
             async reconstructChatHistory(chatHistory, participants) {
                 if (!chatHistory || !chatHistory.history || !participants) {
                     return chatHistory;
                 }
 
                 const participantMap = participants.reduce((map, p) => {
-                    map[p.id] = p;
+                    if(p) map[p.id] = p; // Add a check for null participants
                     return map;
                 }, {});
                 
-                // --- 核心修复：处理时间戳冲突 ---
                 let lastTimestamp = 0;
-                let offset = 1; // 偏移量，单位为毫秒
                 
+                // Sort by timestamp just in case the file is not ordered
+                chatHistory.history.sort((a, b) => a.timestamp - b.timestamp);
+
                 chatHistory.history.forEach(msg => {
-                    // 绑定参与者信息
                     if (msg.senderId && participantMap[msg.senderId]) {
-                        msg.senderInfo = participantMap[msg.senderId];
+                        // We don't need to attach senderInfo for storage
+                        // delete msg.senderInfo; 
                     }
                     
-                    // 检查并修正时间戳
                     if (msg.timestamp <= lastTimestamp) {
-                        // 如果当前消息的时间戳小于或等于上一条，就在上一条的基础上增加偏移量
-                        msg.timestamp = lastTimestamp + offset;
-                    } else {
-                        // 如果是新的时间戳，重置偏移量
-                        offset = 1;
+                        // Increment by 1ms to ensure uniqueness and order
+                        msg.timestamp = lastTimestamp + 1;
                     }
                     
-                    // 更新上一条消息的时间戳记录
                     lastTimestamp = msg.timestamp;
                 });
-                // --- 修复结束 ---
 
                 return chatHistory;
             },
@@ -12503,17 +12618,45 @@ if (entity && entity.autoSummaryEnabled && chatMetadata.totalPlayerTurns > 0 && 
                 this.showExportModal(exportPackage, true);
             },
 
-            showExportModal(entity, isGroup) {
+            async showExportModal(entity, isGroup) {
                 const myProfile = { name: '你' };
                 const targetEntity = isGroup ? entity.groupData : entity;
+                const chatId = targetEntity.id;
 
                 const authorName = targetEntity.author || myProfile.name;
                 const authorWords = targetEntity.authorWords || '';
                 const isAuthorFixed = !!targetEntity.author;
-
+                
+                // 异步获取消息总数和轮数
+                const messageCount = await DBHelper.getChatMessagesCount(chatId);
+                const allMessagesForTurns = await DBHelper.getMessages(chatId, Number.MAX_SAFE_INTEGER);
+                let turnCount = 0;
+                if(allMessagesForTurns.length > 0) {
+                    turnCount = 1;
+                    for (let i = 1; i < allMessagesForTurns.length; i++) {
+                        if (allMessagesForTurns[i].type !== allMessagesForTurns[i-1].type) {
+                            turnCount++;
+                        }
+                    }
+                }
+                
                 UIManager.showModal({
                     title: `导出${isGroup ? '群聊' : '角色'}`,
                     body: `
+                        <style>
+                            .export-history-options {
+                                display: none;
+                                background-color: rgba(0,0,0,0.03);
+                                border-radius: 8px;
+                                padding: 15px;
+                                margin-top: 15px;
+                            }
+                            .export-history-options label {
+                                display: block;
+                                margin-bottom: 10px;
+                                cursor: pointer;
+                            }
+                        </style>
                         <div class="form-group">
                             <label for="export-author-name">作者名</label>
                             <input type="text" id="export-author-name" value="${authorName}" ${isAuthorFixed ? 'disabled' : ''}>
@@ -12524,83 +12667,40 @@ if (entity && entity.autoSummaryEnabled && chatMetadata.totalPlayerTurns > 0 && 
                         </div>
                         <div class="form-group" style="display: flex; align-items: center; justify-content: center; padding-top: 10px;">
                             <input type="checkbox" id="export-chat-history-checkbox" style="width: 16px; height: 16px; margin-right: 8px;">
-                            <label for="export-chat-history-checkbox" style="margin: 0; cursor: pointer;">同时导出聊天记录</label>
+                            <label for="export-chat-history-checkbox" style="margin: 0; cursor: pointer;">同时导出聊天记录 (共 ${turnCount} 轮 / ${messageCount} 条)</label>
+                        </div>
+                        <div id="export-history-options-container" class="export-history-options">
+                            <label><input type="radio" name="history-export-option" value="all" checked> 导出全部记录 (可能卡顿)</label>
+                            <label><input type="radio" name="history-export-option" value="100"> 导出最近100轮</label>
+                            <label><input type="radio" name="history-export-option" value="50"> 导出最近50轮</label>
                         </div>
                     `,
                     actions: [
                         { text: '取消', class: 'btn-secondary', handler: () => UIManager.hideModal() },
-                        { text: '生成文件', class: 'btn-primary', handler: async () => {
+                        { text: '生成文件', class: 'btn-primary', handler: () => {
                             const newAuthorName = $('#export-author-name').value.trim();
                             const newAuthorWords = $('#export-author-words').value.trim();
                             const includeHistory = $('#export-chat-history-checkbox').checked;
-
-                            let exportData;
-                            let chatId;
-
-                            if (isGroup) {
-                                entity.groupData.author = newAuthorName;
-                                entity.groupData.authorWords = newAuthorWords;
-                                exportData = { type: 'group', ...entity };
-                                chatId = entity.groupData.id;
-                            } else {
-                                entity.author = newAuthorName;
-                                entity.authorWords = newAuthorWords;
-                                exportData = { type: 'contact', contactData: entity };
-                                chatId = entity.id;
-                            }
-
+                            
+                            let historyOption = 'none';
                             if (includeHistory) {
-                                // -- BUGFIX: 从正确的 'messages' 表获取所有聊天记录，而不是从旧的 'chats' 表。
-                                const allMessagesForChat = await DBHelper.getMessages(chatId, Number.MAX_SAFE_INTEGER);
-                                const chatHistory = { history: allMessagesForChat };
-
-                                if (chatHistory && chatHistory.history && chatHistory.history.length > 0) {
-                                    const participants = {};
-                                    const myProfile = await DBHelper.get('profile', 'myProfile');
-                                    const allContacts = await DBHelper.getAll('contacts');
-                                    
-                                    participants[myProfile.id] = myProfile;
-
-                                    for (const msg of chatHistory.history) {
-                                        if (msg.senderId && !participants[msg.senderId]) {
-                                            const senderInfo = allContacts.find(c => c.id === msg.senderId);
-                                            if (senderInfo) {
-                                                participants[msg.senderId] = senderInfo;
-                                            }
-                                        }
-                                        delete msg.senderInfo; 
-                                    }
-                                    
-                                    exportData.chatHistory = chatHistory;
-                                    exportData.participants = Object.values(participants);
+                                const selectedOption = $('input[name="history-export-option"]:checked');
+                                if (selectedOption) {
+                                    historyOption = selectedOption.value;
                                 }
                             }
-
-                            const filename = `${isGroup ? entity.groupData.name : entity.name}_${new Date().toISOString().slice(0, 10)}.json`;
-                            const jsonString = JSON.stringify(exportData, null, 2);
-                            const blob = new Blob([jsonString], { type: 'application/json' });
-                            const url = URL.createObjectURL(blob);
                             
-                            UIManager.showModal({
-                                title: '文件已生成',
-                                body: `
-                                    <p>请点击下面的链接下载文件。</p>
-                                    <a href="${url}" download="${filename}" class="modal-btn btn-primary" style="display: block; text-align: center; margin-top: 20px;">
-                                        点击下载 ${filename}
-                                    </a>
-                                    <p style="font-size: 0.8rem; color: #aaa; text-align: center; margin-top: 15px;">(下载后此链接将失效)</p>
-                                `,
-                                actions: [{
-                                    text: '关闭',
-                                    class: 'btn-secondary',
-                                    handler: () => {
-                                        URL.revokeObjectURL(url); 
-                                        UIManager.hideModal();
-                                    }
-                                }]
-                            });
+                            // 调用新的生成文件函数
+                            this.generateExportFile(entity, isGroup, newAuthorName, newAuthorWords, historyOption);
                         }}
                     ]
+                });
+
+                // 绑定事件
+                const checkbox = $('#export-chat-history-checkbox');
+                const optionsContainer = $('#export-history-options-container');
+                checkbox.addEventListener('change', () => {
+                    optionsContainer.style.display = checkbox.checked ? 'block' : 'none';
                 });
             },
 
