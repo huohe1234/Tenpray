@@ -3298,6 +3298,19 @@
             font-size: 0.85rem;
         }
 
+        /* --- 拍一拍消息样式 (新) --- */
+        .pat-notice {
+            align-self: center;
+            background: rgba(0, 0, 0, 0.1);
+            color: var(--text-color-white);
+            font-size: 0.75rem;
+            padding: 4px 10px;
+            border-radius: 10px;
+            margin: 5px 0;
+            cursor: default;
+            user-select: none;
+        }
+
         /* --- 19. 番茄钟 (新) --- */
         #page-pomodoro .page-content {
             display: flex;
@@ -4963,6 +4976,7 @@
                     chatInfo.avatar = entity.avatar;
 
                     switch (lastMessage.segmentType) {
+                        case 'pat_a_pat': chatInfo.lastMessageContent = '[拍一拍]'; break;
                         case 'emoji-image':
                             const emojiDesc = appState.playerEmojiMap[lastMessage.content] || appState.aiEmojiMap[lastMessage.content];
                             chatInfo.lastMessageContent = emojiDesc ? `[表情] ${emojiDesc}` : '[未知表情]';
@@ -5404,6 +5418,11 @@
                         messageElement.textContent = msg.content;
                     } else if (msg.segmentType === 'narrator') {
                         messageElement = await this.createNarratorNoticeElement(msg);
+                    } else if (msg.segmentType === 'pat_a_pat') {
+                        messageElement = document.createElement('div');
+                        messageElement.className = 'pat-notice';
+                        messageElement.id = msg.messageId;
+                        messageElement.textContent = msg.content.displayText;
                     } else {
                         messageElement = await this.createMessageElement(msg, senderInfo);
                     }
@@ -5680,21 +5699,36 @@
             messageRow.innerHTML = `<div class="message-selector"><input type="checkbox" class="message-select-checkbox"></div><img src="${avatarSrc}" alt="avatar" class="${avatarClass}"><div class="message-content">${displayNameHtml}<div class="bubble-and-tag-wrapper"><div class="${bubbleClass}">${bubbleContent}</div>${detailContent}${timestampHtml}</div></div>`;
 
             const avatarEl = messageRow.querySelector('.message-avatar');
-            if (!isTyping && !isReadOnly) { // 增加 isReadOnly 判断
+            if (!isTyping && !isReadOnly) {
                 avatarEl.style.cursor = 'pointer';
+
+                let clickTimer = null;
+                let clickCount = 0;
+
                 avatarEl.addEventListener('click', (e) => {
-                    if (appState.selectionMode.active) {
-                        const checkbox = messageRow.querySelector('.message-select-checkbox');
-                        if (checkbox) checkbox.checked = !checkbox.checked;
-                        EventManager.handleMessageSelection({ target: checkbox });
-                        return;
-                    }
-                    if (msg.type === 'received') {
-                        // 核心修复：传递 senderId 而不是 senderInfo 对象
-                        // 这样 showPersonaModal 就会去数据库获取最新的数据
-                        this.showPersonaModal(msg.senderId);
-                    } else if (msg.type === 'sent') {
-                        AIHandler.handleRegenerateRequest(msg.messageId);
+                    clickCount++;
+
+                    if (clickCount === 1) {
+                        clickTimer = setTimeout(() => {
+                            // Single Click Logic
+                            if (appState.selectionMode.active) {
+                                const checkbox = messageRow.querySelector('.message-select-checkbox');
+                                if (checkbox) checkbox.checked = !checkbox.checked;
+                                EventManager.handleMessageSelection({ target: checkbox });
+                            } else if (msg.type === 'received') {
+                                this.showPersonaModal(msg.senderId);
+                            } else if (msg.type === 'sent') {
+                                AIHandler.handleRegenerateRequest(msg.messageId);
+                            }
+                            clickCount = 0;
+                        }, 300); // 300ms window for double click
+                    } else if (clickCount === 2) {
+                        // Double Click Logic
+                        clearTimeout(clickTimer);
+                        if (!appState.selectionMode.active) {
+                            EventManager.handlePatRequest(msg.type === 'sent' ? 'myProfile' : msg.senderId);
+                        }
+                        clickCount = 0;
                     }
                 });
             }
@@ -5735,6 +5769,11 @@
                 messageElement.textContent = msg.content;
             } else if (msg.segmentType === 'narrator') {
                 messageElement = await this.createNarratorNoticeElement(msg);
+            } else if (msg.segmentType === 'pat_a_pat') {
+                messageElement = document.createElement('div');
+                messageElement.className = 'pat-notice';
+                messageElement.id = msg.messageId;
+                messageElement.textContent = msg.content.displayText;
             } else {
                 // 使用我们刚刚获取到的最新信息来创建元素
                 messageElement = await this.createMessageElement(msg, freshSenderInfo, isTyping);
@@ -7238,10 +7277,19 @@ async showAutoSummaryModal(entityId, isGroup) {
 礼物介绍：xxx（不超过50字）
 寄语：xxx（简单一句话）
 </礼物>
-11. **心声 (强制要求)**: 在你本次所有消息内容之后，你必须以【心声|角色名|你的心声内容】的格式来结束你的整个回复。**字数不超过30字。**
-12. **随笔 (概率出现)**: 你有一定概率会在【心声】之后，额外写一段「随笔|角色名|你的随笔内容」。这段随笔是角色在当前情境下，有感而发的一些思考或经历，可以与当前对话内容相关，也可以是独立的小故事或心情记录。字数请控制在50到250字之间。
-13. **严禁事项(1)**：绝不允许你代入玩家（“{PLAYER_NAME}”）的角色发言或为其生成心声。
-14. **严禁事项(2)**：你的回复内容中，不要使用括号 ()、星号 ** 或其他任何符号来描述角色的动作、表情或内心活动。
+11. **拍一拍**: 当你想表达一些俏皮、提醒或想互动但无话可说的场景时，可以使用拍一拍。你必须使用被拍者的自定义动作和内容，使用此格式：<拍一拍>拍人角色名 (被拍人设定的动作) 被拍角色名 (被拍人设定的内容)</拍一拍>。
+例如，如果玩家的拍一拍内容是“被弹飞了”，则格式为：<拍一拍>33 拍了拍 {PLAYER_NAME} 被弹飞了</拍一拍>。
+绝对不能用拍人者的自定义动作和内容来回复，这是错误的。
+12. **修改拍一拍**: 当角色基于聊天语境下想修改自己的拍一拍设置时，使用此格式：
+<修改拍一拍>
+修改人：角色名
+拍一拍动作：xxx（不超过5个字，例如:捏了捏）
+拍一拍内容：xxx（不超过20个字，例如:的脸，并说好软好软;或者:的头,被弹飞了）
+</修改拍一拍>
+13. **心声 (强制要求)**: 在你本次所有消息内容之后，你必须以【心声|角色名|你的心声内容】的格式来结束你的整个回复。**字数不超过30字。**
+14. **随笔 (概率出现)**: 你有一定概率会在【心声】之后，额外写一段「随笔|角色名|你的随笔内容」。这段随笔是角色在当前情境下，有感而发的一些思考或经历，可以与当前对话内容相关，也可以是独立的小故事或心情记录。字数请控制在50到250字之间。
+15. **严禁事项(1)**：绝不允许你代入玩家（“{PLAYER_NAME}”）的角色发言或为其生成心声。
+16. **严禁事项(2)**：你的回复内容中，不要使用括号 ()、星号 ** 或其他任何符号来描述角色的动作、表情或内心活动。
 ---
 现在，请根据以上信息，对玩家的最新消息进行回应。`,
 
@@ -7265,10 +7313,19 @@ async showAutoSummaryModal(entityId, isGroup) {
 礼物介绍：xxx（不超过50字）
 寄语：xxx（简单一句话）
 </礼物>
-11. **心声 (强制要求)**: 在你本次所有消息内容之后，你必须以【心声|角色名|你的心声内容】的格式来结束你的整个回复。字数不超过30字。
-12. **随笔 (概率出现)**: 你有一定概率会在【心声】之后，额外写一段「随笔|角色名|你的随笔内容」。这段随笔是角色在当前情境下，有感而发的一些思考或经历，可以与当前对话内容相关，也可以是独立的小故事或心情记录。字数请控制在50到250字之间。
-13. **严禁事项(1)**：绝不允许你代入玩家（“{PLAYER_NAME}”）的角色发言或为其生成心声。
-14. **严禁事项(2)**：你的回复内容中，不要使用括号 ()、星号 ** 或其他任何符号来描述角色的动作、表情或内心活动。
+11. **拍一拍**: 当你想表达一些俏皮、提醒或想互动但无话可说的场景时，可以使用拍一拍。你必须使用被拍者的自定义动作和内容，使用此格式：<拍一拍>拍人角色名 (被拍人设定的动作) 被拍角色名 (被拍人设定的内容)</拍一拍>。
+例如，如果玩家的拍一拍内容是“被弹飞了”，则格式为：<拍一拍>33 拍了拍 {PLAYER_NAME} 被弹飞了</拍一拍>。
+绝对不能用拍人者的自定义动作和内容来回复，这是错误的。
+12. **修改拍一拍**: 当角色基于聊天语境想修改自己的拍一拍设置时，使用此格式：
+<修改拍一拍>
+修改人：角色名
+拍一拍动作：xxx（不超过5个字，例如:捏了捏）
+拍一拍内容：xxx（不超过20个字，例如:的脸，并说好软好软;或者:的头,被弹飞了）
+</修改拍一拍>
+13. **心声 (强制要求)**: 在你本次所有消息内容之后，你必须以【心声|角色名|你的心声内容】的格式来结束你的整个回复。字数不超过30字。
+14. **随笔 (概率出现)**: 你有一定概率会在【心声】之后，额外写一段「随笔|角色名|你的随笔内容」。这段随笔是角色在当前情境下，有感而发的一些思考或经历，可以与当前对话内容相关，也可以是独立的小故事或心情记录。字数请控制在50到250字之间。
+15. **严禁事项(1)**：绝不允许你代入玩家（“{PLAYER_NAME}”）的角色发言或为其生成心声。
+16. **严禁事项(2)**：你的回复内容中，不要使用括号 ()、星号 ** 或其他任何符号来描述角色的动作、表情或内心活动。
 ---
 现在，请根据以上信息，开始你的主动发言。`,
 
@@ -7298,7 +7355,15 @@ async showAutoSummaryModal(entityId, isGroup) {
                         case 'red-packet': return `[${senderName}|红包|${msg.cardData.title}|￥${msg.cardData.amount.toFixed(2)}|${msg.cardData.count}]`;
                         case 'image_simulated': return `[${senderName}|图片描述|${msg.cardData.description}]`; 
                         case 'gift': return `<礼物>\n发送方：${senderName}\n接收方：${recipientName}\n礼物名称：${msg.cardData.name}\n礼物价格：${msg.cardData.price}\n礼物介绍：${msg.cardData.description || '无'}\n寄语：${msg.cardData.message}\n</礼物>`;
-                        case 'forward_custom': return msg.content;
+                        case 'pat_a_pat':
+                            const pat = msg.content;
+                            // 修复：移除括号，并确保内容前有空格
+                            const actionText = pat.action || '拍了拍';
+                            const contentText = pat.content ? ` ${pat.content}` : '';
+                            return `<拍一拍>${pat.patterName} ${actionText} ${pat.patteeName}${contentText}</拍一拍>`;
+                        case 'modify_pat_a_pat':
+                            const mod = msg.content;
+                            return `<修改拍一拍>\n修改人：${mod.modifierName}\n拍一拍动作：${mod.action}\n拍一拍内容：${mod.content}\n</修改拍一拍>`;
                         case 'system': return msg.forAi ? `<系统>${msg.content}</系统>`: '';
                         case 'narrator': return `<旁白>${msg.content}</旁白>`;
                         case 'forwarded_history': return msg.content; // 直接使用已格式化的内容
@@ -7489,17 +7554,17 @@ ${promptLines.join('\n')}
                     chatEntity = await DBHelper.get('groups', chatId);
                     const members = chatEntity.members.map(id => allContacts.find(c => c.id === id)).filter(Boolean);
                     taskPrompt = `你现在正在一个名为“${chatEntity.name}”的群聊中，需要同时扮演以下几位角色：${members.map(m => m.name).join('、')}。你的任务是根据每个角色的性格设定，与群里的“${myProfile.name}”（也就是玩家）进行互动。`;
-                    characterInfoPrompt = `群聊成员资料如下：\n` + members.map(m => `角色名: ${m.name}\n性别: ${m.gender}\n喜好: ${m.likes || '无'}\n厌恶: ${m.dislikes || '无'}\n习惯: ${m.habits || '无'}\n背景: ${m.background || '无'}`).join('\n---\n');
+                    characterInfoPrompt = `群聊成员资料如下：\n` + members.map(m => `角色名: ${m.name}\n性别: ${m.gender}\n喜好: ${m.likes || '无'}\n厌恶: ${m.dislikes || '无'}\n习惯: ${m.habits || '无'}\n拍一拍动作(${m.name}自己设定的): ${m.patAction || '拍了拍'}\n拍一拍内容(${m.name}自己设定的): ${m.patContent || ''}\n背景: ${m.background || '无'}`).join('\n---\n');
                 } else {
                     chatEntity = await DBHelper.get('contacts', chatId);
                     taskPrompt = `你现在正在扮演“${chatEntity.name}”，与“${myProfile.name}”（也就是玩家）进行一对一私聊。`;
-                    characterInfoPrompt = `你的角色资料如下：\n角色名: ${chatEntity.name}\n性别: ${chatEntity.gender}\n喜好: ${chatEntity.likes || '无'}\n厌恶: ${chatEntity.dislikes || '无'}\n习惯: ${chatEntity.habits || '无'}\n背景: ${chatEntity.background || '无'}`;
+                    characterInfoPrompt = `你的角色资料如下：\n角色名: ${chatEntity.name}\n性别: ${chatEntity.gender}\n喜好: ${chatEntity.likes || '无'}\n厌恶: ${chatEntity.dislikes || '无'}\n习惯: ${chatEntity.habits || '无'}\n拍一拍动作(${chatEntity.name}自己设定的): ${chatEntity.patAction || '拍了拍'}\n拍一拍内容(${chatEntity.name}自己设定的): ${chatEntity.patContent || ''}\n背景: ${chatEntity.background || '无'}`;
                 }
 
                 let aiCharactersInChat = isGroup ? chatEntity.members.map(id => allContacts.find(c => c.id === id)).filter(Boolean) : [chatEntity];
                 pendingTransfersPrompt = await this.getPendingTransfersPrompt(chatId, aiCharactersInChat);
 
-                const playerInfoPrompt = `玩家（“${myProfile.name}”）的信息如下：\n性别: ${myProfile.gender}\n背景: ${myProfile.background || '无'}`;
+                const playerInfoPrompt = `玩家（“${myProfile.name}”）的信息如下：\n性别: ${myProfile.gender}\n拍一拍动作: ${myProfile.patAction || '拍了拍'}\n拍一拍内容: ${myProfile.patContent || ''}\n背景: ${myProfile.background || '无'}`;
 
                 let pomodoroPromptSection = '';
                 if (appState.pomodoro && appState.pomodoro.isActive && appState.pomodoro.endTime) {
@@ -7641,7 +7706,6 @@ ${promptLines.join('\n')}
                     }
 
                     const data = await response.json();
-                    console.log("API Response Data:", JSON.stringify(data, null, 2));
                     console.log("API Response Data:", JSON.stringify(data, null, 2));
 
                     if (provider === 'gemini') {
@@ -7845,6 +7909,14 @@ ${promptLines.join('\n')}
                         case 'red-packet': return `[${senderName}|红包|${msg.cardData.title}|￥${msg.cardData.amount.toFixed(2)}|${msg.cardData.count}]`;
                         case 'image_simulated': return `[${senderName}|图片描述|${msg.cardData.description}]`;
                         case 'gift': return `<礼物>\n发送方：${senderName}\n接收方：${recipientName}\n礼物名称：${msg.cardData.name}\n礼物价格：${msg.cardData.price}\n礼物介绍：${msg.cardData.description || '无'}\n寄语：${msg.cardData.message}\n</礼物>`;
+                        case 'pat_a_pat':
+                            const pat = msg.content;
+                            const actionText = pat.action ? `(${pat.action})` : '拍了拍';
+                            const contentText = pat.content ? `(${pat.content})` : '';
+                            return `<拍一拍>${pat.patterName} ${actionText} ${pat.patteeName} ${contentText}</拍一拍>`;
+                        case 'modify_pat_a_pat':
+                            const mod = msg.content;
+                            return `<修改拍一拍>\n修改人：${mod.modifierName}\n拍一拍动作：${mod.action}\n拍一拍内容：${mod.content}\n</修改拍一拍>`;
                         case 'system': return msg.forAi ? `<系统>${msg.content}</系统>`: '';
                         case 'narrator': return `<旁白>${msg.content}</旁白>`;
                         case 'moment_forward': return msg.content; 
@@ -7904,7 +7976,7 @@ ${promptLines.join('\n')}
                     `群聊成员资料如下：\n` + chatEntity.members.map(id => allContacts.find(c => c.id === id)).filter(Boolean).map(m => `角色名: ${m.name}\n性别: ${m.gender}\n背景: ${m.background || '无'}`).join('\n---\n') :
                     `你的角色资料如下：\n角色名: ${chatEntity.name}\n性别: ${chatEntity.gender}\n背景: ${chatEntity.background || '无'}`;
                 
-                const playerInfoPrompt = `玩家（“${myProfile.name}”）的信息如下：\n性别: ${myProfile.gender}\n背景: ${myProfile.background || '无'}`;
+                const playerInfoPrompt = `玩家（“${myProfile.name}”）的信息如下：\n性别: ${myProfile.gender}\n拍一拍动作: ${myProfile.patAction || '拍了拍'}\n拍一拍内容: ${myProfile.patContent || ''}\n背景: ${myProfile.background || '无'}`;
 
                 const emojiListString = Object.entries(appState.aiEmojiMap).map(([id, desc]) => `${id}：${desc}`).join('\n');
                 const finalPrompt = [
@@ -8118,7 +8190,7 @@ async handleAutoSummaryRequest(chatId) {
                     characterInfoPrompt = `你的角色资料如下：\n角色名: ${contact.name}\n性别: ${contact.gender}\n喜好: ${contact.likes || '无'}\n厌恶: ${contact.dislikes || '无'}\n习惯: ${contact.habits || '无'}\n背景: ${contact.background || '无'}`;
                 }
                 
-                const playerInfoPrompt = `玩家（“${myProfile.name}”）的信息如下：\n性别: ${myProfile.gender}\n背景: ${myProfile.background || '无'}`;
+                const playerInfoPrompt = `玩家（“${myProfile.name}”）的信息如下：\n性别: ${myProfile.gender}\n拍一拍动作: ${myProfile.patAction || '拍了拍'}\n拍一拍内容: ${myProfile.patContent || ''}\n背景: ${myProfile.background || '无'}`;
                 const openingInstruction = `\n---
 紧急指令：这是一个全新的开场。请根据以下“开场白”内容，让角色开始对话，营造出开场氛围。不要提及“开场白”这三个字，直接开始表演。
 开场白内容：
@@ -8205,14 +8277,93 @@ async handleAutoSummaryRequest(chatId) {
                     };
                 };
 
-                const allMessageRegex = /<旁白>([\s\S]*?)<\/旁白>|<系统>([\s\S]*?)<\/系统>|<私聊>([\s\S]*?)<\/私聊>|<礼物>([\s\S]*?)<\/礼物>|『([^』]+?)』|【([^】]+?)】|「([^」]+?)」|{([^{}]+?)}|\[([^\[\]]+?)\]|<((?!系统|私聊)[^>]+?)>/g;
+                const allMessageRegex = /<旁白>([\s\S]*?)<\/旁白>|<系统>([\s\S]*?)<\/系统>|<私聊>([\s\S]*?)<\/私聊>|<礼物>([\s\S]*?)<\/礼物>|<拍一拍>([\s\S]*?)<\/拍一拍>|<修改拍一拍>([\s\S]*?)<\/修改拍一拍>|『([^』]+?)』|【([^】]+?)】|「([^」]+?)」|{([^{}]+?)}|\[([^\[\]]+?)\]|<((?!系统|私聊)[^>]+?)>/g;
 
                 const messagesToSave = [];
                 const contactUpdates = {};
 
-                text.replace(allMessageRegex, (match, narratorContent, systemContent, privateContent, giftContent, cardContent, innerVoiceContent, essayContent, retractedContent, standardContent, emojiContent) => {
-                    
-                    if (narratorContent !== undefined) {
+                const matches = text.matchAll(allMessageRegex);
+                for (const match of matches) {
+                    const [
+                        fullMatch, narratorContent, systemContent, privateContent,
+                        giftContent, patAPatContent, modifyPatContent, cardContent,
+                        innerVoiceContent, essayContent, retractedContent,
+                        standardContent, emojiContent
+                    ] = match;
+
+                    if (patAPatContent !== undefined) {
+                        const content = patAPatContent.trim();
+                        const patMatch = content.match(/(\S+)\s+.*?\s+(\S+)/);
+
+                        if (patMatch) {
+                            const [, patterName, patteeName] = patMatch.map(s => s.trim());
+                            
+                            // FIX: Removed Promise wrapper to ensure sequential execution
+                            const patterContact = contacts.find(c => c.name === patterName);
+                            const myProfile = await EventManager.getPlayerProfileForContext(chatId);
+                            const patteeIsPlayer = patteeName === myProfile.name;
+                            const patteeContact = patteeIsPlayer ? myProfile : contacts.find(c => c.name === patteeName);
+
+                            if (patterContact && patteeContact) {
+                                const finalAction = patteeContact.patAction || '拍了拍';
+                                const finalContent = patteeContact.patContent || '';
+                                const finalDisplayText = `${patterName} ${finalAction} ${patteeName}${finalContent ? ` ${finalContent}` : ''}`;
+
+                                const message = {
+                                    messageId: Utils.generateId('msg'),
+                                    chatId: chatId,
+                                    senderId: patterContact.id,
+                                    timestamp: baseTimestamp + timestampOffset++,
+                                    type: 'received',
+                                    isUnread: chatId !== appState.currentChatId,
+                                    segmentType: 'pat_a_pat',
+                                    content: {
+                                        patterName: patterName,
+                                        patteeName: patteeName,
+                                        action: finalAction,
+                                        content: finalContent,
+                                        displayText: finalDisplayText
+                                    }
+                                };
+                                messagesToSave.push(message);
+                                displayableMessages.push(message);
+                            }
+                        }
+                    } else if (modifyPatContent !== undefined) {
+                        const content = modifyPatContent.trim();
+                        const modifierMatch = content.match(/修改人：(.+)/);
+                        const actionMatch = content.match(/拍一拍动作：(.+)/);
+                        const contentMatch = content.match(/拍一拍内容：(.+)/);
+
+                        const modifierName = modifierMatch ? modifierMatch[1].trim() : null;
+                        if (modifierName) {
+                            const contactToUpdate = contacts.find(c => c.name === modifierName);
+                            if (contactToUpdate) {
+                                if (actionMatch) contactToUpdate.patAction = actionMatch[1].trim();
+                                if (contentMatch) contactToUpdate.patContent = contentMatch[1].trim();
+                                
+                                if (!contactUpdates[contactToUpdate.id]) {
+                                    contactUpdates[contactToUpdate.id] = {};
+                                }
+                                Object.assign(contactUpdates[contactToUpdate.id], {
+                                    patAction: contactToUpdate.patAction,
+                                    patContent: contactToUpdate.patContent
+                                });
+
+                                const systemMessage = {
+                                    messageId: Utils.generateId('msg'),
+                                    chatId: chatId,
+                                    timestamp: baseTimestamp + timestampOffset++,
+                                    type: 'received',
+                                    content: `${modifierName} 更新了自己的拍一拍`,
+                                    segmentType: 'system',
+                                    forAi: false
+                                };
+                                messagesToSave.push(systemMessage);
+                                displayableMessages.push(systemMessage);
+                            }
+                        }
+                    } else if (narratorContent !== undefined) {
                         const message = { 
                             messageId: Utils.generateId('msg'), 
                             chatId: chatId,
@@ -8255,7 +8406,7 @@ async handleAutoSummaryRequest(chatId) {
                                     await DBHelper.put('messages', privateMessage);
                                     await UIManager.updateChatMetadata(sender.id, privateMessage, 1);
                                     UIManager.showTopNotification(privateMessage);
-                                    UIManager.renderMessagesListPage(); // 刷新消息列表以显示未读
+                                    UIManager.renderMessagesListPage();
                                 })();
                             }
                         }
@@ -8265,11 +8416,11 @@ async handleAutoSummaryRequest(chatId) {
                         const recipientMatch = content.match(/接收方：(.+)/);
                         const nameMatch = content.match(/礼物名称：(.+)/);
                         const priceMatch = content.match(/礼物价格：(.+)/);
-                        const descMatch = content.match(/礼物介绍：([\s\S]+?)寄语：/); // 非贪婪匹配
+                        const descMatch = content.match(/礼物介绍：([\s\S]+?)寄语：/);
                         const messageMatch = content.match(/寄语：(.+)/);
 
                         const senderName = senderMatch ? senderMatch[1].trim() : null;
-                        if (!senderName) return;
+                        if (!senderName) continue;
 
                         const baseMessage = createBaseMessage(senderName);
                         if (baseMessage) {
@@ -8306,14 +8457,14 @@ async handleAutoSummaryRequest(chatId) {
                     } else if (innerVoiceContent !== undefined || essayContent !== undefined) {
                         const content = innerVoiceContent || essayContent;
                         const parts = content.split('|').map(p => p.trim());
-                        if (parts.length !== 3) return;
+                        if (parts.length !== 3) continue;
 
                         const type = parts[0];
                         const senderName = parts[1];
                         const msgContent = parts[2];
                         
                         const sender = contacts.find(c => c.name === senderName);
-                        if (!sender) return;
+                        if (!sender) continue;
 
                         let message;
                         if (type === '心声') {
@@ -8322,12 +8473,11 @@ async handleAutoSummaryRequest(chatId) {
                             message = { messageId: Utils.generateId('msg'), chatId: chatId, senderId: sender.id, content: msgContent, timestamp: baseTimestamp + timestampOffset++, type: 'received', isUnread: false, segmentType: 'essay' };
                             UIManager.showEssayNotification(sender.remark || sender.name, sender.id);
                         } else {
-                            return;
+                            continue;
                         }
                         
                         messagesToSave.push(message);
 
-                        // 将更新任务暂存，而不是立即执行
                         if (!contactUpdates[sender.id]) {
                             contactUpdates[sender.id] = {};
                         }
@@ -8341,7 +8491,7 @@ async handleAutoSummaryRequest(chatId) {
                         if (retractedContent) { bracketType = '{'; innerContent = retractedContent; }
                         else if (standardContent) { bracketType = '['; innerContent = standardContent; }
                         else if (emojiContent) { bracketType = '<'; innerContent = emojiContent; }
-                        else { return; } 
+                        else { continue; } 
 
                         if (bracketType === '<' && innerContent.startsWith('随笔|')) {
                             const parts = innerContent.split('|').map(p => p.trim());
@@ -8354,13 +8504,13 @@ async handleAutoSummaryRequest(chatId) {
                                     UIManager.showEssayNotification(sender.remark || sender.name, sender.id);
                                 }
                             }
-                            return; 
+                            continue; 
                         }
 
                         const parts = innerContent.split('|').map(p => p.trim());
                         const [senderName] = parts;
                         const baseMessage = createBaseMessage(senderName);
-                        if (!baseMessage) return;
+                        if (!baseMessage) continue;
 
                         if (bracketType === '<') {
                             const emojiSetting = baseMessage.senderInfo.allowEmoji;
@@ -8373,22 +8523,20 @@ async handleAutoSummaryRequest(chatId) {
                             }
                             
                             if (!shouldDisplay) {
-                                return; // 直接跳过此表情消息，不进行处理
+                                continue;
                             }
 
                             baseMessage.segmentType = 'emoji-image';
                             baseMessage.content = parts[1];
-                        } else { // 处理 '{' 和 '['
+                        } else {
                             baseMessage.isRetracted = bracketType === '{';
                             baseMessage.toBeRetracted = bracketType === '{';
 
-                            // 检查是否允许撤回
                             if (baseMessage.toBeRetracted && baseMessage.senderInfo.allowRetraction === false) {
-                                baseMessage.toBeRetracted = false; // 不再处理为待撤回状态
-                                baseMessage.isRetracted = false; // 确保它不是已撤回状态
+                                baseMessage.toBeRetracted = false;
+                                baseMessage.isRetracted = false;
                             }
                             
-                            // 正常的其他消息类型判断
                             if (parts.length === 2) { baseMessage.segmentType = 'text'; baseMessage.content = parts[1]; }
                             else if (parts[1] === '领取转账') { 
                                 baseMessage.segmentType = 'transfer-receipt'; 
@@ -8413,7 +8561,7 @@ async handleAutoSummaryRequest(chatId) {
                             displayableMessages.push(baseMessage);
                         }
                     }
-                });
+                }
 
                 // 在批量保存消息前，执行所有暂存的联系人更新
                 for (const [contactId, updates] of Object.entries(contactUpdates)) {
@@ -10284,6 +10432,38 @@ async handleAutoSummaryRequest(chatId) {
                 return baseProfile;
             },
 
+            async handlePatRequest(patteeId) {
+                if (appState.selectionMode.active) return; //
+                const chatId = appState.currentChatId;
+                if (!chatId) return;
+
+                const patter = await this.getPlayerProfileForContext(chatId);
+                const pattee = patteeId === 'myProfile' ? patter : await DBHelper.get('contacts', patteeId);
+                
+                if (!patter || !pattee) return;
+
+                const patAction = pattee.patAction || '拍了拍';
+                const patContent = pattee.patContent || '';
+
+                const displayText = `${patter.name} ${patAction} ${pattee.name}${patContent ? ` ${patContent}` : ''}`;
+
+                const message = {
+                    messageId: Utils.generateId('msg'),
+                    senderId: patter.id, // 新增：明确指定发送者为玩家自己
+                    content: { // Store structured data
+                        patterName: patter.name,
+                        patteeName: pattee.name,
+                        action: patAction,
+                        content: patContent,
+                        displayText: displayText
+                    },
+                    type: 'sent', // Differentiate self-pat
+                    segmentType: 'pat_a_pat',
+                };
+                
+                await this.handlePlayerSendMessage(message);
+            },
+
         async handlePlayerSendMessage(prebuiltMessage = null) {
             const content = messageInput.value.trim();
             if (!prebuiltMessage && (!content || !appState.currentChatId)) return;
@@ -11067,7 +11247,15 @@ if (entity && entity.autoSummaryEnabled && chatMetadata.totalPlayerTurns > 0 && 
                             </select>
                         </div>
                         <div class="form-group">
-                            <label for="profile-background-input">背景资料 (选填)</label>
+                            <label for="profile-pat-action-input">拍一拍动作</label>
+                            <input type="text" id="profile-pat-action-input" value="${profile.patAction || ''}" maxlength="5" placeholder="选填, 例如:拍一拍">
+                        </div>
+                        <div class="form-group">
+                            <label for="profile-pat-content-input">拍一拍内容</label>
+                            <input type="text" id="profile-pat-content-input" value="${profile.patContent || ''}" maxlength="20" placeholder="选填, 例如:的头,被揍了">
+                        </div>
+                        <div class="form-group">
+                            <label for="profile-background-input">背景资料</label>
                             <textarea id="profile-background-input">${profile.background || ''}</textarea>
                         </div>
                         <div class="details-actions" style="margin-top: 20px; flex-direction: row; justify-content: space-around; gap: 10px;">
@@ -11092,6 +11280,8 @@ if (entity && entity.autoSummaryEnabled && chatMetadata.totalPlayerTurns > 0 && 
                                 avatar: newAvatar,
                                 name: newName,
                                 gender: $('#profile-gender-select').value,
+                                patAction: $('#profile-pat-action-input').value.trim(),
+                                patContent: $('#profile-pat-content-input').value.trim(),
                                 background: $('#profile-background-input').value.trim()
                             };
                             
@@ -11139,6 +11329,8 @@ if (entity && entity.autoSummaryEnabled && chatMetadata.totalPlayerTurns > 0 && 
                             $('#profile-avatar-preview').src = selectedPreset.avatar;
                             $('#profile-name-input').value = selectedPreset.name;
                             $('#profile-gender-select').value = selectedPreset.gender;
+                            $('#profile-pat-action-input').value = selectedPreset.patAction || '';
+                            $('#profile-pat-content-input').value = selectedPreset.patContent || '';
                             $('#profile-background-input').value = selectedPreset.background || '';
                             UIManager.showToast(`已加载预设 "${selectedPreset.name}"`);
                         }
@@ -11193,11 +11385,13 @@ if (entity && entity.autoSummaryEnabled && chatMetadata.totalPlayerTurns > 0 && 
                 const existingPreset = isNew ? null : (profile.presets || []).find(p => p.presetId === presetIdToOverwrite);
 
                 const doSave = async (presetName) => {
-                    const newPreset = {
-                        ...currentData,
-                        name: presetName,
-                        presetId: isNew ? Utils.generateId('persona') : presetIdToOverwrite
-                    };
+                        const newPreset = {
+                            ...currentData,
+                            name: presetName,
+                            presetId: isNew ? Utils.generateId('persona') : presetIdToOverwrite,
+                            patAction: $('#profile-pat-action-input').value.trim(),
+                            patContent: $('#profile-pat-content-input').value.trim()
+                        };
 
                     // 直接使用已经获取到的 profile 对象，避免重复读取
                     profile.presets = (profile.presets || []).filter(p => p);
@@ -11410,6 +11604,14 @@ if (entity && entity.autoSummaryEnabled && chatMetadata.totalPlayerTurns > 0 && 
                             <textarea id="add-friend-habits" placeholder="例如：晨跑、运动"></textarea>
                         </div>
                         <div class="form-group">
+                            <label for="add-friend-pat-action">拍一拍动作 (选填)</label>
+                            <input type="text" id="add-friend-pat-action" placeholder="例如：拍了拍" maxlength="5">
+                        </div>
+                        <div class="form-group">
+                            <label for="add-friend-pat-content">拍一拍内容 (选填)</label>
+                            <input type="text" id="add-friend-pat-content" placeholder="例如：的头，被反弹了" maxlength="20">
+                        </div>
+                        <div class="form-group">
                             <label for="add-friend-background">背景资料 (选填)</label>
                             <textarea id="add-friend-background" placeholder="角色的其他资料"></textarea>
                         </div>
@@ -11456,6 +11658,8 @@ if (entity && entity.autoSummaryEnabled && chatMetadata.totalPlayerTurns > 0 && 
                                 likes: $('#add-friend-likes').value.trim(),
                                 dislikes: $('#add-friend-dislikes').value.trim(),
                                 habits: $('#add-friend-habits').value.trim(),
+                                patAction: $('#add-friend-pat-action').value.trim(),
+                                patContent: $('#add-friend-pat-content').value.trim(),
                                 background: $('#add-friend-background').value.trim()
                             };
                             
@@ -13419,16 +13623,16 @@ if (entity && entity.autoSummaryEnabled && chatMetadata.totalPlayerTurns > 0 && 
                             }
 
                         } else {
-                            // --- OpenAI 兼容的通用寻宝逻辑 ---
-                            const base = apiUrlBase.replace(/\/chat\/completions\/?$/, '');
+                            // --- OpenAI 兼容的通用寻宝逻辑 (已更新) ---
+                            // 清理掉常见的API路径后缀，以获取真正的基础URL
+                            const cleanedBase = apiUrlBase.replace(/\/v1beta\/?$|\/v1\/?$|\/chat\/completions\/?$|\/$/, '');
+                            
                             const potentialEndpoints = [
-                                `${base}/v1/models`,
-                                `${base}/models`,
-                                `${base.replace(/\/v1\/?$/, '')}/models`
+                                `${cleanedBase}/v1/models`,
+                                `${cleanedBase}/v1beta/models`, // 新增 v1beta 路径
+                                `${cleanedBase}/models`
                             ];
-                            if (base.endsWith('/v1')) {
-                                potentialEndpoints.push(`${base}/models`);
-                            }
+                            
                             const uniqueEndpoints = [...new Set(potentialEndpoints)];
 
                             let success = false;
@@ -14034,6 +14238,8 @@ handleClickEffect(e) {
                         <div class="form-group"><label for="edit-friend-likes">喜好</label><textarea id="edit-friend-likes">${contact.likes || ''}</textarea></div>
                         <div class="form-group"><label for="edit-friend-dislikes">厌恶</label><textarea id="edit-friend-dislikes">${contact.dislikes || ''}</textarea></div>
                         <div class="form-group"><label for="edit-friend-habits">习惯</label><textarea id="edit-friend-habits">${contact.habits || ''}</textarea></div>
+                        <div class="form-group"><label for="edit-friend-pat-action">拍一拍动作 (5字以内)</label><input type="text" id="edit-friend-pat-action" value="${contact.patAction || ''}" maxlength="5"></div>
+                        <div class="form-group"><label for="edit-friend-pat-content">拍一拍内容 (20字以内)</label><input type="text" id="edit-friend-pat-content" value="${contact.patContent || ''}" maxlength="20"></div>
                         <div class="form-group"><label for="edit-friend-background">背景资料</label><textarea id="edit-friend-background">${contact.background || ''}</textarea></div>
                     `,
                     actions: [
@@ -14050,6 +14256,8 @@ handleClickEffect(e) {
                                 likes: $('#edit-friend-likes').value.trim(),
                                 dislikes: $('#edit-friend-dislikes').value.trim(),
                                 habits: $('#edit-friend-habits').value.trim(),
+                                patAction: $('#edit-friend-pat-action').value.trim(),
+                                patContent: $('#edit-friend-pat-content').value.trim(),
                                 background: $('#edit-friend-background').value.trim()
                             };
                             await DBHelper.put('contacts', updatedContact);
