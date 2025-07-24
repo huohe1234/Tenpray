@@ -4706,6 +4706,24 @@
                     };
                 });
             },
+
+            async batchPut(storeName, items) {
+                if (!items || items.length === 0) {
+                    return Promise.resolve();
+                }
+                return new Promise((resolve, reject) => {
+                    const transaction = this.db.transaction([storeName], 'readwrite');
+                    const store = transaction.objectStore(storeName);
+                    
+                    transaction.oncomplete = () => resolve();
+                    transaction.onerror = (e) => reject(`BatchPut error in ${storeName}: ${e.target.error}`);
+                    
+                    items.forEach(item => {
+                        store.put(item);
+                    });
+                });
+            },
+
             async findLastMessagesBySenderAndTypes(chatId, senderId, typesToFind) {
                 return new Promise((resolve, reject) => {
                     const transaction = this.db.transaction(['messages'], 'readonly');
@@ -5665,13 +5683,15 @@
             if (!isTyping && !isReadOnly) { // 增加 isReadOnly 判断
                 avatarEl.style.cursor = 'pointer';
                 avatarEl.addEventListener('click', (e) => {
-                    if (appState.selectionMode.active) { // 增加选择模式判断
+                    if (appState.selectionMode.active) {
                         const checkbox = messageRow.querySelector('.message-select-checkbox');
                         if (checkbox) checkbox.checked = !checkbox.checked;
                         EventManager.handleMessageSelection({ target: checkbox });
                         return;
                     }
                     if (msg.type === 'received') {
+                        // 核心修复：传递 senderId 而不是 senderInfo 对象
+                        // 这样 showPersonaModal 就会去数据库获取最新的数据
                         this.showPersonaModal(msg.senderId);
                     } else if (msg.type === 'sent') {
                         AIHandler.handleRegenerateRequest(msg.messageId);
@@ -5691,7 +5711,22 @@
 
         async addMessageToDOM(msg, senderInfo, isTyping = false, isAnimating = false) {
             if (msg.isHidden) return;
-            
+
+            // --- 核心修复：在这里获取最新的 senderInfo ---
+            let freshSenderInfo = senderInfo;
+            if (msg.type === 'received' && msg.senderId) {
+                // 对于收到的消息，总是从数据库获取最新的联系人信息
+                freshSenderInfo = await DBHelper.get('contacts', msg.senderId);
+            } else if (msg.type === 'sent') {
+                // 对于发送的消息，获取当前上下文的玩家人设
+                freshSenderInfo = await EventManager.getPlayerProfileForContext(msg.chatId);
+            }
+            // 如果因为某些原因（如角色被删除）找不到信息，提供一个备用对象防止程序崩溃
+            if (!freshSenderInfo) {
+                freshSenderInfo = { name: '未知用户', avatar: Utils.createAvatarDataUrl('#ccc') };
+            }
+            // --- 修复结束 ---
+
             let messageElement;
             if (msg.segmentType === 'system') {
                 messageElement = document.createElement('div');
@@ -5701,7 +5736,8 @@
             } else if (msg.segmentType === 'narrator') {
                 messageElement = await this.createNarratorNoticeElement(msg);
             } else {
-                messageElement = await this.createMessageElement(msg, senderInfo, isTyping, isAnimating);
+                // 使用我们刚刚获取到的最新信息来创建元素
+                messageElement = await this.createMessageElement(msg, freshSenderInfo, isTyping);
             }
             
             if (isTyping && msg.messageId) {
@@ -5784,19 +5820,20 @@
                 });
             },
 
-            async showPersonaModal(contactId) {
-                const contact = await DBHelper.get('contacts', contactId);
+            async showPersonaModal(contactOrId) {
+                let contact;
+                // 核心修改：判断传入的是对象还是ID，如果是ID就从数据库获取最新数据
+                if (typeof contactOrId === 'string') {
+                    contact = await DBHelper.get('contacts', contactOrId);
+                } else {
+                    contact = contactOrId;
+                }
+
                 if (!contact) return;
-        
-                // 使用新的高效方法反向查找最新的 "心声" 和 "随笔"
-                const lastSpecialMessages = await DBHelper.findLastMessagesBySenderAndTypes(
-                    appState.currentChatId, 
-                    contactId, 
-                    ['inner_voice', 'essay']
-                );
-        
-                const lastInnerVoice = lastSpecialMessages.inner_voice;
-                const lastEssay = lastSpecialMessages.essay;
+                
+                // 后续逻辑保持不变，但现在使用的 contact 对象保证是最新鲜的
+                const lastInnerVoice = contact.lastInnerVoiceId ? await DBHelper.get('messages', contact.lastInnerVoiceId) : null;
+                const lastEssay = contact.lastEssayId ? await DBHelper.get('messages', contact.lastEssayId) : null;
         
                 let bodyHtml = `
                     <div style="display: flex; align-items: center; gap: 15px; margin-bottom: 20px;">
@@ -5816,13 +5853,17 @@
                      bodyHtml += `<div class="persona-modal-card note-paper"><h4>随笔</h4><p>${lastEssay.content}</p></div>`;
                 }
         
+                if (!lastInnerVoice && !lastEssay) {
+                    return; 
+                }
+
                 this.showModal({
                     title: "角色洞察",
                     body: bodyHtml,
                     actions: [
                         { text: '进入聊天', class: 'btn-primary', handler: () => {
                             this.hideModal();
-                            this.openChat(contactId); 
+                            this.openChat(contact.id); 
                         }}
                     ]
                 });
@@ -8167,6 +8208,7 @@ async handleAutoSummaryRequest(chatId) {
                 const allMessageRegex = /<旁白>([\s\S]*?)<\/旁白>|<系统>([\s\S]*?)<\/系统>|<私聊>([\s\S]*?)<\/私聊>|<礼物>([\s\S]*?)<\/礼物>|『([^』]+?)』|【([^】]+?)】|「([^」]+?)」|{([^{}]+?)}|\[([^\[\]]+?)\]|<((?!系统|私聊)[^>]+?)>/g;
 
                 const messagesToSave = [];
+                const contactUpdates = {};
 
                 text.replace(allMessageRegex, (match, narratorContent, systemContent, privateContent, giftContent, cardContent, innerVoiceContent, essayContent, retractedContent, standardContent, emojiContent) => {
                     
@@ -8261,23 +8303,38 @@ async handleAutoSummaryRequest(chatId) {
                             messagesToSave.push(baseMessage);
                             displayableMessages.push(baseMessage);
                         }
-                    } else if (innerVoiceContent !== undefined) { // 捕获【】格式
-                        const parts = innerVoiceContent.split('|').map(p => p.trim());
-                        const sender = contacts.find(c => c.name === parts[1]);
-                        if (sender && parts.length === 3) {
-                            if (parts[0] === '心声') {
-                                messagesToSave.push({ messageId: Utils.generateId('msg'), chatId: chatId, senderId: sender.id, content: parts[2], timestamp: baseTimestamp + timestampOffset++, type: 'received', isUnread: false, segmentType: 'inner_voice' });
-                            } else if (parts[0] === '随笔') { // 兼容【随笔】格式
-                                messagesToSave.push({ messageId: Utils.generateId('msg'), chatId: chatId, senderId: sender.id, content: parts[2], timestamp: baseTimestamp + timestampOffset++, type: 'received', isUnread: false, segmentType: 'essay' });
-                                UIManager.showEssayNotification(sender.remark || sender.name, sender.id);
-                            }
-                        }
-                    } else if (essayContent !== undefined) { // 捕获「」格式
-                        const parts = essayContent.split('|').map(p => p.trim());
-                        const sender = contacts.find(c => c.name === parts[1]);
-                        if (sender && parts[0] === '随笔' && parts.length === 3) {
-                            messagesToSave.push({ messageId: Utils.generateId('msg'), chatId: chatId, senderId: sender.id, content: parts[2], timestamp: baseTimestamp + timestampOffset++, type: 'received', isUnread: false, segmentType: 'essay' });
+                    } else if (innerVoiceContent !== undefined || essayContent !== undefined) {
+                        const content = innerVoiceContent || essayContent;
+                        const parts = content.split('|').map(p => p.trim());
+                        if (parts.length !== 3) return;
+
+                        const type = parts[0];
+                        const senderName = parts[1];
+                        const msgContent = parts[2];
+                        
+                        const sender = contacts.find(c => c.name === senderName);
+                        if (!sender) return;
+
+                        let message;
+                        if (type === '心声') {
+                            message = { messageId: Utils.generateId('msg'), chatId: chatId, senderId: sender.id, content: msgContent, timestamp: baseTimestamp + timestampOffset++, type: 'received', isUnread: false, segmentType: 'inner_voice' };
+                        } else if (type === '随笔') {
+                            message = { messageId: Utils.generateId('msg'), chatId: chatId, senderId: sender.id, content: msgContent, timestamp: baseTimestamp + timestampOffset++, type: 'received', isUnread: false, segmentType: 'essay' };
                             UIManager.showEssayNotification(sender.remark || sender.name, sender.id);
+                        } else {
+                            return;
+                        }
+                        
+                        messagesToSave.push(message);
+
+                        // 将更新任务暂存，而不是立即执行
+                        if (!contactUpdates[sender.id]) {
+                            contactUpdates[sender.id] = {};
+                        }
+                        if (type === '心声') {
+                            contactUpdates[sender.id].lastInnerVoiceId = message.messageId;
+                        } else if (type === '随笔') {
+                            contactUpdates[sender.id].lastEssayId = message.messageId;
                         }
                     } else { 
                         let bracketType, innerContent;
@@ -8358,9 +8415,18 @@ async handleAutoSummaryRequest(chatId) {
                     }
                 });
 
-                for (const msg of messagesToSave) {
-                    await DBHelper.put('messages', msg);
+                // 在批量保存消息前，执行所有暂存的联系人更新
+                for (const [contactId, updates] of Object.entries(contactUpdates)) {
+                    const contactToUpdate = await DBHelper.get('contacts', contactId);
+                    if (contactToUpdate) {
+                        Object.assign(contactToUpdate, updates);
+                        await DBHelper.put('contacts', contactToUpdate);
+                    }
                 }
+
+
+
+                await DBHelper.batchPut('messages', messagesToSave);
 
                 if (newGroupNameFromAI && chatId.startsWith('group-')) {
                     const group = await DBHelper.get('groups', chatId);
@@ -11560,26 +11626,30 @@ if (entity && entity.autoSummaryEnabled && chatMetadata.totalPlayerTurns > 0 && 
                             }
 
                             const newGroup = {
-                                id: Utils.generateId('group'),
+                                id: Utils.generateId('group-'),
                                 createdAt: Date.now(),
                                 name,
                                 avatar: $('#create-group-avatar-preview').src,
                                 members: selectedMembers,
-                                creatorId: creatorId 
+                                creatorId: creatorId
                             };
                             
                             await DBHelper.put('groups', newGroup);
 
+                            // --- 创建聊天元数据，让新群聊显示在消息列表 ---
+                            const placeholderMessage = {
+                                content: '群聊已创建，开始聊天吧！',
+                                timestamp: Date.now(),
+                                segmentType: 'system', // 仅用于元数据
+                                type: 'received' // 仅用于元数据
+                            };
+                            await UIManager.updateChatMetadata(newGroup.id, placeholderMessage, 0);
                             
+                            // --- 保留并优化原有的开场白创建逻辑 ---
                             try {
                                 const creatorContact = creatorId === myProfile.id ? myProfile : await DBHelper.get('contacts', creatorId);
-                                const memberNames = (await Promise.all(
-                                    selectedMembers.map(id => DBHelper.get('contacts', id))
-                                )).filter(Boolean).map(c => c.name).join('、');
-
-                                
-                                const creatorNameForScene = creatorContact ? creatorContact.name : "一位神秘的朋友";
-                                const defaultSceneContent = `${creatorNameForScene} 创建了群聊 “${newGroup.name}”，群聊成员有：${memberNames}、${myProfile.name}。现在，大家开始积极发言吧！`;
+                                const creatorNameForScene = creatorContact ? (creatorContact.remark || creatorContact.name) : "一位神秘的朋友";
+                                const defaultSceneContent = `${creatorNameForScene} 创建了群聊 “${newGroup.name}”，群聊成员有：${invitedNames}、${myProfile.name}。现在，大家开始积极发言吧！`;
                                 const defaultScene = {
                                     id: Utils.generateId('scene'),
                                     groupId: newGroup.id,
@@ -13308,6 +13378,7 @@ if (entity && entity.autoSummaryEnabled && chatMetadata.totalPlayerTurns > 0 && 
 
                 // 获取可用模型按钮的逻辑
                 $('#fetch-models-btn').addEventListener('click', async () => {
+                    const provider = $('#api-provider').value;
                     const apiUrlBase = $('#api-url').value.trim();
                     const apiKey = $('#api-key').value.trim();
                     const modelSelect = $('#api-model-select');
@@ -13324,76 +13395,98 @@ if (entity && entity.autoSummaryEnabled && chatMetadata.totalPlayerTurns > 0 && 
                     fetchBtn.disabled = true;
                     UIManager.showToast("正在获取模型列表...");
 
+                    try {
+                        let data;
+                        if (provider === 'gemini') {
+                            // --- Gemini 特别通道 ---
+                            const geminiModelsUrl = `${apiUrlBase.replace(/\/$/, '')}?key=${apiKey}`;
+                            console.log("Attempting to fetch models for Gemini from:", geminiModelsUrl);
+                            const response = await fetch(geminiModelsUrl);
+                            if (!response.ok) {
+                                throw new Error(`Gemini请求失败，状态码: ${response.status}`);
+                            }
+                            data = await response.json();
+                            // Gemini返回的数据结构是 { "models": [...] }
+                            // 并且模型信息在 model.name 中，例如 "models/gemini-1.5-pro-latest"
+                            if (data.models && Array.isArray(data.models)) {
+                                const modelNames = data.models
+                                    .map(model => model.name.replace('models/', ''))
+                                    // 过滤出支持内容生成的模型
+                                    .filter(name => data.models.find(m => m.name.endsWith(name))?.supportedGenerationMethods.includes("generateContent"));
+                                populateSelectWithOptions(modelNames);
+                            } else {
+                                throw new Error("Gemini API返回了无效的模型列表格式");
+                            }
+
+                        } else {
+                            // --- OpenAI 兼容的通用寻宝逻辑 ---
+                            const base = apiUrlBase.replace(/\/chat\/completions\/?$/, '');
+                            const potentialEndpoints = [
+                                `${base}/v1/models`,
+                                `${base}/models`,
+                                `${base.replace(/\/v1\/?$/, '')}/models`
+                            ];
+                            if (base.endsWith('/v1')) {
+                                potentialEndpoints.push(`${base}/models`);
+                            }
+                            const uniqueEndpoints = [...new Set(potentialEndpoints)];
+
+                            let success = false;
+                            for (const endpoint of uniqueEndpoints) {
+                                try {
+                                    console.log("Attempting to fetch models from (OpenAI compatible):", endpoint);
+                                    const response = await fetch(endpoint, {
+                                        method: 'GET',
+                                        headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' }
+                                    });
+
+                                    if (!response.ok) {
+                                        throw new Error(`请求失败，状态码: ${response.status}`);
+                                    }
+                                    
+                                    data = await response.json();
+                                    const modelsList = data.data || data;
+                                    if (Array.isArray(modelsList)) {
+                                        const modelIds = modelsList.map(model => typeof model === 'object' ? model.id : model).filter(Boolean);
+                                        populateSelectWithOptions(modelIds);
+                                        success = true;
+                                        break;
+                                    }
+                                } catch (error) {
+                                    console.warn(`从 ${endpoint} 获取失败:`, error.message);
+                                }
+                            }
+
+                            if (!success) {
+                                throw new Error("未能获取到模型列表，不支持获取该url的模型或你的Key填写错误");
+                            }
+                        }
+                    } catch (error) {
+                        console.error("获取模型列表失败:", error);
+                        UIManager.showToast(`获取失败: ${error.message}`);
+                    } finally {
+                        fetchBtn.innerHTML = originalBtnText;
+                        fetchBtn.disabled = false;
+                    }
+
                     // 辅助函数，用来填充下拉列表
-                    const populateModels = (data) => {
-                        // API返回的数据结构可能是 data.data 或直接就是 data
-                        const models = data.data || data;
-                        
-                        if (!Array.isArray(models) || models.length === 0) {
+                    function populateSelectWithOptions(options) {
+                        if (!Array.isArray(options) || options.length === 0) {
                             throw new Error("API返回了空或无效的模型列表");
                         }
 
                         modelSelect.innerHTML = ''; // 清空旧选项
-                        models.forEach(model => {
-                            // 模型ID可能在 model.id 或直接是 model (如果返回的是字符串数组)
-                            const modelId = typeof model === 'object' ? model.id : model;
-                            if (modelId) {
-                                const option = document.createElement('option');
-                                option.value = modelId;
-                                option.textContent = modelId;
-                                modelSelect.appendChild(option);
-                            }
-                        });
+                        options.forEach(optionValue => {
+                            const option = document.createElement('option');
+                            option.value = optionValue;
+                            option.textContent = optionValue;
+                            modelSelect.appendChild(option);
+});
 
                         modelSelect.style.display = 'block';
                         modelInput.style.display = 'none';
-                        UIManager.showToast(`成功获取 ${models.length} 个模型！`);
-                    };
-
-                    // 尝试从给定URL获取
-                    const tryFetch = async (url) => {
-                        console.log("正在尝试从URL获取:", url);
-                        const response = await fetch(url, {
-                            method: 'GET',
-                            headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' }
-                        });
-
-                        if (!response.ok) {
-                            throw new Error(`请求失败，状态码: ${response.status}`);
-                        }
-                        return await response.json();
-                    };
-
-                    // 构造几种可能的模型列表URL
-                    const base = apiUrlBase.replace(/\/chat\/completions\/?$/, '');
-                    const potentialEndpoints = [
-                        `${base}/v1/models`,
-                        `${base}/models`,
-                        `${base.replace(/\/v1\/?$/, '')}/models`
-                    ];
-                     if (base.endsWith('/v1')) {
-                         potentialEndpoints.push(`${base}/models`);
+                        UIManager.showToast(`成功获取 ${options.length} 个模型！`);
                     }
-                    const uniqueEndpoints = [...new Set(potentialEndpoints)]; // 去重
-
-                    let success = false;
-                    for (const endpoint of uniqueEndpoints) {
-                        try {
-                            const data = await tryFetch(endpoint);
-                            populateModels(data);
-                            success = true;
-                            break; 
-                        } catch (error) {
-                            console.warn(`从 ${endpoint} 获取失败:`, error.message);
-                        }
-                    }
-
-                    if (!success) {
-                        UIManager.showToast(`获取失败: 尝试了多种方式，都未能获取到模型列表。请检查URL或联系API提供商。`);
-                    }
-
-                    fetchBtn.innerHTML = originalBtnText;
-                    fetchBtn.disabled = false;
                 });
                 
                 const toggleBtn = $('#toggle-api-key-visibility');
@@ -13415,64 +13508,69 @@ if (entity && entity.autoSummaryEnabled && chatMetadata.totalPlayerTurns > 0 && 
                     const apiUrlInput = $('#api-url');
                     const modelSelect = $('#api-model-select');
                     const modelInput = $('#api-model-input');
-                    const currentModel = AIHandler.apiConfig.model;
-                    
-                    modelSelect.innerHTML = '';
-                    
+                    const savedModel = config.model; // 使用从数据库加载的config
+
                     const modelOptions = {
                         gemini: [
                             "gemini-2.5-flash", "gemini-2.5-pro", "gemini-1.5-flash-latest", "gemini-1.5-pro-latest"
                         ],
                         siliconflow: [
-                            "deepseek-ai/DeepSeek-V3", "deepseek-ai/DeepSeek-R1-0528-Qwen3-8B", "Qwen/Qwen2-7B-Instruct", "Qwen/Qwen2-72B-Instruct", "01-ai/Yi-1.5-34B-Chat", "mistralai/Mistral-7B-Instruct-v0.2", "mistralai/Mixtral-8x7B-Instruct-v0.1"
+                            "deepseek-ai/DeepSeek-V3", "deepseek-ai/DeepSeek-R1-0528-Qwen3-8B", "Qwen/Qwen2-7B-Instruct", "Qwen/Qwen2-72B-Instruct"
                         ],
                         paioupu: [
                             "deepseek/deepseek-v3"
-                        ]
-                    };
-
-                    const setOptions = (options) => {
-                        modelSelect.innerHTML = options.map(opt => `<option value="${opt}">${opt}</option>`).join('');
-                        modelSelect.value = options.includes(currentModel) ? currentModel : options[0];
+                        ],
+                        // 为自定义和火山留空，因为它们使用输入框
+                        volcano: [],
+                        custom: []
                     };
                     
-                    switch (provider) {
-                        case 'gemini':
-                            apiUrlInput.value = 'https://generativelanguage.googleapis.com/v1beta/models/';
-                            modelSelect.style.display = 'block';
-                            modelInput.style.display = 'none';
-                            setOptions(modelOptions.gemini);
-                            break;
-                        case 'siliconflow':
-                            apiUrlInput.value = 'https://api.siliconflow.cn/v1/chat/completions';
-                            modelSelect.style.display = 'block';
-                            modelInput.style.display = 'none';
-                            setOptions(modelOptions.siliconflow);
-                            break;
-                        case 'paioupu':
-                            apiUrlInput.value = 'https://api.ppinfra.com/v3/openai';
-                            modelSelect.style.display = 'block';
-                            modelInput.style.display = 'none';
-                            setOptions(modelOptions.paioupu);
-                            break;
-                        case 'volcano':
-                            apiUrlInput.value = 'https://ark.cn-beijing.volces.com/api/v3';
-                            modelSelect.style.display = 'none';
-                            modelInput.style.display = 'block';
-                            modelInput.value = currentModel;
-                            break;
-                        case 'custom':
-                            modelSelect.style.display = 'none';
-                            modelInput.style.display = 'block';
-                            modelInput.value = currentModel;
-                            break;
+                    const providerData = {
+                        gemini: { url: 'https://generativelanguage.googleapis.com/v1beta/models/', models: modelOptions.gemini, defaultModel: 'gemini-1.5-flash-latest' },
+                        siliconflow: { url: 'https://api.siliconflow.cn/v1/chat/completions', models: modelOptions.siliconflow, defaultModel: 'deepseek-ai/DeepSeek-V2-Chat' },
+                        paioupu: { url: 'https://api.ppinfra.com/v3/openai/chat/completions', models: modelOptions.paioupu, defaultModel: 'deepseek/deepseek-v2' },
+                        volcano: { url: 'https://ark.cn-beijing.volces.com/api/v3', models: [], defaultModel: '' },
+                        custom: { url: '', models: [], defaultModel: '' }
+                    };
+
+                    const data = providerData[provider] || providerData.custom;
+                    apiUrlInput.value = config.url || data.url;
+
+                    if (provider === 'custom' || provider === 'volcano') {
+                        modelSelect.style.display = 'none';
+                        modelInput.style.display = 'block';
+                        modelInput.value = savedModel;
+                    } else {
+                        modelSelect.style.display = 'block';
+                        modelInput.style.display = 'none';
+                        
+                        let finalOptions = [...data.models];
+
+                        // --- 核心修复逻辑 ---
+                        // 如果已保存的模型不在我们的预设列表里，就把它加进去！
+                        if (savedModel && !finalOptions.includes(savedModel)) {
+                            finalOptions.unshift(savedModel);
+                        }
+
+                        modelSelect.innerHTML = finalOptions.map(opt => `<option value="${opt}">${opt}</option>`).join('');
+                        
+                        // 现在可以安全地设置值了，因为它肯定在列表里
+                        modelSelect.value = savedModel || data.defaultModel;
                     }
                 };
-                
+
                 $('#api-provider').addEventListener('change', () => {
-                    if ($('#api-provider').value === 'custom') {
-                        $('#api-url').value = '';
-                    }
+                    // 切换提供商时，重置URL和模型以使用新默认值
+                    const provider = $('#api-provider').value;
+                    const providerDefaults = {
+                        gemini: { url: 'https://generativelanguage.googleapis.com/v1beta/models/', model: 'gemini-1.5-flash-latest' },
+                        siliconflow: { url: 'https://api.siliconflow.cn/v1/chat/completions', model: 'deepseek-ai/DeepSeek-V2-Chat' },
+                        paioupu: { url: 'https://api.ppinfra.com/v3/openai/chat/completions', model: 'deepseek/deepseek-v2' },
+                        volcano: { url: 'https://ark.cn-beijing.volces.com/api/v3', model: '' },
+                        custom: { url: '', model: '' }
+                    };
+                    config.url = providerDefaults[provider].url;
+                    config.model = providerDefaults[provider].model;
                     updateApiFields();
                 });
                 updateApiFields(); 
