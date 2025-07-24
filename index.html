@@ -4439,7 +4439,7 @@
 
             async init() {
                 
-                this.DB_VERSION = 18;
+                this.DB_VERSION = 19;
 
                 return new Promise((resolve, reject) => {
                     if (this.db) {
@@ -6162,6 +6162,46 @@
                 setTimeout(hideAndRemove, 4000);
             },
 
+            async showMomentNotification(moment) {
+                const container = $('#top-notification-container');
+                const banner = document.createElement('div');
+                banner.className = 'notification-banner';
+
+                const allContacts = await DBHelper.getAll('contacts');
+                const author = allContacts.find(c => c.id === moment.authorId);
+                
+                if (!author) return;
+
+                banner.innerHTML = `
+                    <img src="${author.avatar}" alt="avatar" class="notification-avatar">
+                    <div class="notification-content">
+                        <div class="notification-header">
+                            <span class="notification-name">${author.remark || author.name} 发布了新动态</span>
+                        </div>
+                        <p class="notification-message">${moment.content}</p>
+                    </div>
+                `;
+
+                const hideAndRemove = () => {
+                    if (container.contains(banner)) {
+                         banner.style.animation = 'notification-exit 0.5s forwards';
+                         setTimeout(() => {
+                            if (container.contains(banner)) container.removeChild(banner);
+                         }, 500);
+                    }
+                };
+
+                banner.addEventListener('click', async () => {
+                    await this.navigateTo('moments');
+                    await this.renderMomentsPage(moment.circleId);
+                    hideAndRemove();
+                });
+                
+                container.appendChild(banner);
+
+                setTimeout(hideAndRemove, 3000);
+            },
+
             renderPomodoroPage() {
                 const { isActive, goal } = appState.pomodoro;
                 const timerDisplay = $('#pomodoro-timer-display');
@@ -6698,6 +6738,11 @@
     <span>自动总结</span>
     <i class="fas fa-chevron-right"></i>
 </div>
+                            <div class="setting-item" id="sidebar-bind-circle">
+                                <i class="fas fa-link"></i>
+                                <span>绑定朋友圈</span>
+                                <i class="fas fa-chevron-right"></i>
+                            </div>
                             <div class="setting-item" id="sidebar-forward-chat-friend">
                                 <i class="fas fa-share-square"></i>
                                 <span>多选消息</span>
@@ -6742,6 +6787,7 @@
                 $('#sidebar-opening-scene-friend').addEventListener('click', () => EventManager.handleOpeningSceneSettings(contact.id, false));
                 $('#sidebar-chat-background').addEventListener('click', () => EventManager.handleChatBackgroundSettings(contact.id, false));
                 $('#sidebar-auto-summary').addEventListener('click', () => EventManager.handleAutoSummarySettings(contact.id, false));
+                $('#sidebar-bind-circle').addEventListener('click', () => EventManager.showCircleBindingModal(contact.id, false));
                 $('#sidebar-forward-chat-friend').addEventListener('click', () => {
                     UIManager.hideSidebar();
                     EventManager.toggleSelectionMode();
@@ -7207,6 +7253,7 @@ async showAutoSummaryModal(entityId, isGroup) {
                         ${!folder.isUnclassified ? `
                         <div class="prompt-folder-controls">
                             <button class="folder-action-btn" data-action="bind-persona" title="绑定玩家人设"><i class="fas fa-user-tag"></i></button>
+                            <button class="folder-action-btn" data-action="bind-circle" title="绑定朋友圈"><i class="fas fa-link"></i></button>
                             <button class="folder-action-btn" data-action="edit-folder" title="编辑分组"><i class="fas fa-edit"></i></button>
                             <button class="folder-action-btn" data-action="delete-folder" title="删除分组"><i class="fas fa-trash-alt"></i></button>
                         </div>
@@ -7233,7 +7280,9 @@ async showAutoSummaryModal(entityId, isGroup) {
                         } else if (action === 'delete-folder') {
                             EventManager.confirmDeleteFriendFolder(folderId);
                         } else if (action === 'bind-persona') {
-                            EventManager.showPersonaBindingModal(folderId, false);
+                            EventManager.showPersonaBindingModal(folderId, true); // 修复：这里应该是 isFolder = true
+                        } else if (action === 'bind-circle') {
+                            EventManager.showCircleBindingModal(folderId, true);
                         }
                     } else if (folderHeader) {
                         const content = folderHeader.nextElementSibling;
@@ -7580,6 +7629,43 @@ ${promptLines.join('\n')}
 ---`;
                 }
 
+                // --- 动态朋友圈生成模块 ---
+                let momentsPromptSection = '';
+                let charactersWithCircle = [];
+                
+                if (isGroup) {
+                    const members = chatEntity.members.map(id => allContacts.find(c => c.id === id)).filter(Boolean);
+                    charactersWithCircle = members.filter(m => m.boundCircleId);
+                } else {
+                    if (chatEntity.boundCircleId) {
+                        charactersWithCircle.push(chatEntity);
+                    }
+                }
+
+                if (charactersWithCircle.length > 0) {
+                    const allowedAuthors = charactersWithCircle.map(c => c.name).join('、');
+                    momentsPromptSection = `
+---
+即时朋友圈动态规则 (可选):
+1. 在本次聊天回复中，你有一定几率可以发布一条或多条朋友圈动态。
+2. 动态内容需要与当前聊天情景、角色近期经历或人设紧密相关。
+3. 每条动态都必须被一个 <朋友圈> 标签包裹。
+4. 动态格式: 【作者角色名：动态内容|动态时间(月/日 HH:mm)】
+5. 点赞格式(强制要求): 在动态格式之后，另起一行，用中文括号包裹点赞列表，格式为（已点赞：好友名字,好友名字）。
+6. 评论格式: 〖评论者角色名：评论内容〗
+7. 在本次群聊中，只允许以下角色发布动态：${allowedAuthors}。
+8. 严禁代替玩家（“${myProfile.name}”）点赞或评论。
+9. 举例:
+<朋友圈>
+【三三：今天天气真不错，有没有要一起出去玩的？|7/3 8:36】
+（已点赞：vv,入入）
+〖vv：带我一个！〗
+</朋友圈>
+---
+`;
+                }
+                // --- 动态朋友圈结束 ---
+
                 // --- 修复开始 ---
                 // 1. 先构建自定义提示词部分
                 let customPromptsSection = '';
@@ -7642,7 +7728,8 @@ ${promptLines.join('\n')}
                     characterInfoPrompt, 
                     playerInfoPrompt, 
                     pendingTransfersPrompt, 
-                    pomodoroPromptSection, 
+                    pomodoroPromptSection,
+                    momentsPromptSection, 
                     summaryPromptSection, 
                     customPromptsSection, // 现在这里包含了正确的内容
                     historyPrompt, 
@@ -8277,7 +8364,7 @@ async handleAutoSummaryRequest(chatId) {
                     };
                 };
 
-                const allMessageRegex = /<旁白>([\s\S]*?)<\/旁白>|<系统>([\s\S]*?)<\/系统>|<私聊>([\s\S]*?)<\/私聊>|<礼物>([\s\S]*?)<\/礼物>|<拍一拍>([\s\S]*?)<\/拍一拍>|<修改拍一拍>([\s\S]*?)<\/修改拍一拍>|『([^』]+?)』|【([^】]+?)】|「([^」]+?)」|{([^{}]+?)}|\[([^\[\]]+?)\]|<((?!系统|私聊)[^>]+?)>/g;
+                const allMessageRegex = /<朋友圈>([\s\S]*?)<\/朋友圈>|<旁白>([\s\S]*?)<\/旁白>|<系统>([\s\S]*?)<\/系统>|<私聊>([\s\S]*?)<\/私聊>|<礼物>([\s\S]*?)<\/礼物>|<拍一拍>([\s\S]*?)<\/拍一拍>|<修改拍一拍>([\s\S]*?)<\/修改拍一拍>|『([^』]+?)』|【([^】]+?)】|「([^」]+?)」|{([^{}]+?)}|\[([^\[\]]+?)\]|<((?!系统|私聊)[^>]+?)>/g;
 
                 const messagesToSave = [];
                 const contactUpdates = {};
@@ -8285,13 +8372,70 @@ async handleAutoSummaryRequest(chatId) {
                 const matches = text.matchAll(allMessageRegex);
                 for (const match of matches) {
                     const [
-                        fullMatch, narratorContent, systemContent, privateContent,
+                        fullMatch, momentContent, narratorContent, systemContent, privateContent,
                         giftContent, patAPatContent, modifyPatContent, cardContent,
                         innerVoiceContent, essayContent, retractedContent,
                         standardContent, emojiContent
                     ] = match;
 
-                    if (patAPatContent !== undefined) {
+                    if (momentContent !== undefined) {
+                        (async () => {
+                            const block = momentContent.trim();
+                            const postMatch = block.match(/【(.*?)】/);
+                            if (!postMatch) return;
+
+                            const [authorPart, timePart] = postMatch[1].split('|');
+                            const [authorName, ...contentParts] = authorPart.split('：');
+                            const content = contentParts.join('：').trim();
+                            const trimmedAuthorName = authorName.trim();
+
+                            const author = contacts.find(c => c.name === trimmedAuthorName);
+                            if (!author || !author.boundCircleId) {
+                                console.log(`朋友圈动态被跳过：角色“${trimmedAuthorName}”未找到或未绑定朋友圈。`);
+                                return;
+                            }
+
+                            const myProfile = await EventManager.getPlayerProfileForContext(author.boundCircleId);
+
+                            const likeMatch = block.match(/（已点赞：(.*?)）/);
+                            const likerNames = likeMatch ? likeMatch[1].split(/,|，/).map(n => n.trim()) : [];
+
+                            const newMoment = {
+                                id: Utils.generateId('moment'),
+                                circleId: author.boundCircleId,
+                                authorId: author.id,
+                                content: content,
+                                images: [], 
+                                timestamp: Utils.parseMomentTimestamp(timePart ? timePart.trim() : null),
+                                likes: likerNames, 
+                                comments: []
+                            };
+                            
+                            const commentMatches = block.match(/〖(.*?)〗/g) || [];
+                            for (const cMatch of commentMatches) {
+                                const inner = cMatch.slice(1, -1);
+                                const [cAuthorName, ...cContentParts] = inner.split('：');
+                                const trimmedCommentAuthor = cAuthorName.trim();
+                                
+                                let cAuthorId;
+                                if (trimmedCommentAuthor === myProfile.name) {
+                                    cAuthorId = myProfile.id; 
+                                } else {
+                                    const cAuthorContact = contacts.find(c => c.name === trimmedCommentAuthor);
+                                    cAuthorId = cAuthorContact ? cAuthorContact.id : trimmedCommentAuthor; 
+                                }
+                                
+                                newMoment.comments.push({
+                                    authorId: cAuthorId,
+                                    content: cContentParts.join('：').trim(),
+                                    timestamp: Date.now()
+                                });
+                            }
+
+                            await DBHelper.put('moments', newMoment);
+                            UIManager.showMomentNotification(newMoment);
+                        })();
+                    } else if (patAPatContent !== undefined) {
                         const content = patAPatContent.trim();
                         const patMatch = content.match(/(\S+)\s+.*?\s+(\S+)/);
 
@@ -16600,6 +16744,98 @@ handleImmediateSummary(entityId, isGroup) {
                             
                             UIManager.hideModal();
                             UIManager.showToast('人设绑定已更新！');
+                        }}
+                    ]
+                });
+            },
+
+            async showCircleBindingModal(entityId, isFolder) {
+                const circles = await DBHelper.getAll('circles');
+                if (circles.length === 0) {
+                    return UIManager.showToast("还没有创建任何圈子");
+                }
+
+                const storeName = isFolder ? 'friendFolders' : 'contacts';
+                const entity = await DBHelper.get(storeName, entityId);
+                if (!entity) return;
+
+                let itemsHtml;
+                const boundCircleId = entity.boundCircleId || 'null';
+
+                // 根据是分组还是好友，生成不同的列表
+                if (isFolder) {
+                    // 分组绑定：不显示当前绑定，默认选择“不绑定”
+                    itemsHtml = `
+                        <label class="member-select-item">
+                            <input type="radio" name="circle-bind" value="null" checked>
+                            <span>不绑定</span>
+                        </label>
+                        ${circles.map(c => `
+                            <label class="member-select-item">
+                                <input type="radio" name="circle-bind" value="${c.id}">
+                                <span>${c.name}</span>
+                            </label>
+                        `).join('')}
+                    `;
+                } else {
+                    // 好友绑定：显示当前绑定的朋友圈
+                    itemsHtml = `
+                        <label class="member-select-item">
+                            <input type="radio" name="circle-bind" value="null" ${boundCircleId === 'null' ? 'checked' : ''}>
+                            <span>不绑定</span>
+                        </label>
+                        ${circles.map(c => `
+                            <label class="member-select-item">
+                                <input type="radio" name="circle-bind" value="${c.id}" ${boundCircleId === c.id ? 'checked' : ''}>
+                                <span>${c.name}</span>
+                            </label>
+                        `).join('')}
+                    `;
+                }
+
+                // *** 这是我们新增的提示文字HTML ***
+                const hintText = `<p style="font-size: 0.8rem; color: var(--text-color-medium); text-align: center; margin-top: 15px; line-height: 1.5;">
+                    提示：绑定后，AI在聊天时可能会触发即时朋友圈动态。此动态不受圈子内好友限制，评论区可能出现设定外的角色。
+                </p>`;
+
+                UIManager.showModal({
+                    title: isFolder ? `为分组“${entity.name}”绑定朋友圈` : `为好友“${entity.remark || entity.name}”绑定朋友圈`,
+                    // *** 在这里把提示文字加到 body 里 ***
+                    body: `<div class="member-select-list" style="max-height: 40vh;">${itemsHtml}</div>${hintText}`,
+                    actions: [
+                        { text: '取消', class: 'btn-secondary', handler: () => UIManager.hideModal() },
+                        { text: '保存', class: 'btn-primary', handler: async () => {
+                            const selected = document.querySelector('input[name="circle-bind"]:checked');
+                            if (!selected) return;
+
+                            const newBoundId = selected.value === 'null' ? null : selected.value;
+                            
+                            if (isFolder) {
+                                UIManager.showModal({
+                                    title: '确认批量绑定',
+                                    body: `<p>这将把分组“<strong>${entity.name}</strong>”内所有好友的朋友圈绑定都更新为所选圈子。确定要继续吗？</p><p style="font-size: 0.8rem; color: #aaa;">此操作会覆盖好友原有的单独绑定。</p>`,
+                                    actions: [
+                                        { text: '取消', class: 'btn-secondary', handler: () => UIManager.hideModal() },
+                                        { text: '确认', class: 'btn-primary', handler: async () => {
+                                            entity.boundCircleId = newBoundId;
+                                            await DBHelper.put(storeName, entity);
+                                            
+                                            const contactsInFolder = (await DBHelper.getAll('contacts')).filter(c => c.folderId === entityId);
+                                            for (const contact of contactsInFolder) {
+                                                contact.boundCircleId = newBoundId;
+                                                await DBHelper.put('contacts', contact);
+                                            }
+                                            UIManager.hideModal();
+                                            UIManager.showToast('分组朋友圈绑定已更新！');
+                                        }}
+                                    ]
+                                });
+                            } else {
+                                entity.boundCircleId = newBoundId;
+                                await DBHelper.put(storeName, entity);
+                                UIManager.hideModal();
+                                UIManager.showToast('好友朋友圈绑定已更新！');
+                            }
                         }}
                     ]
                 });
