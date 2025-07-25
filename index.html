@@ -12807,20 +12807,17 @@ if (entity && entity.autoSummaryEnabled && chatMetadata.totalPlayerTurns > 0 && 
                             .progress-bar-container { width: 100%; background-color: #eee; border-radius: 10px; overflow: hidden; margin: 10px 0; }
                             .progress-bar { width: 0%; height: 20px; background-color: var(--accent-color); transition: width 0.3s ease; text-align: center; color: white; line-height: 20px; font-size: 0.8rem; }
                         </style>
-                        <div id="export-progress-text" style="text-align: center; margin-bottom: 5px; color: var(--text-color-medium);">正在初始化...</div>
-                        <div id="export-detail-text" style="text-align: center; font-size: 0.8rem; color: #aaa; min-height: 1.2em; margin-bottom: 10px;"></div>
+                        <div id="export-progress-text" style="text-align: center; margin-bottom: 10px; color: var(--text-color-medium);">正在初始化...</div>
                         <div class="progress-bar-container"><div id="export-progress-bar" class="progress-bar">0%</div></div>
                     `,
                     actions: [{ text: '取消', class: 'btn-danger', handler: () => { exportState.isCancelled = true; } }]
                 });
 
-                const updateProgress = (text, percentage, detailText = '') => {
+                const updateProgress = (text, percentage) => {
                     if (exportState.isCancelled) throw new Error("Export cancelled by user.");
                     const progressText = $('#export-progress-text');
                     const progressBar = $('#export-progress-bar');
-                    const detailEl = $('#export-detail-text');
                     if(progressText) progressText.textContent = text;
-                    if(detailEl) detailEl.textContent = detailText;
                     if(progressBar) {
                         progressBar.style.width = `${percentage}%`;
                         progressBar.textContent = `${Math.round(percentage)}%`;
@@ -12834,100 +12831,111 @@ if (entity && entity.autoSummaryEnabled && chatMetadata.totalPlayerTurns > 0 && 
 
                     const appendDataPart = (key, data) => {
                         if (exportState.isCancelled) throw new Error("Export cancelled by user.");
-                        if (!isFirstDataPart) jsonParts.push(',');
+                        if (!isFirstDataPart) {
+                            jsonParts.push(',');
+                        }
                         jsonParts.push(`"${key}":${JSON.stringify(data, null, 2)}`);
                         isFirstDataPart = false;
                     };
-                    
-                    const processPart = async (partName, progressStart, progressEnd, taskName, getDataFunc) => {
-                        if (partsToExport.includes(partName)) {
+
+                    const processSimplePart = async (partName, progressStart, progressEnd, taskName, getDataFunc) => {
+                         if (partsToExport.includes(partName)) {
                             updateProgress(`正在读取 ${taskName}...`, progressStart);
                             const data = await getDataFunc();
                             appendDataPart(partName, data);
                         }
-                        await new Promise(resolve => setTimeout(resolve, 50));
                         updateProgress(`处理完成: ${taskName}`, progressEnd);
+                        await new Promise(resolve => setTimeout(resolve, 50));
                     };
 
-                    await processPart('profile', 0, 5, "玩家数据", async () => {
+                    if (partsToExport.includes('characters')) {
+                        updateProgress("正在读取角色与群聊数据...", 0);
+                        appendDataPart('contacts', await DBHelper.getAll('contacts'));
+                        appendDataPart('groups', await DBHelper.getAll('groups'));
+                        appendDataPart('friendFolders', await DBHelper.getAll('friendFolders'));
+                        updateProgress("处理完成: 角色与群聊数据", 10);
+                        await new Promise(resolve => setTimeout(resolve, 50));
+                    }
+                    
+                    await processSimplePart('profile', 10, 20, "玩家数据", async () => {
                         const profile = await DBHelper.get('profile', 'myProfile');
-                        if (profile) delete profile.apiKey;
+                        if(profile) delete profile.apiKey;
                         return profile;
                     });
-                    await processPart('contacts', 5, 10, "角色数据", () => DBHelper.getAll('contacts'));
-                    await processPart('groups', 10, 15, "群聊数据", () => DBHelper.getAll('groups'));
-                    await processPart('friendFolders', 15, 20, "好友分组", () => DBHelper.getAll('friendFolders'));
-                    await processPart('circles', 20, 25, "朋友圈数据", () => DBHelper.getAll('circles'));
-                    await processPart('moments', 25, 30, "朋友圈动态", () => DBHelper.getAll('moments'));
-                    await processPart('themeSettings', 30, 35, "主题设置", () => DBHelper.get('apiConfig', 'themeSettings'));
+                    
+                    if (partsToExport.includes('moments')) {
+                        updateProgress("正在读取朋友圈数据...", 20);
+                        appendDataPart('circles', await DBHelper.getAll('circles'));
+                        appendDataPart('moments', await DBHelper.getAll('moments'));
+                        updateProgress("处理完成: 朋友圈数据", 30);
+                        await new Promise(resolve => setTimeout(resolve, 50));
+                    }
 
+                    await processSimplePart('themeSettings', 30, 40, "主题设置", () => DBHelper.get('apiConfig', 'themeSettings'));
+                    
                     if (partsToExport.includes('others')) {
-                        updateProgress("正在读取其他配置...", 35);
+                        updateProgress("正在读取其他配置...", 40);
                         appendDataPart('prompts', await DBHelper.getAll('prompts'));
                         appendDataPart('promptFolders', await DBHelper.getAll('promptFolders'));
                         appendDataPart('openingScenes', await DBHelper.getAll('openingScenes'));
                         const giftConfig = await DBHelper.get('giftApiConfig', 'mainConfig');
-                        if (giftConfig) { delete giftConfig.key; appendDataPart('giftApiConfig', giftConfig); }
-                        updateProgress("处理完成: 其他配置", 40);
+                        if (giftConfig) {
+                            delete giftConfig.key;
+                            appendDataPart('giftApiConfig', giftConfig);
+                        }
+                        updateProgress("处理完成: 其他配置", 50);
                         await new Promise(resolve => setTimeout(resolve, 50));
                     }
-                    
-                    if (partsToExport.includes('history')) {
-                        const allContacts = await DBHelper.getAll('contacts');
-                        const allGroups = await DBHelper.getAll('groups');
-                        const allChats = [
-                            ...allContacts.map(c => ({ id: c.id, name: c.name })),
-                            ...allGroups.map(g => ({ id: g.id, name: g.name }))
-                        ];
 
-                        if (!isFirstDataPart) jsonParts.push(',');
-                        jsonParts.push('"messages":[');
-                        let isFirstMessage = true;
+                    const processStoreWithCursor = (storeName, progressStart, progressEnd) => {
+                        return new Promise((resolve, reject) => {
+                            if (!partsToExport.includes('history')) return resolve();
 
-                        for (let i = 0; i < allChats.length; i++) {
-                            const chat = allChats[i];
-                            const transaction = DBHelper.db.transaction(['messages'], 'readonly');
-                            const store = transaction.objectStore('messages');
-                            const index = store.index('by_chat_and_time');
-                            const range = IDBKeyRange.only(chat.id);
-                            const countReq = index.count(range);
-                            
-                            const totalMessages = await new Promise(res => { countReq.onsuccess = () => res(countReq.result); });
-                            if (totalMessages === 0) continue;
+                            updateProgress(`正在打包 ${storeName}... (这可能需要一些时间)`, progressStart);
+                            if (!isFirstDataPart) jsonParts.push(',');
+                            jsonParts.push(`"${storeName}":[`);
 
-                            let currentCount = 0;
-                            await new Promise((resolve, reject) => {
-                                index.openCursor(range).onsuccess = e => {
-                                    if (exportState.isCancelled) { transaction.abort(); return reject(new Error("Export cancelled")); }
-                                    const cursor = e.target.result;
-                                    if (cursor) {
-                                        if (!isFirstMessage) jsonParts.push(',');
-                                        jsonParts.push(JSON.stringify(cursor.value));
-                                        isFirstMessage = false;
-                                        currentCount++;
-                                        if (currentCount % 100 === 0) {
-                                            const progress = 40 + (i / allChats.length * 55) + (currentCount / totalMessages) * (55 / allChats.length);
-                                            updateProgress(`正在打包聊天记录...`, progress, `处理 "${chat.name}" (${currentCount}/${totalMessages})`);
-                                        }
-                                        cursor.continue();
-                                    } else {
-                                        resolve();
+                            const transaction = DBHelper.db.transaction([storeName], 'readonly');
+                            const store = transaction.objectStore(storeName);
+                            let isFirstItem = true;
+                            let count = 0;
+
+                            store.openCursor().onsuccess = (e) => {
+                                if (exportState.isCancelled) {
+                                    transaction.abort();
+                                    return reject(new Error("Export cancelled by user."));
+                                }
+                                const cursor = e.target.result;
+                                if (cursor) {
+                                    if (!isFirstItem) jsonParts.push(',');
+                                    jsonParts.push(JSON.stringify(cursor.value));
+                                    isFirstItem = false;
+                                    count++;
+                                    if(count % 1000 === 0) { // Update progress every 1000 records
+                                        updateProgress(`正在打包 ${storeName}: ${count}条...`, progressStart);
                                     }
-                                };
-                            });
-                        }
-                        jsonParts.push(']');
-                        isFirstDataPart = false;
-                         await processPart('chatMetadata', 95, 98, "聊天元数据", () => DBHelper.getAll('chatMetadata'));
-                    }
+                                    cursor.continue();
+                                } else {
+                                    jsonParts.push(']');
+                                    isFirstDataPart = false;
+                                    updateProgress(`处理完成: ${storeName}`, progressEnd);
+                                    resolve();
+                                }
+                            };
+                            transaction.onerror = (e) => reject(new Error(`读取 ${storeName} 失败: ${e.target.error}`));
+                        });
+                    };
+
+                    await processStoreWithCursor('messages', 50, 90);
+                    await processStoreWithCursor('chatMetadata', 90, 95);
 
                     updateProgress("正在生成文件...", 98);
                     jsonParts.push('}}');
-                    
+
                     const blob = new Blob(jsonParts, { type: 'application/json' });
                     const url = URL.createObjectURL(blob);
                     const filename = `33聊天室_备份_${new Date().toISOString().slice(0, 10)}.json`;
-                    
+
                     UIManager.showModal({
                         title: '导出成功',
                         body: `<a href="${url}" download="${filename}" class="modal-btn btn-primary" style="display: block; text-align: center;">点击下载备份文件</a>`,
@@ -12935,7 +12943,7 @@ if (entity && entity.autoSummaryEnabled && chatMetadata.totalPlayerTurns > 0 && 
                     });
 
                 } catch (error) {
-                     if (error.message.includes("cancelled")) {
+                    if (error.message.includes("cancelled")) {
                         UIManager.hideModal();
                         UIManager.showToast("导出已取消");
                     } else {
