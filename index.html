@@ -4742,6 +4742,29 @@
                 });
             },
 
+            async iterateStore(storeName, callback) {
+                return new Promise((resolve, reject) => {
+                    const transaction = this.db.transaction([storeName], 'readonly');
+                    const store = transaction.objectStore(storeName);
+                    const request = store.openCursor();
+                    let isFirst = true;
+
+                    request.onsuccess = (e) => {
+                        const cursor = e.target.result;
+                        if (cursor) {
+                            // 将当前数据和是否是第一条的标志传递给回调函数
+                            callback(cursor.value, isFirst);
+                            isFirst = false;
+                            cursor.continue();
+                        } else {
+                            // 游标结束，表示所有数据都处理完了
+                            resolve();
+                        }
+                    };
+                    request.onerror = (e) => reject(`Cursor error on ${storeName}: ${e.target.error}`);
+                });
+            },
+
             async findLastMessagesBySenderAndTypes(chatId, senderId, typesToFind) {
                 return new Promise((resolve, reject) => {
                     const transaction = this.db.transaction(['messages'], 'readonly');
@@ -12801,10 +12824,18 @@ if (entity && entity.autoSummaryEnabled && chatMetadata.totalPlayerTurns > 0 && 
                 };
 
                 try {
-                    const exportObject = {
-                        version: '1.0.0',
-                        createdAt: new Date().toISOString(),
-                        data: {}
+                    // 使用一个数组来存储JSON字符串的各个部分
+                    const jsonStringParts = [];
+                    
+                    jsonStringParts.push('{\n"version": "1.0.0",\n"createdAt": "' + new Date().toISOString() + '",\n"data": {\n');
+
+                    let isFirstDataPart = true;
+                    const appendDataPart = (key, data) => {
+                        if (!isFirstDataPart) {
+                            jsonStringParts.push(',');
+                        }
+                        jsonStringParts.push(`"${key}": ${JSON.stringify(data, null, 2)}`);
+                        isFirstDataPart = false;
                     };
 
                     const processPart = async (partName, progressStart, progressEnd, processFunc) => {
@@ -12816,51 +12847,76 @@ if (entity && entity.autoSummaryEnabled && chatMetadata.totalPlayerTurns > 0 && 
 
                     await processPart('characters', 0, 10, async () => {
                         updateProgress("正在读取角色与群聊数据...", 5);
-                        exportObject.data.contacts = await DBHelper.getAll('contacts');
-                        exportObject.data.groups = await DBHelper.getAll('groups');
-                        exportObject.data.friendFolders = await DBHelper.getAll('friendFolders');
+                        appendDataPart('contacts', await DBHelper.getAll('contacts'));
+                        appendDataPart('groups', await DBHelper.getAll('groups'));
+                        appendDataPart('friendFolders', await DBHelper.getAll('friendFolders'));
                     });
 
                     await processPart('player', 10, 20, async () => {
                         updateProgress("正在打包玩家数据...", 15);
                         const profile = await DBHelper.get('profile', 'myProfile');
-                        delete profile.apiKey; // 移除敏感信息
-                        exportObject.data.profile = profile;
+                        if (profile && profile.apiKey) delete profile.apiKey;
+                        appendDataPart('profile', profile);
                     });
                     
                     await processPart('moments', 20, 30, async () => {
                         updateProgress("正在打包朋友圈数据...", 25);
-                        exportObject.data.circles = await DBHelper.getAll('circles');
-                        exportObject.data.moments = await DBHelper.getAll('moments');
+                        appendDataPart('circles', await DBHelper.getAll('circles'));
+                        appendDataPart('moments', await DBHelper.getAll('moments'));
                     });
                     
                     await processPart('theme', 30, 40, async () => {
                         updateProgress("正在打包主题设置...", 35);
                         const themeSettings = await DBHelper.get('apiConfig', 'themeSettings');
-                        if (themeSettings) exportObject.data.themeSettings = themeSettings;
+                        if (themeSettings) appendDataPart('themeSettings', themeSettings);
                     });
 
                     await processPart('others', 40, 50, async () => {
                         updateProgress("正在打包其他配置...", 45);
-                        exportObject.data.prompts = await DBHelper.getAll('prompts');
-                        exportObject.data.promptFolders = await DBHelper.getAll('promptFolders');
-                        exportObject.data.openingScenes = await DBHelper.getAll('openingScenes');
+                        appendDataPart('prompts', await DBHelper.getAll('prompts'));
+                        appendDataPart('promptFolders', await DBHelper.getAll('promptFolders'));
+                        appendDataPart('openingScenes', await DBHelper.getAll('openingScenes'));
                         const giftConfig = await DBHelper.get('giftApiConfig', 'mainConfig');
                         if (giftConfig) {
-                            delete giftConfig.key; // 移除敏感信息
-                            exportObject.data.giftApiConfig = giftConfig;
+                            if (giftConfig.key) delete giftConfig.key;
+                            appendDataPart('giftApiConfig', giftConfig);
                         }
                     });
 
-                    await processPart('history', 50, 95, async () => {
-                        updateProgress("正在打包聊天记录 (这可能需要一些时间)...", 50);
-                        exportObject.data.messages = await DBHelper.getAll('messages');
-                        exportObject.data.chatMetadata = await DBHelper.getAll('chatMetadata');
-                    });
+                    // 流式处理聊天记录
+                    if (partsToExport.includes('history')) {
+                        if (exportState.isCancelled) return;
+                        
+                        // 处理 messages
+                        updateProgress("正在打包聊天记录 (这可能需要一些时间)...", 55);
+                        if (!isFirstDataPart) jsonStringParts.push(',');
+                        jsonStringParts.push('"messages":[');
+                        await DBHelper.iterateStore('messages', (message, isFirst) => {
+                            if (exportState.isCancelled) throw new Error("Export cancelled by user.");
+                            if (!isFirst) jsonStringParts.push(',');
+                            jsonStringParts.push(JSON.stringify(message));
+                        });
+                        jsonStringParts.push(']');
+                        isFirstDataPart = false;
+
+                        // 处理 chatMetadata
+                        updateProgress("正在打包聊天元数据...", 90);
+                        if (!isFirstDataPart) jsonStringParts.push(',');
+                        jsonStringParts.push('"chatMetadata":[');
+                        await DBHelper.iterateStore('chatMetadata', (meta, isFirst) => {
+                             if (exportState.isCancelled) throw new Error("Export cancelled by user.");
+                            if (!isFirst) jsonStringParts.push(',');
+                            jsonStringParts.push(JSON.stringify(meta));
+                        });
+                        jsonStringParts.push(']');
+                    }
+                     updateProgress("处理完成: history", 95);
+
+
+                    jsonStringParts.push('\n}\n}'); // 关闭 "data" 和根对象
 
                     updateProgress("正在生成文件...", 98);
-                    const jsonString = JSON.stringify(exportObject, null, 2);
-                    const blob = new Blob([jsonString], { type: 'application/json' });
+                    const blob = new Blob(jsonStringParts, { type: 'application/json' });
                     const url = URL.createObjectURL(blob);
                     const filename = `33聊天室_备份_${new Date().toISOString().slice(0, 10)}.json`;
 
