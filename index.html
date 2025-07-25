@@ -4742,29 +4742,6 @@
                 });
             },
 
-            async iterateStore(storeName, callback) {
-                return new Promise((resolve, reject) => {
-                    const transaction = this.db.transaction([storeName], 'readonly');
-                    const store = transaction.objectStore(storeName);
-                    const request = store.openCursor();
-                    let isFirst = true;
-
-                    request.onsuccess = (e) => {
-                        const cursor = e.target.result;
-                        if (cursor) {
-                            // 将当前数据和是否是第一条的标志传递给回调函数
-                            callback(cursor.value, isFirst);
-                            isFirst = false;
-                            cursor.continue();
-                        } else {
-                            // 游标结束，表示所有数据都处理完了
-                            resolve();
-                        }
-                    };
-                    request.onerror = (e) => reject(`Cursor error on ${storeName}: ${e.target.error}`);
-                });
-            },
-
             async findLastMessagesBySenderAndTypes(chatId, senderId, typesToFind) {
                 return new Promise((resolve, reject) => {
                     const transaction = this.db.transaction(['messages'], 'readonly');
@@ -12818,105 +12795,124 @@ if (entity && entity.autoSummaryEnabled && chatMetadata.totalPlayerTurns > 0 && 
 
                 const updateProgress = (text, percentage) => {
                     if (exportState.isCancelled) throw new Error("Export cancelled by user.");
-                    $('#export-progress-text').textContent = text;
-                    $('#export-progress-bar').style.width = `${percentage}%`;
-                    $('#export-progress-bar').textContent = `${Math.round(percentage)}%`;
+                    const progressText = $('#export-progress-text');
+                    const progressBar = $('#export-progress-bar');
+                    if(progressText) progressText.textContent = text;
+                    if(progressBar) {
+                        progressBar.style.width = `${percentage}%`;
+                        progressBar.textContent = `${Math.round(percentage)}%`;
+                    }
                 };
 
                 try {
-                    // 使用一个数组来存储JSON字符串的各个部分
-                    const jsonStringParts = [];
-                    
-                    jsonStringParts.push('{\n"version": "1.0.0",\n"createdAt": "' + new Date().toISOString() + '",\n"data": {\n');
-
+                    const jsonParts = [];
+                    jsonParts.push('{"version":"1.0.0","createdAt":"' + new Date().toISOString() + '","data":{');
                     let isFirstDataPart = true;
+
                     const appendDataPart = (key, data) => {
+                        if (exportState.isCancelled) throw new Error("Export cancelled by user.");
                         if (!isFirstDataPart) {
-                            jsonStringParts.push(',');
+                            jsonParts.push(',');
                         }
-                        jsonStringParts.push(`"${key}": ${JSON.stringify(data, null, 2)}`);
+                        jsonParts.push(`"${key}":${JSON.stringify(data, null, 2)}`);
                         isFirstDataPart = false;
                     };
 
-                    const processPart = async (partName, progressStart, progressEnd, processFunc) => {
-                        if (exportState.isCancelled) return;
-                        if (partsToExport.includes(partName)) await processFunc();
-                        updateProgress(`处理完成: ${partName}`, progressEnd);
-                        await new Promise(resolve => setTimeout(resolve, 50)); // UI flush
+                    const processSimplePart = async (partName, progressStart, progressEnd, taskName, getDataFunc) => {
+                         if (partsToExport.includes(partName)) {
+                            updateProgress(`正在读取 ${taskName}...`, progressStart);
+                            const data = await getDataFunc();
+                            appendDataPart(partName, data);
+                        }
+                        updateProgress(`处理完成: ${taskName}`, progressEnd);
+                        await new Promise(resolve => setTimeout(resolve, 50));
                     };
 
-                    await processPart('characters', 0, 10, async () => {
-                        updateProgress("正在读取角色与群聊数据...", 5);
+                    if (partsToExport.includes('characters')) {
+                        updateProgress("正在读取角色与群聊数据...", 0);
                         appendDataPart('contacts', await DBHelper.getAll('contacts'));
                         appendDataPart('groups', await DBHelper.getAll('groups'));
                         appendDataPart('friendFolders', await DBHelper.getAll('friendFolders'));
-                    });
-
-                    await processPart('player', 10, 20, async () => {
-                        updateProgress("正在打包玩家数据...", 15);
+                        updateProgress("处理完成: 角色与群聊数据", 10);
+                        await new Promise(resolve => setTimeout(resolve, 50));
+                    }
+                    
+                    await processSimplePart('profile', 10, 20, "玩家数据", async () => {
                         const profile = await DBHelper.get('profile', 'myProfile');
-                        if (profile && profile.apiKey) delete profile.apiKey;
-                        appendDataPart('profile', profile);
+                        if(profile) delete profile.apiKey;
+                        return profile;
                     });
                     
-                    await processPart('moments', 20, 30, async () => {
-                        updateProgress("正在打包朋友圈数据...", 25);
+                    if (partsToExport.includes('moments')) {
+                        updateProgress("正在读取朋友圈数据...", 20);
                         appendDataPart('circles', await DBHelper.getAll('circles'));
                         appendDataPart('moments', await DBHelper.getAll('moments'));
-                    });
-                    
-                    await processPart('theme', 30, 40, async () => {
-                        updateProgress("正在打包主题设置...", 35);
-                        const themeSettings = await DBHelper.get('apiConfig', 'themeSettings');
-                        if (themeSettings) appendDataPart('themeSettings', themeSettings);
-                    });
+                        updateProgress("处理完成: 朋友圈数据", 30);
+                        await new Promise(resolve => setTimeout(resolve, 50));
+                    }
 
-                    await processPart('others', 40, 50, async () => {
-                        updateProgress("正在打包其他配置...", 45);
+                    await processSimplePart('themeSettings', 30, 40, "主题设置", () => DBHelper.get('apiConfig', 'themeSettings'));
+                    
+                    if (partsToExport.includes('others')) {
+                        updateProgress("正在读取其他配置...", 40);
                         appendDataPart('prompts', await DBHelper.getAll('prompts'));
                         appendDataPart('promptFolders', await DBHelper.getAll('promptFolders'));
                         appendDataPart('openingScenes', await DBHelper.getAll('openingScenes'));
                         const giftConfig = await DBHelper.get('giftApiConfig', 'mainConfig');
                         if (giftConfig) {
-                            if (giftConfig.key) delete giftConfig.key;
+                            delete giftConfig.key;
                             appendDataPart('giftApiConfig', giftConfig);
                         }
-                    });
-
-                    // 流式处理聊天记录
-                    if (partsToExport.includes('history')) {
-                        if (exportState.isCancelled) return;
-                        
-                        // 处理 messages
-                        updateProgress("正在打包聊天记录 (这可能需要一些时间)...", 55);
-                        if (!isFirstDataPart) jsonStringParts.push(',');
-                        jsonStringParts.push('"messages":[');
-                        await DBHelper.iterateStore('messages', (message, isFirst) => {
-                            if (exportState.isCancelled) throw new Error("Export cancelled by user.");
-                            if (!isFirst) jsonStringParts.push(',');
-                            jsonStringParts.push(JSON.stringify(message));
-                        });
-                        jsonStringParts.push(']');
-                        isFirstDataPart = false;
-
-                        // 处理 chatMetadata
-                        updateProgress("正在打包聊天元数据...", 90);
-                        if (!isFirstDataPart) jsonStringParts.push(',');
-                        jsonStringParts.push('"chatMetadata":[');
-                        await DBHelper.iterateStore('chatMetadata', (meta, isFirst) => {
-                             if (exportState.isCancelled) throw new Error("Export cancelled by user.");
-                            if (!isFirst) jsonStringParts.push(',');
-                            jsonStringParts.push(JSON.stringify(meta));
-                        });
-                        jsonStringParts.push(']');
+                        updateProgress("处理完成: 其他配置", 50);
+                        await new Promise(resolve => setTimeout(resolve, 50));
                     }
-                     updateProgress("处理完成: history", 95);
 
+                    const processStoreWithCursor = (storeName, progressStart, progressEnd) => {
+                        return new Promise((resolve, reject) => {
+                            if (!partsToExport.includes('history')) return resolve();
 
-                    jsonStringParts.push('\n}\n}'); // 关闭 "data" 和根对象
+                            updateProgress(`正在打包 ${storeName}... (这可能需要一些时间)`, progressStart);
+                            if (!isFirstDataPart) jsonParts.push(',');
+                            jsonParts.push(`"${storeName}":[`);
+
+                            const transaction = DBHelper.db.transaction([storeName], 'readonly');
+                            const store = transaction.objectStore(storeName);
+                            let isFirstItem = true;
+                            let count = 0;
+
+                            store.openCursor().onsuccess = (e) => {
+                                if (exportState.isCancelled) {
+                                    transaction.abort();
+                                    return reject(new Error("Export cancelled by user."));
+                                }
+                                const cursor = e.target.result;
+                                if (cursor) {
+                                    if (!isFirstItem) jsonParts.push(',');
+                                    jsonParts.push(JSON.stringify(cursor.value));
+                                    isFirstItem = false;
+                                    count++;
+                                    if(count % 1000 === 0) { // Update progress every 1000 records
+                                        updateProgress(`正在打包 ${storeName}: ${count}条...`, progressStart);
+                                    }
+                                    cursor.continue();
+                                } else {
+                                    jsonParts.push(']');
+                                    isFirstDataPart = false;
+                                    updateProgress(`处理完成: ${storeName}`, progressEnd);
+                                    resolve();
+                                }
+                            };
+                            transaction.onerror = (e) => reject(new Error(`读取 ${storeName} 失败: ${e.target.error}`));
+                        });
+                    };
+
+                    await processStoreWithCursor('messages', 50, 90);
+                    await processStoreWithCursor('chatMetadata', 90, 95);
 
                     updateProgress("正在生成文件...", 98);
-                    const blob = new Blob(jsonStringParts, { type: 'application/json' });
+                    jsonParts.push('}}');
+
+                    const blob = new Blob(jsonParts, { type: 'application/json' });
                     const url = URL.createObjectURL(blob);
                     const filename = `33聊天室_备份_${new Date().toISOString().slice(0, 10)}.json`;
 
