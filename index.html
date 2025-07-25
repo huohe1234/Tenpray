@@ -8365,7 +8365,7 @@ async handleAutoSummaryRequest(chatId) {
                         timestamp: baseTimestamp + timestampOffset++,
                         type: 'received',
                         isUnread: chatId !== appState.currentChatId,
-                        senderInfo: sender,
+                        // senderInfo: sender, // 这就是关键的优化！我们不再把完整的senderInfo存入数据库
                     };
                 };
 
@@ -8761,6 +8761,10 @@ async handleAutoSummaryRequest(chatId) {
                             chatArea.appendChild(timeDiv);
                         }
                         
+                        // 由于我们不再存储 senderInfo，所以在显示时需要从联系人列表中找到它
+                        const senderForDisplay = contacts.find(c => c.id === msg.senderId) || { name: '未知用户', avatar: Utils.createAvatarDataUrl('#ccc') };
+                        msg.senderInfo = senderForDisplay;
+                        
                         if (msg.segmentType === 'system') {
                             const notice = document.createElement('div');
                             notice.className = 'system-notice'; notice.id = msg.messageId; notice.textContent = msg.content;
@@ -8816,7 +8820,7 @@ async handleAutoSummaryRequest(chatId) {
                         timestamp: baseTimestamp + timestampOffset++,
                         type: 'received',
                         isUnread: chatId !== appState.currentChatId, 
-                        senderInfo: sender,
+                        // senderInfo: sender, // 同样进行优化
                         isAutoReply: true, // 确保应用主动回复样式
                         displayTimestamp: displayTimestamp,
                     };
@@ -8978,7 +8982,9 @@ async handleAutoSummaryRequest(chatId) {
                     await new Promise(resolve => setTimeout(resolve, Math.random() * 400 + 200));
 
                     if (chatId === appState.currentChatId) {
-                        UIManager.addMessageToDOM(msg, msg.senderInfo, false, true);
+                        // 显示时查找发送者信息
+                        const senderForDisplay = contacts.find(c => c.id === msg.senderId) || { name: '未知用户', avatar: Utils.createAvatarDataUrl('#ccc') };
+                        UIManager.addMessageToDOM(msg, senderForDisplay, false, true);
 
                         if (msg.toBeRetracted) {
                             const retractDelay = Math.random() * 1000 + 1000;
@@ -12782,7 +12788,7 @@ if (entity && entity.autoSummaryEnabled && chatMetadata.totalPlayerTurns > 0 && 
                             <label class="member-select-item"><input type="checkbox" name="export-parts" value="moments" checked> 朋友圈数据</label>
                             <label class="member-select-item"><input type="checkbox" name="export-parts" value="theme" checked> 主题与字体设置</label>
                             <label class="member-select-item"><input type="checkbox" name="export-parts" value="others" checked> 其他 (提示词、表情包、礼物配置等)</label>
-                            <label class="member-select-item"><input type="checkbox" name="export-parts" value="history"> 聊天记录 (耗时较长)</label>
+                            <label class="member-select-item"><input type="checkbox" name="export-parts" value="history"> 聊天记录 (仅保留会话最新200条)</label>
                         </div>
                     `,
                     actions: [
@@ -12926,8 +12932,36 @@ if (entity && entity.autoSummaryEnabled && chatMetadata.totalPlayerTurns > 0 && 
                         });
                     };
 
-                    await processStoreWithCursor('messages', 50, 90);
-                    await processStoreWithCursor('chatMetadata', 90, 95);
+                    if (partsToExport.includes('history')) {
+                        updateProgress(`正在准备导出聊天记录...`, 50);
+                        const allMetadata = await DBHelper.getAll('chatMetadata');
+                        const allChatIds = allMetadata.map(meta => meta.chatId);
+                        let allMessagesForExport = [];
+                        let processedChats = 0;
+
+                        for (const chatId of allChatIds) {
+                            if (exportState.isCancelled) throw new Error("Export cancelled by user.");
+                            
+                            const messages = await DBHelper.getMessages(chatId, 200);
+                            allMessagesForExport.push(...messages);
+
+                            processedChats++;
+                            const progress = 50 + (processedChats / allChatIds.length) * 40;
+                            updateProgress(`正在打包聊天记录 (${processedChats}/${allChatIds.length})...`, progress);
+                        }
+                        
+                        updateProgress(`正在清理数据...`, 91);
+                        allMessagesForExport.forEach(msg => {
+                            if (msg.senderInfo) {
+                                delete msg.senderInfo;
+                            }
+                        });
+                        
+                        appendDataPart('messages', allMessagesForExport);
+                        updateProgress("处理完成: 聊天记录", 95);
+                        await new Promise(resolve => setTimeout(resolve, 50));
+                    }
+                    await processStoreWithCursor('chatMetadata', 95, 98);
 
                     updateProgress("正在生成文件...", 98);
                     jsonParts.push('}}');
