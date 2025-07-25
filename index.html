@@ -12254,7 +12254,15 @@ if (entity && entity.autoSummaryEnabled && chatMetadata.totalPlayerTurns > 0 && 
                     actions: [
                         { text: '取消', class: 'btn-secondary', handler: () => UIManager.hideModal() },
                         { text: '更新角色', class: 'btn-primary', handler: async () => {
-                            const updatedContact = { ...existingContact, ...importedContact, id: existingContact.id };
+                            const updatedContact = {
+                                ...importedContact, // 优先使用导入的数据
+                                id: existingContact.id, // 保留本地的唯一ID
+                                createdAt: existingContact.createdAt, // 保留本地的创建时间
+                                // 保留本地的关系绑定，这些不应被导入文件覆盖
+                                boundPersonaPresetId: existingContact.boundPersonaPresetId, 
+                                boundCircleId: existingContact.boundCircleId,
+                                folderId: existingContact.folderId
+                            };
                             delete updatedContact.openingScenes; 
                             await DBHelper.put('contacts', updatedContact);
                             
@@ -12529,16 +12537,16 @@ if (entity && entity.autoSummaryEnabled && chatMetadata.totalPlayerTurns > 0 && 
 
                     if (chatHistory.history.length > 0) {
                         const participants = {};
-                        participants[myProfile.id] = myProfile;
 
                         for (const msg of chatHistory.history) {
-                            if (msg.senderId && !participants[msg.senderId]) {
+                            // 只有当 senderId 存在、不是玩家自己、且尚未被添加时，才加入 participants
+                            if (msg.senderId && msg.senderId !== myProfile.id && !participants[msg.senderId]) {
                                 const senderInfo = allContacts.find(c => c.id === msg.senderId);
                                 if (senderInfo) {
                                     participants[msg.senderId] = senderInfo;
                                 }
                             }
-                            delete msg.senderInfo; 
+                            delete msg.senderInfo;
                         }
                         
                         exportData.chatHistory = chatHistory;
@@ -12632,20 +12640,8 @@ if (entity && entity.autoSummaryEnabled && chatMetadata.totalPlayerTurns > 0 && 
                 const authorName = targetEntity.author || myProfile.name;
                 const authorWords = targetEntity.authorWords || '';
                 const isAuthorFixed = !!targetEntity.author;
-                
-                // 异步获取消息总数和轮数
-                const messageCount = await DBHelper.getChatMessagesCount(chatId);
-                const allMessagesForTurns = await DBHelper.getMessages(chatId, Number.MAX_SAFE_INTEGER);
-                let turnCount = 0;
-                if(allMessagesForTurns.length > 0) {
-                    turnCount = 1;
-                    for (let i = 1; i < allMessagesForTurns.length; i++) {
-                        if (allMessagesForTurns[i].type !== allMessagesForTurns[i-1].type) {
-                            turnCount++;
-                        }
-                    }
-                }
-                
+
+                // 先显示弹窗，计数部分用加载图标占位
                 UIManager.showModal({
                     title: `导出${isGroup ? '群聊' : '角色'}`,
                     body: `
@@ -12662,6 +12658,10 @@ if (entity && entity.autoSummaryEnabled && chatMetadata.totalPlayerTurns > 0 && 
                                 margin-bottom: 10px;
                                 cursor: pointer;
                             }
+                            #history-count-placeholder .fa-spinner {
+                                font-size: 0.9em;
+                                color: var(--text-color-light);
+                            }
                         </style>
                         <div class="form-group">
                             <label for="export-author-name">作者名</label>
@@ -12673,7 +12673,9 @@ if (entity && entity.autoSummaryEnabled && chatMetadata.totalPlayerTurns > 0 && 
                         </div>
                         <div class="form-group" style="display: flex; align-items: center; justify-content: center; padding-top: 10px;">
                             <input type="checkbox" id="export-chat-history-checkbox" style="width: 16px; height: 16px; margin-right: 8px;">
-                            <label for="export-chat-history-checkbox" style="margin: 0; cursor: pointer;">同时导出聊天记录 (共 ${turnCount} 轮 / ${messageCount} 条)</label>
+                            <label for="export-chat-history-checkbox" id="export-history-label" style="margin: 0; cursor: pointer;">
+                                同时导出聊天记录 <span id="history-count-placeholder">(<i class="fas fa-spinner fa-spin"></i> 正在计算...)</span>
+                            </label>
                         </div>
                         <div id="export-history-options-container" class="export-history-options">
                             <label><input type="radio" name="history-export-option" value="all" checked> 导出全部记录 (可能卡顿)</label>
@@ -12696,7 +12698,6 @@ if (entity && entity.autoSummaryEnabled && chatMetadata.totalPlayerTurns > 0 && 
                                 }
                             }
                             
-                            // 调用新的生成文件函数
                             this.generateExportFile(entity, isGroup, newAuthorName, newAuthorWords, historyOption);
                         }}
                     ]
@@ -12708,6 +12709,25 @@ if (entity && entity.autoSummaryEnabled && chatMetadata.totalPlayerTurns > 0 && 
                 checkbox.addEventListener('change', () => {
                     optionsContainer.style.display = checkbox.checked ? 'block' : 'none';
                 });
+                
+                // 异步计算并更新UI
+                (async () => {
+                    const messageCount = await DBHelper.getChatMessagesCount(chatId);
+                    const allMessagesForTurns = await DBHelper.getMessages(chatId, Number.MAX_SAFE_INTEGER);
+                    let turnCount = 0;
+                    if(allMessagesForTurns.length > 0) {
+                        turnCount = 1;
+                        for (let i = 1; i < allMessagesForTurns.length; i++) {
+                            if (allMessagesForTurns[i].type !== allMessagesForTurns[i-1].type) {
+                                turnCount++;
+                            }
+                        }
+                    }
+                    const countPlaceholder = $('#history-count-placeholder');
+                    if(countPlaceholder) {
+                        countPlaceholder.textContent = `(共 ${turnCount} 轮 / ${messageCount} 条)`;
+                    }
+                })();
             },
 
             handleResetApp() {
@@ -12787,17 +12807,20 @@ if (entity && entity.autoSummaryEnabled && chatMetadata.totalPlayerTurns > 0 && 
                             .progress-bar-container { width: 100%; background-color: #eee; border-radius: 10px; overflow: hidden; margin: 10px 0; }
                             .progress-bar { width: 0%; height: 20px; background-color: var(--accent-color); transition: width 0.3s ease; text-align: center; color: white; line-height: 20px; font-size: 0.8rem; }
                         </style>
-                        <div id="export-progress-text" style="text-align: center; margin-bottom: 10px; color: var(--text-color-medium);">正在初始化...</div>
+                        <div id="export-progress-text" style="text-align: center; margin-bottom: 5px; color: var(--text-color-medium);">正在初始化...</div>
+                        <div id="export-detail-text" style="text-align: center; font-size: 0.8rem; color: #aaa; min-height: 1.2em; margin-bottom: 10px;"></div>
                         <div class="progress-bar-container"><div id="export-progress-bar" class="progress-bar">0%</div></div>
                     `,
                     actions: [{ text: '取消', class: 'btn-danger', handler: () => { exportState.isCancelled = true; } }]
                 });
 
-                const updateProgress = (text, percentage) => {
+                const updateProgress = (text, percentage, detailText = '') => {
                     if (exportState.isCancelled) throw new Error("Export cancelled by user.");
                     const progressText = $('#export-progress-text');
                     const progressBar = $('#export-progress-bar');
+                    const detailEl = $('#export-detail-text');
                     if(progressText) progressText.textContent = text;
+                    if(detailEl) detailEl.textContent = detailText;
                     if(progressBar) {
                         progressBar.style.width = `${percentage}%`;
                         progressBar.textContent = `${Math.round(percentage)}%`;
@@ -12811,111 +12834,100 @@ if (entity && entity.autoSummaryEnabled && chatMetadata.totalPlayerTurns > 0 && 
 
                     const appendDataPart = (key, data) => {
                         if (exportState.isCancelled) throw new Error("Export cancelled by user.");
-                        if (!isFirstDataPart) {
-                            jsonParts.push(',');
-                        }
+                        if (!isFirstDataPart) jsonParts.push(',');
                         jsonParts.push(`"${key}":${JSON.stringify(data, null, 2)}`);
                         isFirstDataPart = false;
                     };
-
-                    const processSimplePart = async (partName, progressStart, progressEnd, taskName, getDataFunc) => {
-                         if (partsToExport.includes(partName)) {
+                    
+                    const processPart = async (partName, progressStart, progressEnd, taskName, getDataFunc) => {
+                        if (partsToExport.includes(partName)) {
                             updateProgress(`正在读取 ${taskName}...`, progressStart);
                             const data = await getDataFunc();
                             appendDataPart(partName, data);
                         }
-                        updateProgress(`处理完成: ${taskName}`, progressEnd);
                         await new Promise(resolve => setTimeout(resolve, 50));
+                        updateProgress(`处理完成: ${taskName}`, progressEnd);
                     };
 
-                    if (partsToExport.includes('characters')) {
-                        updateProgress("正在读取角色与群聊数据...", 0);
-                        appendDataPart('contacts', await DBHelper.getAll('contacts'));
-                        appendDataPart('groups', await DBHelper.getAll('groups'));
-                        appendDataPart('friendFolders', await DBHelper.getAll('friendFolders'));
-                        updateProgress("处理完成: 角色与群聊数据", 10);
-                        await new Promise(resolve => setTimeout(resolve, 50));
-                    }
-                    
-                    await processSimplePart('profile', 10, 20, "玩家数据", async () => {
+                    await processPart('profile', 0, 5, "玩家数据", async () => {
                         const profile = await DBHelper.get('profile', 'myProfile');
-                        if(profile) delete profile.apiKey;
+                        if (profile) delete profile.apiKey;
                         return profile;
                     });
-                    
-                    if (partsToExport.includes('moments')) {
-                        updateProgress("正在读取朋友圈数据...", 20);
-                        appendDataPart('circles', await DBHelper.getAll('circles'));
-                        appendDataPart('moments', await DBHelper.getAll('moments'));
-                        updateProgress("处理完成: 朋友圈数据", 30);
-                        await new Promise(resolve => setTimeout(resolve, 50));
-                    }
+                    await processPart('contacts', 5, 10, "角色数据", () => DBHelper.getAll('contacts'));
+                    await processPart('groups', 10, 15, "群聊数据", () => DBHelper.getAll('groups'));
+                    await processPart('friendFolders', 15, 20, "好友分组", () => DBHelper.getAll('friendFolders'));
+                    await processPart('circles', 20, 25, "朋友圈数据", () => DBHelper.getAll('circles'));
+                    await processPart('moments', 25, 30, "朋友圈动态", () => DBHelper.getAll('moments'));
+                    await processPart('themeSettings', 30, 35, "主题设置", () => DBHelper.get('apiConfig', 'themeSettings'));
 
-                    await processSimplePart('themeSettings', 30, 40, "主题设置", () => DBHelper.get('apiConfig', 'themeSettings'));
-                    
                     if (partsToExport.includes('others')) {
-                        updateProgress("正在读取其他配置...", 40);
+                        updateProgress("正在读取其他配置...", 35);
                         appendDataPart('prompts', await DBHelper.getAll('prompts'));
                         appendDataPart('promptFolders', await DBHelper.getAll('promptFolders'));
                         appendDataPart('openingScenes', await DBHelper.getAll('openingScenes'));
                         const giftConfig = await DBHelper.get('giftApiConfig', 'mainConfig');
-                        if (giftConfig) {
-                            delete giftConfig.key;
-                            appendDataPart('giftApiConfig', giftConfig);
-                        }
-                        updateProgress("处理完成: 其他配置", 50);
+                        if (giftConfig) { delete giftConfig.key; appendDataPart('giftApiConfig', giftConfig); }
+                        updateProgress("处理完成: 其他配置", 40);
                         await new Promise(resolve => setTimeout(resolve, 50));
                     }
+                    
+                    if (partsToExport.includes('history')) {
+                        const allContacts = await DBHelper.getAll('contacts');
+                        const allGroups = await DBHelper.getAll('groups');
+                        const allChats = [
+                            ...allContacts.map(c => ({ id: c.id, name: c.name })),
+                            ...allGroups.map(g => ({ id: g.id, name: g.name }))
+                        ];
 
-                    const processStoreWithCursor = (storeName, progressStart, progressEnd) => {
-                        return new Promise((resolve, reject) => {
-                            if (!partsToExport.includes('history')) return resolve();
+                        if (!isFirstDataPart) jsonParts.push(',');
+                        jsonParts.push('"messages":[');
+                        let isFirstMessage = true;
 
-                            updateProgress(`正在打包 ${storeName}... (这可能需要一些时间)`, progressStart);
-                            if (!isFirstDataPart) jsonParts.push(',');
-                            jsonParts.push(`"${storeName}":[`);
+                        for (let i = 0; i < allChats.length; i++) {
+                            const chat = allChats[i];
+                            const transaction = DBHelper.db.transaction(['messages'], 'readonly');
+                            const store = transaction.objectStore('messages');
+                            const index = store.index('by_chat_and_time');
+                            const range = IDBKeyRange.only(chat.id);
+                            const countReq = index.count(range);
+                            
+                            const totalMessages = await new Promise(res => { countReq.onsuccess = () => res(countReq.result); });
+                            if (totalMessages === 0) continue;
 
-                            const transaction = DBHelper.db.transaction([storeName], 'readonly');
-                            const store = transaction.objectStore(storeName);
-                            let isFirstItem = true;
-                            let count = 0;
-
-                            store.openCursor().onsuccess = (e) => {
-                                if (exportState.isCancelled) {
-                                    transaction.abort();
-                                    return reject(new Error("Export cancelled by user."));
-                                }
-                                const cursor = e.target.result;
-                                if (cursor) {
-                                    if (!isFirstItem) jsonParts.push(',');
-                                    jsonParts.push(JSON.stringify(cursor.value));
-                                    isFirstItem = false;
-                                    count++;
-                                    if(count % 1000 === 0) { // Update progress every 1000 records
-                                        updateProgress(`正在打包 ${storeName}: ${count}条...`, progressStart);
+                            let currentCount = 0;
+                            await new Promise((resolve, reject) => {
+                                index.openCursor(range).onsuccess = e => {
+                                    if (exportState.isCancelled) { transaction.abort(); return reject(new Error("Export cancelled")); }
+                                    const cursor = e.target.result;
+                                    if (cursor) {
+                                        if (!isFirstMessage) jsonParts.push(',');
+                                        jsonParts.push(JSON.stringify(cursor.value));
+                                        isFirstMessage = false;
+                                        currentCount++;
+                                        if (currentCount % 100 === 0) {
+                                            const progress = 40 + (i / allChats.length * 55) + (currentCount / totalMessages) * (55 / allChats.length);
+                                            updateProgress(`正在打包聊天记录...`, progress, `处理 "${chat.name}" (${currentCount}/${totalMessages})`);
+                                        }
+                                        cursor.continue();
+                                    } else {
+                                        resolve();
                                     }
-                                    cursor.continue();
-                                } else {
-                                    jsonParts.push(']');
-                                    isFirstDataPart = false;
-                                    updateProgress(`处理完成: ${storeName}`, progressEnd);
-                                    resolve();
-                                }
-                            };
-                            transaction.onerror = (e) => reject(new Error(`读取 ${storeName} 失败: ${e.target.error}`));
-                        });
-                    };
-
-                    await processStoreWithCursor('messages', 50, 90);
-                    await processStoreWithCursor('chatMetadata', 90, 95);
+                                };
+                            });
+                        }
+                        jsonParts.push(']');
+                        isFirstDataPart = false;
+                         await processPart('chatMetadata', 95, 98, "聊天元数据", () => DBHelper.getAll('chatMetadata'));
+                    }
 
                     updateProgress("正在生成文件...", 98);
                     jsonParts.push('}}');
-
+                    
                     const blob = new Blob(jsonParts, { type: 'application/json' });
                     const url = URL.createObjectURL(blob);
                     const filename = `33聊天室_备份_${new Date().toISOString().slice(0, 10)}.json`;
-
+                    
                     UIManager.showModal({
                         title: '导出成功',
                         body: `<a href="${url}" download="${filename}" class="modal-btn btn-primary" style="display: block; text-align: center;">点击下载备份文件</a>`,
@@ -12923,7 +12935,7 @@ if (entity && entity.autoSummaryEnabled && chatMetadata.totalPlayerTurns > 0 && 
                     });
 
                 } catch (error) {
-                    if (error.message.includes("cancelled")) {
+                     if (error.message.includes("cancelled")) {
                         UIManager.hideModal();
                         UIManager.showToast("导出已取消");
                     } else {
@@ -13002,8 +13014,16 @@ if (entity && entity.autoSummaryEnabled && chatMetadata.totalPlayerTurns > 0 && 
                                 await DBHelper.init();
 
                                 // 4. 逐个导入数据
+                                // --- 修复开始：单独处理 profile 对象 ---
+                                if (dataToImport.profile) {
+                                    // The profile is a single object, not an array. Use `put`.
+                                    await DBHelper.put('profile', dataToImport.profile);
+                                }
+                                // --- 修复结束 ---
+
                                 const storesToImport = [
-                                    'profile', 'contacts', 'groups', 'friendFolders', 
+                                    // 'profile' is now handled above
+                                    'contacts', 'groups', 'friendFolders', 
                                     'circles', 'moments', 'prompts', 'promptFolders', 
                                     'openingScenes', 'messages', 'chatMetadata'
                                 ];
