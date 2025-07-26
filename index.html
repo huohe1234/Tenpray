@@ -3976,10 +3976,79 @@
         .page-header > *,
         #bottom-nav > * {
             position: relative;
-            z-index: 1; /* 确保内容在噪点层之上 */
+            z-index: 1;
         }
 
-    </style>
+        .theme-setting-card .css-editor-container {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+        .theme-setting-card #custom-bubble-css-input {
+            width: 100%;
+            min-height: 200px;
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 0.9rem;
+            background-color: #f9f9f9;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 10px;
+            resize: vertical;
+            outline-color: var(--accent-color);
+        }
+        .theme-setting-card .editor-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+        }
+        .css-preview-area {
+            padding: 20px;
+            background-color: var(--theme-color-1);
+            border-radius: 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        .css-tutorial-code {
+            background-color: #2d2d2d;
+            color: #ccc;
+            padding: 15px;
+            border-radius: 8px;
+            font-family: 'Courier New', Courier, monospace;
+            white-space: pre-wrap;
+            font-size: 0.85rem;
+            position: relative;
+            user-select: text;
+            -webkit-user-select: text;
+        }
+        .css-tutorial-code .copy-btn {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background-color: #444;
+            color: #eee;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 0.8rem;
+        }
+        .css-tutorial-code .copy-btn:hover {
+            background-color: #555;
+        }
+
+        /* --- 23. 自定义气泡基础样式 (新) --- */
+#app-container.app-bubble-style-custom .bubble {
+    /* 这是一个“空白”样式，用于承载用户的自定义CSS，避免被其他内置样式干扰 */
+    background: none;
+    border: none;
+    box-shadow: none;
+    padding: 8px 12px !important; /* 保留一个基础的内边距，用户可以覆盖 */
+    border-radius: 16px !important; /* 保留一个基础的圆角，用户可以覆盖 */
+    color: var(--text-color-dark) !important; /* 默认文字颜色 */
+}
+
+</style>
 </head>
 <body>
     <!-- 开屏动画 -->
@@ -6020,10 +6089,10 @@
                 }
 
                 if (!contact) return;
-                
+
                 const lastInnerVoice = contact.lastInnerVoiceId ? await DBHelper.get('messages', contact.lastInnerVoiceId) : null;
                 const lastEssay = contact.lastEssayId ? await DBHelper.get('messages', contact.lastEssayId) : null;
-        
+
                 let bodyHtml = `
                     <div style="display: flex; align-items: center; gap: 15px; margin-bottom: 20px;">
                         <img src="${contact.avatar}" style="width: 70px; height: 70px; border-radius: 12px; object-fit: cover;">
@@ -6033,23 +6102,16 @@
                         </div>
                     </div>
                 `;
-        
-                if (lastInnerVoice) {
-                    bodyHtml += `<div class="persona-modal-card"><h4>心声</h4><p>${lastInnerVoice.content}</p></div>`;
-                }
-        
-                if (lastEssay) {
-                     bodyHtml += `<div class="persona-modal-card note-paper"><h4>随笔</h4><p>${lastEssay.content}</p></div>`;
-                }
-        
-                if (!lastInnerVoice && !lastEssay) {
-                     // 如果没有可显示的内容，但需要返回，则直接执行返回逻辑
-                    if (fromGroupInsight && appState.currentChatId) {
-                        this.showGroupInsightModal(appState.currentChatId);
-                    }
-                    return;
-                }
 
+                // --- 核心修改：无论是否有心声，都显示心声卡片 ---
+                bodyHtml += `<div class="persona-modal-card"><h4>心声</h4><p>${lastInnerVoice ? lastInnerVoice.content : '暂未洞察到心声内容'}</p></div>`;
+
+                // 仅当有随笔时才显示随笔卡片
+                if (lastEssay) {
+                    bodyHtml += `<div class="persona-modal-card note-paper"><h4>随笔</h4><p>${lastEssay.content}</p></div>`;
+                }
+                
+                // --- 核心修改：移除了提前返回的逻辑 ---
                 this.showModal({
                     title: "角色洞察",
                     body: bodyHtml,
@@ -8480,18 +8542,39 @@ async handleAutoSummaryRequest(chatId) {
                 const allContacts = await DBHelper.getAll('contacts');
 
                 let taskPrompt, characterInfoPrompt, finalPrompt;
+                
+                const chatEntity = await DBHelper.get(isGroup ? 'groups' : 'contacts', chatId);
 
                 if (isGroup) {
-                    const group = await DBHelper.get('groups', scene.groupId);
-                    const members = group.members.map(id => allContacts.find(c => c.id === id)).filter(Boolean);
-                    taskPrompt = `你现在正在一个名为“${group.name}”的群聊中，需要同时扮演以下几位角色：${members.map(m => m.name).join('、')}。`;
+                    const members = chatEntity.members.map(id => allContacts.find(c => c.id === id)).filter(Boolean);
+                    taskPrompt = `你现在正在一个名为“${chatEntity.name}”的群聊中，需要同时扮演以下几位角色：${members.map(m => m.name).join('、')}。`;
                     characterInfoPrompt = `群聊成员资料如下：\n` + members.map(m => `角色名: ${m.name}\n性别: ${m.gender}\n喜好: ${m.likes || '无'}\n厌恶: ${m.dislikes || '无'}\n习惯: ${m.habits || '无'}\n背景: ${m.background || '无'}`).join('\n---\n');
                 } else {
-                    const contact = await DBHelper.get('contacts', scene.contactId);
-                    taskPrompt = `你现在正在扮演“${contact.name}”，与“${myProfile.name}”（也就是玩家）进行一对一私聊。`;
-                    characterInfoPrompt = `你的角色资料如下：\n角色名: ${contact.name}\n性别: ${contact.gender}\n喜好: ${contact.likes || '无'}\n厌恶: ${contact.dislikes || '无'}\n习惯: ${contact.habits || '无'}\n背景: ${contact.background || '无'}`;
+                    taskPrompt = `你现在正在扮演“${chatEntity.name}”，与“${myProfile.name}”（也就是玩家）进行一对一私聊。`;
+                    characterInfoPrompt = `你的角色资料如下：\n角色名: ${chatEntity.name}\n性别: ${chatEntity.gender}\n喜好: ${chatEntity.likes || '无'}\n厌恶: ${chatEntity.dislikes || '无'}\n习惯: ${chatEntity.habits || '无'}\n背景: ${chatEntity.background || '无'}`;
                 }
                 
+                // --- 新增：读取并构建绑定的提示词 ---
+                let customPromptsSection = '';
+                if (chatEntity && chatEntity.boundPromptFolderIds?.length > 0) {
+                    const allFolders = await DBHelper.getAll('promptFolders');
+                    const allPrompts = await DBHelper.getAll('prompts');
+                    const playerInputForScene = scene.content; // 使用开场白内容作为隐性提示词的触发依据
+
+                    const activeBoundFolders = allFolders.filter(f => chatEntity.boundPromptFolderIds.includes(f.id) && f.isActive);
+                    if (activeBoundFolders.length > 0) {
+                        const activeBoundFolderIds = activeBoundFolders.map(f => f.id);
+                        const relevantPrompts = allPrompts.filter(p => activeBoundFolderIds.includes(p.folderId) && p.isActive);
+                        const promptsToInject = relevantPrompts
+                            .filter(p => p.type === 'explicit' || (p.type === 'implicit' && JSON.parse(p.keywords).some(kw => playerInputForScene.includes(kw))))
+                            .map(p => p.content);
+                        if (promptsToInject.length > 0) {
+                            customPromptsSection = `\n--- 其他资料 ---\n${promptsToInject.join('\n\n')}\n---`;
+                        }
+                    }
+                }
+                // --- 新增结束 ---
+
                 const playerInfoPrompt = `玩家（“${myProfile.name}”）的信息如下：\n性别: ${myProfile.gender}\n拍一拍动作: ${myProfile.patAction || '拍了拍'}\n拍一拍内容: ${myProfile.patContent || ''}\n背景: ${myProfile.background || '无'}`;
                 const openingInstruction = `\n---
 紧急指令：这是一个全新的开场。请根据以下“开场白”内容，让角色开始对话，营造出开场氛围。不要提及“开场白”这三个字，直接开始表演。
@@ -8500,15 +8583,23 @@ async handleAutoSummaryRequest(chatId) {
 ---`;
                 const formatPrompt = AIHandler.formatPromptTpl.replace('{PLAYER_NAME}', myProfile.name);
 
+                const promptParts = [
+                    taskPrompt, 
+                    characterInfoPrompt, 
+                    playerInfoPrompt, 
+                    customPromptsSection, // 将提示词放在角色资料下方
+                    openingInstruction, 
+                    formatPrompt
+                ];
+
+                finalPrompt = promptParts.filter(Boolean).join('\n\n');
                 if (isGroup) {
-                    finalPrompt = [taskPrompt, characterInfoPrompt, playerInfoPrompt, openingInstruction, formatPrompt, AIHandler.groupChatRules].join('\n\n');
-                } else {
-                    finalPrompt = [taskPrompt, characterInfoPrompt, playerInfoPrompt, openingInstruction, formatPrompt].join('\n\n');
+                    finalPrompt += AIHandler.groupChatRules;
                 }
                 
                 console.log("--- OPENING SCENE PROMPT SENT TO AI ---\n", finalPrompt);
                 
-                const typingTarget = await DBHelper.get(isGroup ? 'groups' : 'contacts', chatId);
+                const typingTarget = chatEntity;
                 const typingBubbleId = Utils.generateId('typing');
                 if (typingTarget) {
                      if (isGroup) {
@@ -10154,6 +10245,41 @@ async handleAutoSummaryRequest(chatId) {
 
         
         const EventManager = {
+
+            _scopeCSS(css, prefix) {
+                if (!css || !prefix) return '';
+                // 这是一个简化的CSS解析器，用于处理基本规则
+                let scopedCss = '';
+                let depth = 0;
+                let buffer = '';
+                let selectors = [];
+
+                for (let i = 0; i < css.length; i++) {
+                    const char = css[i];
+                    buffer += char;
+
+                    if (char === '{') {
+                        if (depth === 0) {
+                            const selectorPart = buffer.slice(0, -1).trim();
+                            selectors = selectorPart.split(',').map(s => s.trim());
+                            buffer = '{';
+                        }
+                        depth++;
+                    } else if (char === '}') {
+                        depth--;
+                        if (depth === 0) {
+                            const prefixedSelectors = selectors.map(s => {
+                                if (s.startsWith('@')) return s; // 忽略 @-rules
+                                return `${prefix} ${s}`;
+                            }).join(', ');
+                            scopedCss += `${prefixedSelectors} ${buffer}\n`;
+                            buffer = '';
+                            selectors = [];
+                        }
+                    }
+                }
+                return scopedCss;
+            },
 
             async setupEmojiMaps() {
                 const profile = await DBHelper.get('profile', 'myProfile');
@@ -13710,6 +13836,7 @@ if (entity && entity.autoSummaryEnabled && chatMetadata.totalPlayerTurns > 0 && 
             async renderBubbleSettingsPage() {
                 const contentArea = $('#bubble-settings-content');
                 const settings = await DBHelper.get('apiConfig', 'themeSettings') || {};
+                const profile = await DBHelper.get('profile', 'myProfile'); // 获取玩家信息用于预览
                 
                 const bubbleStyles = {
                     'default': { name: '默认', type: 'A', style: 'background: white; border: 2px solid var(--player-bubble-bg);' },
@@ -13731,6 +13858,7 @@ if (entity && entity.autoSummaryEnabled && chatMetadata.totalPlayerTurns > 0 && 
                     'ocean': { name: '海洋风', type: 'B', style: 'background: linear-gradient(160deg, #0077b6, #00b4d8);' },
                     'paw': { name: '猫爪风', type: 'B', style: 'background: #fce1cb; color: #8b5e34;' },
                     'wechat': { name: '绿色', type: 'B', style: 'background-color: #95EC6A;' },
+                    'custom': { name: '自定义', type: 'B', style: 'background: #f0f0f0; border: 2px dashed #ccc; color: #999 !important;' },
                 };
 
                 const currentStyle = settings.bubbleStyle || 'default';
@@ -13819,10 +13947,76 @@ if (entity && entity.autoSummaryEnabled && chatMetadata.totalPlayerTurns > 0 && 
                         <h3>聊天气泡样式</h3>
                         <div id="bubble-style-options" class="bubble-style-options-container">${bubbleStyleOptionsHTML}</div>
                     </div>
+                    <div class="theme-setting-card">
+                        <h3>自定义气泡样式</h3>
+                        <div class="css-editor-container">
+                            <textarea id="custom-bubble-css-input" placeholder="在此处输入您的自定义CSS代码..."></textarea>
+                            <div class="editor-actions">
+                                <button id="reset-custom-css-btn" class="modal-btn btn-secondary">重置</button>
+                                <button id="save-preview-custom-css-btn" class="modal-btn btn-secondary">预览</button>
+                                <button id="apply-custom-css-btn" class="modal-btn btn-primary">应用</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="theme-setting-card">
+                        <h3>效果预览</h3>
+                        <style id="custom-bubble-preview-style"></style>
+                        <div id="custom-bubble-preview" class="css-preview-area"></div>
+                    </div>
+                    <div class="theme-setting-card">
+                        <h3>教程与示例</h3>
+                        <p style="font-size:0.9rem; color:var(--text-color-medium); margin-bottom:16px;">您可以复制以下示例代码作为起点进行修改或发送给AI进行修改。请注意，为了安全，仅支持基础的CSS选择器和属性。</p>
+                        <p style="font-size:0.9rem; color:var(--text-color-medium); margin-bottom:13px;"><strong>注意：</strong>请确保你使用的气泡代码是<strong>自己编写/自己使用AI生成/其他制作老师同意使用的，否则后续问题自行负责</strong></p>
+                        <p style="font-size:0.9rem; color:var(--text-color-medium); margin-bottom:10px;"><strong>请尊重所有人的产出</strong></p>
+                        <pre id="css-tutorial-code-block" class="css-tutorial-code"><button class="copy-btn">复制</button><code>/* --- 好友的气泡 --- */
+.bubble.received {
+  background-color: #FFFFFF;
+  color: #333333;
+  border: 1px solid #E0E0E0;
+  border-radius: 16px 16px 16px 5px;
+}
+
+/* --- 我的气泡 --- */
+.bubble.sent {
+  background-color: #A7C7E7;
+  color: #FFFFFF;
+  border-radius: 16px 16px 5px 16px;
+}
+</code></pre>
+                    </div>
                 `;
                 
                 $('#bubble-settings-back-btn').onclick = () => UIManager.navigateTo('settings');
                 
+                // --- 填充预览区域 ---
+                const previewArea = $('#custom-bubble-preview');
+                previewArea.innerHTML = `
+                    <div class="message-row received">
+                        <img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0MCIgaGVpZ2h0PSI0MCIgdmlld0JveD0iMCAwIDQwIDQwIj48cmVjdCB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIGZpbGw9IiNjY2Q0Y2MiLz48L3N2Zz4=" alt="avatar" class="message-avatar">
+                        <div class="message-content">
+                            <div class="bubble received">这是好友的消息气泡。</div>
+                        </div>
+                    </div>
+                    <div class="message-row sent">
+                        <img src="${profile.avatar}" alt="avatar" class="message-avatar">
+                        <div class="message-content">
+                            <div class="bubble sent">这是我的消息气泡。</div>
+                        </div>
+                    </div>
+                `;
+                
+                // --- 加载并应用已保存的自定义CSS ---
+                const cssInput = $('#custom-bubble-css-input');
+                cssInput.value = settings.customBubbleCSS || '';
+                const previewStyleTag = $('#custom-bubble-preview-style');
+                previewStyleTag.textContent = this._scopeCSS(cssInput.value, '#custom-bubble-preview');
+
+                // --- 绑定事件 ---
+                $('#reset-custom-css-btn').onclick = () => this.handleResetCustomCSS();
+                $('#save-preview-custom-css-btn').onclick = () => this.handleSaveAndPreviewCustomCSS();
+                $('#apply-custom-css-btn').onclick = () => this.handleApplyCustomCSS();
+                $('.css-tutorial-code .copy-btn').onclick = () => this.handleCopyTutorialCSS();
+
                 EventManager._syncColorInputs('friend-bubble-bg-color', 'friend-bubble-bg-hex');
                 EventManager._syncColorInputs('player-bubble-bg-color', 'player-bubble-bg-hex');
                 EventManager._syncColorInputs('friend-bubble-text-color', 'friend-bubble-text-hex');
@@ -13992,33 +14186,32 @@ if (entity && entity.autoSummaryEnabled && chatMetadata.totalPlayerTurns > 0 && 
             setupUploadHandler('receipt-cover', 'receiptCover');
         },
 
-        async applyBubbleSettings() {
-            const settings = await DBHelper.get('apiConfig', 'themeSettings') || {};
-            const root = document.documentElement;
-            const appContainer = $('#app-container');
+            async applyBubbleSettings() {
+                const settings = await DBHelper.get('apiConfig', 'themeSettings') || {};
+                const root = document.documentElement;
+                const appContainer = $('#app-container');
 
-            
-            root.style.setProperty('--friend-bubble-bg', settings.friendBubbleBg || '#FFFFFF');
-            root.style.setProperty('--player-bubble-bg', settings.playerBubbleBg || 'var(--accent-color)');
-            root.style.setProperty('--friend-bubble-text-color', settings.friendBubbleTextColor || '#5D534A');
-            root.style.setProperty('--player-bubble-text-color', settings.playerBubbleTextColor || '#FFFFFF');
+                root.style.setProperty('--friend-bubble-bg', settings.friendBubbleBg || '#FFFFFF');
+                root.style.setProperty('--player-bubble-bg', settings.playerBubbleBg || 'var(--accent-color)');
+                root.style.setProperty('--friend-bubble-text-color', settings.friendBubbleTextColor || '#5D534A');
+                root.style.setProperty('--player-bubble-text-color', settings.playerBubbleTextColor || '#FFFFFF');
 
-            
-            const styleKey = settings.bubbleStyle || 'default';
-            const classList = Array.from(appContainer.classList);
-            
-            
-            let newClassList = classList.filter(c => !c.startsWith('app-bubble-style-'));
-            if(classList.includes('bottom-offset-active')) {
-                if(!newClassList.includes('bottom-offset-active')) {
-                     newClassList.push('bottom-offset-active');
+                const styleKey = settings.bubbleStyle || 'default';
+                const classList = Array.from(appContainer.classList);
+                
+                let newClassList = classList.filter(c => !c.startsWith('app-bubble-style-'));
+                if(classList.includes('bottom-offset-active')) {
+                    if(!newClassList.includes('bottom-offset-active')) {
+                         newClassList.push('bottom-offset-active');
+                    }
                 }
-            }
-            
-            
-            newClassList.push(`app-bubble-style-${styleKey}`);
-            appContainer.className = newClassList.join(' ');
-        },
+                
+                newClassList.push(`app-bubble-style-${styleKey}`);
+                appContainer.className = newClassList.join(' ');
+
+                // 应用全局自定义CSS
+                await this.loadAndApplyCustomBubbleCSS();
+            },
 
         async applyBubbleFontSize() {
             const settings = await DBHelper.get('apiConfig', 'themeSettings') || {};
@@ -14032,6 +14225,23 @@ if (entity && entity.autoSummaryEnabled && chatMetadata.totalPlayerTurns > 0 && 
             };
             document.documentElement.style.setProperty('--font-bubble-size', fontSizes[fontSizeKey]);
         },
+
+            async loadAndApplyCustomBubbleCSS() {
+                let customStyleTag = document.getElementById('global-custom-bubble-style');
+                if (!customStyleTag) {
+                    customStyleTag = document.createElement('style');
+                    customStyleTag.id = 'global-custom-bubble-style';
+                    document.head.appendChild(customStyleTag);
+                }
+
+                const settings = await DBHelper.get('apiConfig', 'themeSettings') || {};
+                if (settings.bubbleStyle === 'custom' && settings.customBubbleCSS) {
+                    const scopedCss = this._scopeCSS(settings.customBubbleCSS, '#app-container.app-bubble-style-custom .chat-area');
+                    customStyleTag.textContent = scopedCss;
+                } else {
+                    customStyleTag.textContent = ''; // Clear if not in custom mode
+                }
+            },
 
             async applyPageStyleSettings() {
                 const settings = await DBHelper.get('apiConfig', 'themeSettings') || {};
@@ -18757,6 +18967,83 @@ async showGiftDetailsModal(messageId) {
                 }
 
                 UIManager.navigateTo('forwarded-history');
+            },
+        
+            async handleSaveAndPreviewCustomCSS() {
+                const cssInput = $('#custom-bubble-css-input');
+                const previewStyle = $('#custom-bubble-preview-style');
+                const css = cssInput.value;
+
+                const settingsToSave = await DBHelper.get('apiConfig', 'themeSettings') || { id: 'themeSettings' };
+                settingsToSave.customBubbleCSS = css;
+                await DBHelper.put('apiConfig', settingsToSave);
+
+                const scopedCss = this._scopeCSS(css, '#custom-bubble-preview');
+                previewStyle.textContent = scopedCss;
+
+                UIManager.showToast("已保存并更新预览！");
+            },
+
+            async handleApplyCustomCSS() {
+                await this.handleSaveAndPreviewCustomCSS(); // First, save and update preview
+
+                const settingsToSave = await DBHelper.get('apiConfig', 'themeSettings') || { id: 'themeSettings' };
+                settingsToSave.bubbleStyle = 'custom'; // Set the style to 'custom'
+                await DBHelper.put('apiConfig', settingsToSave);
+
+                await this.applyBubbleSettings(); // Apply the change globally
+
+                // Update the UI on the settings page to reflect the new selection
+                $$('.bubble-style-option').forEach(opt => {
+                    opt.classList.toggle('selected', opt.dataset.styleKey === 'custom');
+                });
+                
+                $('#bubble-color-card').style.display = 'none';
+
+                UIManager.showToast("自定义气泡样式已应用！");
+            },
+            
+            async handleResetCustomCSS() {
+                 UIManager.showModal({
+                    title: "确认重置",
+                    body: `<p>确定要清空自定义CSS代码吗？</p>`,
+                    actions: [
+                        { text: '取消', class: 'btn-secondary', handler: () => UIManager.hideModal() },
+                        { text: '确认', class: 'btn-danger', handler: async () => {
+                            const cssInput = $('#custom-bubble-css-input');
+                            const previewStyle = $('#custom-bubble-preview-style');
+                            
+                            cssInput.value = '';
+                            previewStyle.textContent = '';
+                            
+                            const settingsToSave = await DBHelper.get('apiConfig', 'themeSettings') || { id: 'themeSettings' };
+                            delete settingsToSave.customBubbleCSS;
+                            
+                            // If the current style was 'custom', switch back to 'default'
+                            if (settingsToSave.bubbleStyle === 'custom') {
+                                settingsToSave.bubbleStyle = 'default';
+                            }
+                            
+                            await DBHelper.put('apiConfig', settingsToSave);
+                            
+                            // Re-apply settings and re-render the page to reflect changes
+                            await this.applyBubbleSettings(); 
+                            await this.renderBubbleSettingsPage(); 
+                            
+                            UIManager.hideModal();
+                            UIManager.showToast("自定义CSS已重置。");
+                        }}
+                    ]
+                });
+            },
+
+            handleCopyTutorialCSS() {
+                const codeBlock = $('#css-tutorial-code-block code');
+                if (codeBlock) {
+                    navigator.clipboard.writeText(codeBlock.textContent.trim())
+                        .then(() => UIManager.showToast("示例代码已复制！"))
+                        .catch(() => UIManager.showToast("复制失败,请手动复制"));
+                }
             },
         };
         
