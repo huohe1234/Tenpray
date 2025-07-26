@@ -2933,15 +2933,57 @@
             box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12);
         }
         /* --- 核心修复：针对所有主题，强制重置特殊消息的气泡样式 --- */
-        #app-container[class*="app-bubble-style-"] .bubble.transfer-or-red-packet-bubble,
-        #app-container[class*="app-bubble-style-"] .bubble.card-bubble,
-        #app-container[class*="app-bubble-style-"] .bubble.forwarded-moment-bubble {
+        #app-container[class*="app-bubble-style-"] .chat-area .message-content .bubble.transfer-or-red-packet-bubble,
+        #app-container[class*="app-bubble-style-"] .chat-area .message-content .bubble.card-bubble,
+        #app-container[class*="app-bubble-style-"] .chat-area .message-content .bubble.forwarded-moment-bubble,
+        #app-container[class*="app-bubble-style-"] .chat-area .message-content .bubble.gift-bubble,
+        #app-container[class*="app-bubble-style-"] .chat-area .message-content .bubble.forwarded-history-bubble,
+        #app-container[class*="app-bubble-style-"] .chat-area .message-content .bubble.bubble-emoji {
             background: none !important;
             border: none !important;
             box-shadow: none !important;
             padding: 0 !important;
+            margin: 0 !important;
+            filter: none !important;
         }
         
+        /* --- 核心修复：专门禁用自定义CSS在特殊气泡上的伪元素 --- */
+        #app-container[class*="app-bubble-style-"] .chat-area .message-content .bubble.transfer-or-red-packet-bubble::before,
+        #app-container[class*="app-bubble-style-"] .chat-area .message-content .bubble.transfer-or-red-packet-bubble::after,
+        #app-container[class*="app-bubble-style-"] .chat-area .message-content .bubble.card-bubble::before,
+        #app-container[class*="app-bubble-style-"] .chat-area .message-content .bubble.card-bubble::after,
+        #app-container[class*="app-bubble-style-"] .chat-area .message-content .bubble.forwarded-moment-bubble::before,
+        #app-container[class*="app-bubble-style-"] .chat-area .message-content .bubble.forwarded-moment-bubble::after,
+        #app-container[class*="app-bubble-style-"] .chat-area .message-content .bubble.gift-bubble::before,
+        #app-container[class*="app-bubble-style-"] .chat-area .message-content .bubble.gift-bubble::after,
+        #app-container[class*="app-bubble-style-"] .chat-area .message-content .bubble.forwarded-history-bubble::before,
+        #app-container[class*="app-bubble-style-"] .chat-area .message-content .bubble.forwarded-history-bubble::after,
+        #app-container[class*="app-bubble-style-"] .chat-area .message-content .bubble.bubble-emoji::before,
+        #app-container[class*="app-bubble-style-"] .chat-area .message-content .bubble.bubble-emoji::after {
+            content: none !important;
+        }
+        
+
+        /* --- 通用基础样式 --- */
+        .bubble.transfer-or-red-packet-bubble,
+        .bubble.card-bubble {
+            padding: 0;
+            background: none;
+            border: none;
+            box-shadow: none;
+            cursor: pointer;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+            max-width: 280px;
+        }
+        .bubble.transfer-or-red-packet-bubble:not(.claimed):hover,
+        .bubble.card-bubble:hover .card-message-wrapper {
+            transform: translateY(-3px) scale(1.02);
+            box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12);
+        }
+        .bubble.card-bubble {
+            max-width: 280px; /* 调整为 max-width */
+        }
+
         .forwarded-moment-card-content {
             background-color: var(--text-color-white);
             border: 1px solid var(--border-color);
@@ -3867,13 +3909,7 @@
             transform: translateY(-3px) scale(1.02);
             box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12);
         }
-        /* --- 核心修复：针对所有主题，强制重置特殊消息的气泡样式 --- */
-        #app-container[class*="app-bubble-style-"] .bubble.forwarded-history-bubble {
-            background: none !important;
-            border: none !important;
-            box-shadow: none !important;
-            padding: 0 !important;
-        }
+
         .forwarded-history-card-content {
             background-color: var(--text-color-white);
             border: 1px solid var(--border-color);
