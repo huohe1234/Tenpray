@@ -8694,15 +8694,15 @@ async handleAutoSummaryRequest(chatId) {
                         console.warn(`未在通讯录中找到名为 "${senderName}" 的角色，跳过此消息。`);
                         return null;
                     }
-                    return {
+                    const baseMessage = {
                         messageId: Utils.generateId('msg'),
                         chatId: chatId,
                         senderId: sender.id,
                         timestamp: baseTimestamp + timestampOffset++,
                         type: 'received',
                         isUnread: chatId !== appState.currentChatId,
-                        // senderInfo: sender, // 这就是关键的优化！我们不再把完整的senderInfo存入数据库
                     };
+                    return { baseMessage, sender };
                 };
 
                 const allMessageRegex = /<朋友圈>([\s\S]*?)<\/朋友圈>|<旁白>([\s\S]*?)<\/旁白>|<系统>([\s\S]*?)<\/系统>|<私聊>([\s\S]*?)<\/私聊>|<礼物>([\s\S]*?)<\/礼物>|<拍一拍>([\s\S]*?)<\/拍一拍>|<修改拍一拍>([\s\S]*?)<\/修改拍一拍>|『([^』]+?)』|【([^】]+?)】|「([^」]+?)」|{([^{}]+?)}|\[([^\[\]]+?)\]|<((?!系统|私聊)[^>]+?)>/g;
@@ -9045,11 +9045,12 @@ async handleAutoSummaryRequest(chatId) {
 
                         const parts = innerContent.split('|').map(p => p.trim());
                         const [senderName] = parts;
-                        const baseMessage = createBaseMessage(senderName);
-                        if (!baseMessage) continue;
+                        const result = createBaseMessage(senderName);
+                        if (!result) continue;
+                        const { baseMessage, sender } = result;
 
                         if (bracketType === '<') {
-                            const emojiSetting = baseMessage.senderInfo.allowEmoji;
+                            const emojiSetting = sender.allowEmoji;
                             let shouldDisplay = true;
 
                             if (emojiSetting === 'off') {
@@ -9068,7 +9069,7 @@ async handleAutoSummaryRequest(chatId) {
                             baseMessage.isRetracted = bracketType === '{';
                             baseMessage.toBeRetracted = bracketType === '{';
 
-                            if (baseMessage.toBeRetracted && baseMessage.senderInfo.allowRetraction === false) {
+                            if (baseMessage.toBeRetracted && sender.allowRetraction === false) {
                                 baseMessage.toBeRetracted = false;
                                 baseMessage.isRetracted = false;
                             }
