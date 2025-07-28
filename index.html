@@ -1037,6 +1037,16 @@
             min-width: 80px;
             box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05) !important; /* 使用 !important 强制覆盖主题样式 */
         }
+        .bubble.image-with-desc-bubble .description-text { display: none; padding: 0 4px; font-size: 0.9rem; line-height: 1.5; color: var(--text-color-dark); }
+        .bubble.vision-image-bubble {
+            max-width: 240px; /* 让图片可以显示得更大一些 */
+            max-height: none; /* 移除高度限制 */
+            padding: 5px;
+        }
+        .bubble.vision-image-bubble .description-text {
+            display: block; /* 总是显示附言 */
+            padding-top: 5px;
+        }
         .bubble.voice-message-bubble:hover {
             background-color: #f9f9f9 !important;
         }
@@ -1759,8 +1769,11 @@
         line-height: 1.6;
         color: var(--text-color-dark);
     }
-    .note-paper {
+    .persona-modal-card.note-paper p {
         font-family: var(--font-essay); /* 应用随笔字体 */
+        white-space: pre-wrap; /* 让换行符生效 */
+    }
+    .note-paper {
         background-color: #fdf5d3;
         background-image:
             linear-gradient(90deg, rgba(200, 180, 140, 0.15) 1px, transparent 1px),
@@ -4083,6 +4096,73 @@
     border-radius: 16px !important; /* 保留一个基础的圆角，用户可以覆盖 */
 }
 
+        /* --- 24. 公告弹窗样式 (新) --- */
+        .announcement-modal-content {
+            max-width: 480px; /* 公告可以宽一点 */
+            background: #f9f9f9;
+            border: 1px solid #ddd;
+        }
+        .announcement-modal-content .modal-header {
+            font-size: 1.4rem;
+            color: var(--text-color-dark);
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 15px;
+        }
+        .announcement-modal-content .modal-body {
+            line-height: 1.8;
+            font-size: 0.95rem;
+            color: #444;
+        }
+        .announcement-modal-content .modal-body h4 {
+            font-size: 1.1rem;
+            margin-bottom: 10px;
+            color: var(--text-color-dark);
+        }
+        .announcement-modal-content .modal-body p {
+            margin-bottom: 15px;
+        }
+        .announcement-page {
+            display: none;
+        }
+        .announcement-page.active {
+            display: block;
+        }
+        .announcement-auth-list {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 8px 15px;
+            font-size: 0.9rem;
+            color: var(--text-color-medium);
+            padding: 10px;
+            background-color: rgba(0,0,0,0.02);
+            border-radius: 8px;
+        }
+        .announcement-warning {
+            font-size: 0.85rem;
+            color: #c0392b;
+            margin-top: 15px;
+            font-weight: bold;
+        }
+        .announcement-nav {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 20px;
+        }
+        .announcement-nav .page-indicator {
+            font-size: 0.9rem;
+            color: var(--text-color-light);
+        }
+        .announcement-nav .nav-btn {
+            padding: 6px 15px;
+            font-size: 0.9rem;
+        }
+        #announcement-close-btn:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+            color: #666;
+        }
+
 </style>
 </head>
 <body>
@@ -4246,6 +4326,7 @@
                             <button class="feature-btn" id="transfer-btn" title="转账"><i class="fas fa-exchange-alt"></i></button>
                             <button class="feature-btn" id="red-packet-btn" title="发红包"><i class="fas fa-wallet"></i></button>
                             <button class="feature-btn" id="simulated-image-btn" title="图文消息"><i class="fas fa-image"></i></button>
+                            <button class="feature-btn" id="image-vision-btn" title="发送图片 (AI识图)"><i class="fas fa-camera"></i></button>
                             <button class="feature-btn" id="gift-btn" title="送礼物"><i class="fas fa-gift"></i></button>
                             <button class="feature-btn" id="card-btn" title="发送卡片"><i class="fas fa-share-square"></i></button>
                             <button class="feature-btn" id="delete-last-turn-btn" title="删除最新一轮回复"><i class="fas fa-eraser"></i></button>
@@ -4388,6 +4469,11 @@
                 </div>
                 <div class="page-content">
                     <div class="settings-list">
+                        <div class="setting-item" id="setting-announcement">
+                            <i class="fas fa-bullhorn"></i>
+                            <span>游玩提醒公告</span>
+                            <i class="fas fa-chevron-right"></i>
+                        </div>
                         <div class="setting-item" id="tutorial-api">
                             <i class="fas fa-key"></i>
                             <span>如何配置API</span>
@@ -5238,6 +5324,7 @@
                             chatInfo.lastMessageContent = emojiDesc ? `[表情] ${emojiDesc}` : '[未知表情]';
                             break;
                         case 'image_simulated': chatInfo.lastMessageContent = '[图片]'; break;
+                        case 'image_vision': chatInfo.lastMessageContent = '[图片]'; break;
                         case 'card': chatInfo.lastMessageContent = `[${lastMessage.cardData.shareType || '分享'} ${lastMessage.cardData.title}]`; break;
                         case 'voice': chatInfo.lastMessageContent = '[语音]'; break;
                         case 'transfer': chatInfo.lastMessageContent = '[转账]'; break;
@@ -5745,6 +5832,13 @@
                         bubbleContent = `
                             ${msg.cardData.imageSrc ? `<img src="${msg.cardData.imageSrc}" alt="图片">` : ''}
                             <div class="description-text">${msg.cardData.description}</div>
+                        `;
+                        break;
+                    case 'image_vision':
+                        bubbleClass += ' image-with-desc-bubble vision-image-bubble';
+                        bubbleContent = `
+                            <img src="${msg.cardData.base64}" alt="用户发送的图片">
+                            ${msg.cardData.prompt ? `<div class="description-text">${msg.cardData.prompt}</div>` : ''}
                         `;
                         break;
                     case 'voice':
@@ -7714,7 +7808,10 @@ async showAutoSummaryModal(entityId, isGroup) {
                             return `[${receiptRecipient.name}|领取转账|${receiptSender.name}|${msg.cardData.amount}]`;
                         case 'transfer-return': return `[${senderName}|退还转账|${recipientName}|${msg.cardData.amount}]`;
                         case 'red-packet': return `[${senderName}|红包|${msg.cardData.title}|￥${msg.cardData.amount.toFixed(2)}|${msg.cardData.count}]`;
-                        case 'image_simulated': return `[${senderName}|图片描述|${msg.cardData.description}]`; 
+                        case 'image_simulated': return `[${senderName}|图片描述|${msg.cardData.description}]`;
+                        case 'image_vision':
+                            const promptText = msg.cardData.prompt ? ` ${msg.cardData.prompt}` : '';
+                            return `[${senderName}|[图片]${promptText}]`;
                         case 'gift': return `<礼物>\n发送方：${senderName}\n接收方：${recipientName}\n礼物名称：${msg.cardData.name}\n礼物价格：${msg.cardData.price}\n礼物介绍：${msg.cardData.description || '无'}\n寄语：${msg.cardData.message}\n</礼物>`;
                         case 'pat_a_pat':
                             const pat = msg.content;
@@ -8026,7 +8123,20 @@ ${promptLines.join('\n')}
                 }
 
                 // 3. 构建其他部分
-                const emojiListString = Object.entries(appState.aiEmojiMap).map(([id, desc]) => `${id}：${desc}`).join('\n');
+                const useBuiltin = chatSettings.useBuiltinEmojis !== false;
+                const useCustom = chatSettings.useCustomEmojisInPrompt !== false;
+
+                let emojiMapForPrompt = {};
+                if (useBuiltin) {
+                    Object.assign(emojiMapForPrompt, BUILTIN_AI_EMOJIS);
+                }
+                if (useCustom) {
+                    for (const [id, data] of Object.entries(appState.customEmojis)) {
+                        emojiMapForPrompt[id] = data.name;
+                    }
+                }
+
+                const emojiListString = Object.entries(emojiMapForPrompt).map(([id, desc]) => `${id}：${desc}`).join('\n');
                 const formatPrompt = AIHandler.formatPromptTpl.replace('{EMOJI_LIST}', emojiListString).replace('{PLAYER_NAME}', myProfile.name);
                 let summaryPromptSection = '';
                 if (chatEntity && chatEntity.autoSummary) {
@@ -8062,7 +8172,7 @@ ${promptLines.join('\n')}
                 return finalPrompt;
             },
 
-            async getApiResponse(prompt, signal) {
+            async getApiResponse(textPrompt, images, signal) {
                 const { provider, url, key, model, temperature } = this.apiConfig;
                 if (!key || !url || !model) {
                     throw new Error('API配置不完整，请在设置中检查。');
@@ -8072,22 +8182,53 @@ ${promptLines.join('\n')}
                 let headers = { 'Content-Type': 'application/json' };
                 let body;
 
-                const messagesForApi = [{ role: 'user', content: prompt }];
-
-                if (['siliconflow', 'paioupu', 'volcano', 'custom'].includes(provider)) {
-                    headers['Authorization'] = `Bearer ${key}`;
-                    if (!apiUrl.endsWith('/chat/completions')) {
-                        apiUrl = apiUrl.endsWith('/') ? `${apiUrl}chat/completions` : `${apiUrl}/chat/completions`;
+                // 如果有图片，就构建多模态请求
+                if (images && images.length > 0) {
+                    console.log(`正在发送一个包含 ${images.length} 张图片的多模态请求。`);
+                    if (['siliconflow', 'paioupu', 'volcano', 'custom'].includes(provider)) {
+                        headers['Authorization'] = `Bearer ${key}`;
+                        if (!apiUrl.endsWith('/chat/completions')) {
+                            apiUrl = apiUrl.endsWith('/') ? `${apiUrl}chat/completions` : `${apiUrl}/chat/completions`;
+                        }
+                        const content = [{ "type": "text", "text": textPrompt }];
+                        images.forEach(img => {
+                            content.push({ "type": "image_url", "image_url": { "url": img.base64 } });
+                        });
+                        body = { model: model, messages: [{ "role": "user", "content": content }], temperature: temperature };
+                    } else if (provider === 'gemini') {
+                        apiUrl += `${model}:generateContent?key=${key}`;
+                        const parts = [{ "text": textPrompt }];
+                        images.forEach(img => {
+                            const base64Data = img.base64.split(',')[1];
+                            const mimeTypeMatch = img.base64.match(/^data:(image\/[a-zA-Z]+);base64,/);
+                            const mimeType = mimeTypeMatch ? mimeTypeMatch[1] : 'image/jpeg';
+                            parts.push({ "inline_data": { "mime_type": mimeType, "data": base64Data } });
+                        });
+                        body = {
+                            contents: [{ role: 'user', parts: parts }],
+                            generationConfig: { temperature: temperature }
+                        };
+                    } else {
+                        throw new Error('不支持的API提供商。');
                     }
-                    body = { model: model, messages: messagesForApi, temperature: temperature };
-                } else if (provider === 'gemini') {
-                    apiUrl += `${model}:generateContent?key=${key}`;
-                    body = {
-                        contents: [{ role: 'user', parts: [{ text: prompt }] }],
-                        generationConfig: { temperature: temperature }
-                    };
                 } else {
-                    throw new Error('不支持的API提供商。');
+                    // 如果没有图片，就使用和以前一样的纯文本请求
+                    const messagesForApi = [{ role: 'user', content: textPrompt }];
+                    if (['siliconflow', 'paioupu', 'volcano', 'custom'].includes(provider)) {
+                        headers['Authorization'] = `Bearer ${key}`;
+                        if (!apiUrl.endsWith('/chat/completions')) {
+                            apiUrl = apiUrl.endsWith('/') ? `${apiUrl}chat/completions` : `${apiUrl}/chat/completions`;
+                        }
+                        body = { model: model, messages: messagesForApi, temperature: temperature };
+                    } else if (provider === 'gemini') {
+                        apiUrl += `${model}:generateContent?key=${key}`;
+                        body = {
+                            contents: [{ role: 'user', parts: [{ text: textPrompt }] }],
+                            generationConfig: { temperature: temperature }
+                        };
+                    } else {
+                        throw new Error('不支持的API提供商。');
+                    }
                 }
 
                 try {
@@ -8151,14 +8292,6 @@ ${promptLines.join('\n')}
                 aiRequestBtn.innerHTML = '<i class="fas fa-stop-circle"></i>';
                 aiRequestBtn.disabled = false; 
 
-                const prompt = await this.buildPrompt();
-                if (!prompt) {
-                     this.showError("无法构建prompt");
-                     this.isAwaitingResponse = false;
-                     aiRequestBtn.innerHTML = '<i class="fas fa-feather-alt"></i>';
-                     return;
-                }
-                
                 const isGroup = requestedChatId.startsWith('group-');
                 let typingBubbleId = Utils.generateId('typing');
                 let typingTarget;
@@ -8177,7 +8310,30 @@ ${promptLines.join('\n')}
                 }
 
                 try {
-                    const aiRawResponse = await this.getApiResponse(prompt, this.abortController.signal);
+                    const textPrompt = await this.buildPrompt();
+                    if (!textPrompt) {
+                         this.showError("无法构建prompt");
+                         this.isAwaitingResponse = false;
+                         aiRequestBtn.innerHTML = '<i class="fas fa-feather-alt"></i>';
+                         return;
+                    }
+                    
+                    // 新增：扫描玩家最后一轮消息，看有没有图片
+                    const allMessages = await DBHelper.getMessages(requestedChatId, 15);
+                    const imagesForApi = [];
+                    
+                    for (let i = allMessages.length - 1; i >= 0; i--) {
+                        const msg = allMessages[i];
+                        if (msg.type === 'sent') {
+                            if (msg.segmentType === 'image_vision') {
+                                imagesForApi.push({ base64: msg.cardData.base64 });
+                            }
+                        } else {
+                            break;
+                        }
+                    }
+
+                    const aiRawResponse = await this.getApiResponse(textPrompt, imagesForApi.reverse(), this.abortController.signal);
                     console.log("--- AI 原始回复 ---\n", aiRawResponse);
                     await this.parseAndDisplayAIResponse(aiRawResponse, requestedChatId);
                 } catch (error) {
@@ -8377,7 +8533,20 @@ ${promptLines.join('\n')}
                 
                 const playerInfoPrompt = `玩家（“${myProfile.name}”）的信息如下：\n性别: ${myProfile.gender}\n拍一拍动作: ${myProfile.patAction || '拍了拍'}\n拍一拍内容: ${myProfile.patContent || ''}\n背景: ${myProfile.background || '无'}`;
 
-                const emojiListString = Object.entries(appState.aiEmojiMap).map(([id, desc]) => `${id}：${desc}`).join('\n');
+                const useBuiltin = chatSettings.useBuiltinEmojis !== false;
+                const useCustom = chatSettings.useCustomEmojisInPrompt !== false;
+
+                let emojiMapForPrompt = {};
+                if (useBuiltin) {
+                    Object.assign(emojiMapForPrompt, BUILTIN_AI_EMOJIS);
+                }
+                if (useCustom) {
+                    for (const [id, data] of Object.entries(appState.customEmojis)) {
+                        emojiMapForPrompt[id] = data.name;
+                    }
+                }
+
+                const emojiListString = Object.entries(emojiMapForPrompt).map(([id, desc]) => `${id}：${desc}`).join('\n');
                 const finalPrompt = [
                     situationPrompt,
                     taskPrompt,
@@ -9586,27 +9755,30 @@ async handleAutoSummaryRequest(chatId) {
                 const extraMembersInfo = circle.extraMembers ? `这个圈子还有一些其他朋友：${circle.extraMembers}。` : '';
 
                 let contextHistory = '';
-                for (const member of selectedMembers) {
-                    const privateChat = await DBHelper.get('chats', member.id);
-                    if (privateChat && privateChat.history.length > 0) {
-                        const turns = this.buildTurnsFromHistory(privateChat.history, allContacts, myProfile);
-                        const lastTwoTurns = turns.slice(-2);
-                        if (lastTwoTurns.length > 0) {
-                            contextHistory += `与 ${member.name} 的最新私聊 (最多2轮):\n${lastTwoTurns.map(t => JSON.stringify(t)).join('\n')}\n`;
-                        }
-                    }
-                    const groupsWithMember = allGroups.filter(g => g.members.includes(member.id));
-                    for (const group of groupsWithMember) {
-                        const groupChat = await DBHelper.get('chats', group.id);
-                        if (groupChat && groupChat.history.length > 0) {
-                            const turns = this.buildTurnsFromHistory(groupChat.history, allContacts, myProfile);
-                            const lastTwoTurns = turns.slice(-2);
-                            if (lastTwoTurns.length > 0) {
-                                contextHistory += `在群聊 ${group.name} 中 ${member.name} 的相关动态 (最多2轮):\n${lastTwoTurns.map(t => JSON.stringify(t)).join('\n')}\n`;
-                            }
-                        }
-                    }
-                }
+for (const member of selectedMembers) {
+    // 修复：从 'messages' 表获取私聊记录
+    const privateChatHistory = await DBHelper.getMessages(member.id, 10); // 获取最近10条消息以构建轮次
+    if (privateChatHistory && privateChatHistory.length > 0) {
+        const turns = this.buildTurnsFromHistory(privateChatHistory, allContacts, myProfile);
+        const lastTwoTurns = turns.slice(-2);
+        if (lastTwoTurns.length > 0) {
+            contextHistory += `与 ${member.name} 的最新私聊 (最多2轮):\n${lastTwoTurns.map(t => JSON.stringify(t)).join('\n')}\n`;
+        }
+    }
+    
+    // 修复：从 'messages' 表获取群聊记录
+    const groupsWithMember = allGroups.filter(g => g.members.includes(member.id));
+    for (const group of groupsWithMember) {
+        const groupChatHistory = await DBHelper.getMessages(group.id, 10); // 获取最近10条消息
+        if (groupChatHistory && groupChatHistory.length > 0) {
+            const turns = this.buildTurnsFromHistory(groupChatHistory, allContacts, myProfile);
+            const lastTwoTurns = turns.slice(-2);
+            if (lastTwoTurns.length > 0) {
+                contextHistory += `在群聊 ${group.name} 中 ${member.name} 的相关动态 (最多2轮):\n${lastTwoTurns.map(t => JSON.stringify(t)).join('\n')}\n`;
+            }
+        }
+    }
+}
                 const formatRules = `
 ---
 朋友圈动态生成规则（非常重要！）：
@@ -10282,6 +10454,97 @@ async handleAutoSummaryRequest(chatId) {
         
         const EventManager = {
 
+            async showAnnouncementModal(isFromTutorial = false) {
+                const page1Content = `
+                    <h4>为了33聊天室保持友好和谐的交流气氛，我们在这里作出以下提醒：</h4>
+                    <p>1. 聊天室内设有自定义角色功能，角色卡并非强制购买。</p>
+                    <p>2. 请尊重原创，不要使用其他老师未授权的角色设定或其他设定。如果因使用未授权内容引发侵权问题，后果需自行承担。</p>
+                    <p>3. 请大家尊重所有人的产出，不要在任何公开平台上将33聊天室与其他ai聊天工具进行拉踩、比较。</p>
+                    <p><strong>在这里诚挚地祝愿各位在聊天室玩得开心。</strong></p>
+                `;
+
+                const page2Content = `
+                    <h4>聊天室授权老师ID</h4>
+                    <div class="announcement-auth-list">
+                        <span>盐汽水Vio.</span><span>VV</span><span>DD要努力</span>
+                        <span>灯灯</span><span>假发卫衣</span><span>魔王咕叽</span>
+                        <span>小甜Sweettt</span><span>九系萌</span><span>莓莓の24h</span>
+                        <span>喻禧の文游</span><span>云朵の</span><span>云朵朵</span>
+                        <span>原如</span><span>是短短</span><span>美味厨房ai</span>
+                        <span>初月月月月</span>
+                    </div>
+                    <p class="announcement-warning">如果你是从其他途径获取，说明对方是倒卖/二传的，我们抵制盗用二贩行为，且不承担售后解答义务。</p>
+                `;
+
+                const modalBody = `
+                    <div id="announcement-page-1" class="announcement-page active">${page1Content}</div>
+                    <div id="announcement-page-2" class="announcement-page">${page2Content}</div>
+                    <div class="announcement-nav">
+                        <button id="announcement-prev-btn" class="modal-btn btn-secondary nav-btn" style="visibility: hidden;">上一页</button>
+                        <span class="page-indicator">1 / 2</span>
+                        <button id="announcement-next-btn" class="modal-btn btn-secondary nav-btn">下一页</button>
+                    </div>
+                `;
+
+                UIManager.showModal({
+                    title: "重要提醒",
+                    customClass: 'announcement-modal-content',
+                    body: modalBody,
+                    actions: [
+                        { text: '已阅读', class: 'btn-primary', id: 'announcement-close-btn' }
+                    ]
+                });
+                
+                const pages = $$('.announcement-page');
+                const prevBtn = $('#announcement-prev-btn');
+                const nextBtn = $('#announcement-next-btn');
+                const pageIndicator = $('.page-indicator');
+                const closeBtn = $('#announcement-close-btn');
+                let currentPage = 0;
+
+                const updateNav = () => {
+                    pages.forEach((page, index) => page.classList.toggle('active', index === currentPage));
+                    prevBtn.style.visibility = currentPage === 0 ? 'hidden' : 'visible';
+                    nextBtn.style.visibility = currentPage === pages.length - 1 ? 'hidden' : 'visible';
+                    pageIndicator.textContent = `${currentPage + 1} / ${pages.length}`;
+                };
+
+                prevBtn.onclick = () => {
+                    if (currentPage > 0) {
+                        currentPage--;
+                        updateNav();
+                    }
+                };
+                nextBtn.onclick = () => {
+                    if (currentPage < pages.length - 1) {
+                        currentPage++;
+                        updateNav();
+                    }
+                };
+                
+                closeBtn.onclick = async () => {
+                    UIManager.hideModal();
+                    const config = await DBHelper.get('apiConfig', 'mainConfig') || {id: 'mainConfig'};
+                    config.announcementReadV1 = true;
+                    await DBHelper.put('apiConfig', config);
+                };
+
+                if (!isFromTutorial) {
+                    closeBtn.disabled = true;
+                    let countdown = 3;
+                    closeBtn.textContent = `已阅读 (${countdown}s)`;
+                    const interval = setInterval(() => {
+                        countdown--;
+                        closeBtn.textContent = `已阅读 (${countdown}s)`;
+                        if (countdown <= 0) {
+                            clearInterval(interval);
+                            closeBtn.disabled = false;
+                            closeBtn.textContent = '已阅读';
+                        }
+                    }, 1000);
+                }
+            },
+
             _scopeCSS(css, prefix) {
                 if (!css || !prefix) return '';
                 // 这是一个简化的CSS解析器，用于处理基本规则
@@ -10628,6 +10891,9 @@ async handleAutoSummaryRequest(chatId) {
                     };
 
                     switch (item.id) {
+                        case 'setting-announcement':
+                            this.showAnnouncementModal(true);
+                            break;
                         case 'tutorial-api':
                             showTutorialModal('如何配置API', `
                                 <p>聊天室需要你提供一个AI服务商的API Key才能运行。</p>
@@ -10854,6 +11120,7 @@ async handleAutoSummaryRequest(chatId) {
                 });
 
                 $('#simulated-image-btn').addEventListener('click', () => this.handleSimulatedImageSend());
+                $('#image-vision-btn').addEventListener('click', () => this.handleVisionImageSend());
                 $('#card-btn').addEventListener('click', () => this.handlePlayerCardSend());
                 $('#delete-last-turn-btn').addEventListener('click', () => this.handleDeleteLastTurn());
                 voiceBtn.addEventListener('click', () => this.handleVoiceInput());
@@ -11077,8 +11344,17 @@ async handleAutoSummaryRequest(chatId) {
             } else if (appState.quotingMessage) {
                 
                 const quotedMsg = appState.quotingMessage;
-                const contact = await DBHelper.get('contacts', quotedMsg.senderId);
-                const senderName = contact ? (contact.remark || contact.name) : '对方';
+                let senderName = '对方'; // Default value
+
+                if (quotedMsg.type === 'sent') {
+                    // It's the player's own message being quoted
+                    const profile = await this.getPlayerProfileForContext(appState.currentChatId);
+                    senderName = profile.name;
+                } else {
+                    // It's a received message being quoted
+                    const contact = await DBHelper.get('contacts', quotedMsg.senderId);
+                    senderName = contact ? (contact.remark || contact.name) : '对方';
+                }
 
                 let quotedContentText;
                 switch (quotedMsg.segmentType) {
@@ -11170,8 +11446,21 @@ if (entity && entity.autoSummaryEnabled && chatMetadata.totalPlayerTurns > 0 && 
             
             
             
-            renderEmojiPage() {
-                const emojiEntries = Object.entries(appState.playerEmojiMap);
+            async renderEmojiPage() {
+                const chatSettings = await DBHelper.get('apiConfig', 'chatSettings') || {};
+                const useBuiltin = chatSettings.useBuiltinEmojis !== false; // Default to true if undefined
+
+                let emojiEntries;
+
+                if (useBuiltin) {
+                    // 如果开启，显示所有玩家可用的表情（内置+自定义）
+                    emojiEntries = Object.entries(appState.playerEmojiMap);
+                } else {
+                    // 如果关闭，只显示自定义表情
+                    // 需要将 customEmojis 的数据结构 {id: {url, name}} 转换为 [id, name]
+                    emojiEntries = Object.entries(appState.customEmojis).map(([id, data]) => [id, data.name]);
+                }
+                
                 const pageCount = Math.ceil(emojiEntries.length / appState.emojisPerPage);
 
                 if (appState.emojiCurrentPage < 0) appState.emojiCurrentPage = pageCount - 1;
@@ -11369,58 +11658,198 @@ if (entity && entity.autoSummaryEnabled && chatMetadata.totalPlayerTurns > 0 && 
                 }
             },
 
+            async showBatchAddEmojiResultModal(addedEmojis) {
+                let formattedText = '额外表情包:\n';
+                addedEmojis.forEach(emoji => {
+                    formattedText += `${emoji.id}:${emoji.name}\n`;
+                });
+
+                UIManager.showModal({
+                    title: `成功添加 ${addedEmojis.length} 个表情包`,
+                    body: `
+                        <style>
+                            #emoji-id-display {
+                                width: 100%;
+                                max-height: 200px;
+                                overflow-y: auto;
+                                font-family: monospace;
+                                white-space: pre-wrap;
+                                word-break: break-all;
+                                user-select: text;
+                                -webkit-user-select: text;
+                                background-color: var(--text-color-white);
+                                border: 1px solid var(--border-color);
+                                border-radius: 8px;
+                                padding: 10px;
+                                font-size: 0.9rem;
+                                color: var(--text-color-dark);
+                                box-sizing: border-box;
+                            }
+                        </style>
+                        <p>以下是新添加的表情包及其ID，可用于提示词中：</p>
+                        <pre id="emoji-id-display">${formattedText}</pre>
+                    `,
+                    actions: [
+                        { text: '关闭', class: 'btn-secondary', handler: () => UIManager.hideModal() },
+                        { text: '复制', class: 'btn-primary', id: 'copy-emoji-ids-btn' }
+                    ]
+                });
+
+                const copyButton = $('#copy-emoji-ids-btn');
+                if (copyButton) {
+                    copyButton.addEventListener('click', async () => {
+                        const textToCopy = $('#emoji-id-display').textContent;
+                        
+                        const copyTextFallback = (text) => {
+                            const textArea = document.createElement("textarea");
+                            textArea.value = text;
+                            textArea.style.position = "fixed";
+                            textArea.style.top = "-9999px";
+                            textArea.style.left = "-9999px";
+                            document.body.appendChild(textArea);
+                            textArea.focus();
+                            textArea.select();
+                            try {
+                                const successful = document.execCommand('copy');
+                                if (successful) {
+                                    UIManager.showToast("已成功复制到剪贴板！");
+                                } else {
+                                    UIManager.showToast("复制失败，请手动复制");
+                                }
+                            } catch (err) {
+                                console.error('使用 execCommand 复制失败: ', err);
+                                UIManager.showToast("复制失败，请手动复制");
+                            }
+                            document.body.removeChild(textArea);
+                        };
+
+                        if (navigator.clipboard && window.isSecureContext) {
+                            try {
+                                await navigator.clipboard.writeText(textToCopy);
+                                UIManager.showToast("已成功复制到剪贴板！");
+                            } catch (err) {
+                                console.error('使用 navigator.clipboard 复制失败，将尝试备用方法: ', err);
+                                copyTextFallback(textToCopy);
+                            }
+                        } else {
+                            console.log("当前环境不安全或不支持 Clipboard API，使用备用方法。");
+                            copyTextFallback(textToCopy);
+                        }
+                    });
+                }
+            },
+
             async showAddCustomEmojiModal() {
                 UIManager.showModal({
                     title: "添加自定义表情",
                     body: `
-                        <div class="form-group">
-                            <label for="custom-emoji-url">表情包链接 (URL)</label>
-                            <input type="text" id="custom-emoji-url" placeholder="请粘贴图片的URL">
+                        <div class="creation-mode-tabs" style="margin-bottom: 20px;">
+                            <button class="mode-btn active" data-mode="single">单个添加</button>
+                            <button class="mode-btn" data-mode="batch">批量添加</button>
                         </div>
-                        <div class="form-group">
-                            <label for="custom-emoji-name">表情包名称/描述</label>
-                            <input type="text" id="custom-emoji-name" placeholder="例如：可爱猫猫摇尾巴">
+
+                        <div id="add-emoji-single-panel">
+                            <div class="form-group">
+                                <label for="custom-emoji-url">表情包链接 (URL)</label>
+                                <input type="text" id="custom-emoji-url" placeholder="请粘贴图片的URL">
+                            </div>
+                            <div class="form-group">
+                                <label for="custom-emoji-name">表情包名称/描述</label>
+                                <input type="text" id="custom-emoji-name" placeholder="例如：可爱猫猫摇尾巴">
+                            </div>
+                            <p style="font-size:0.8rem; color:#aaa;">表情包可以是静态图片/动态图片，表情包名称将用于AI理解表情含义，请准确填写含义。</p>
                         </div>
-                        <p style="font-size:0.8rem; color:#aaa;">表情包可以是静态图片/动态图片，表情包名称将用于AI理解表情含义，请准确填写含义。</p>
+
+                        <div id="add-emoji-batch-panel" style="display: none;">
+                            <div class="form-group">
+                                <label for="batch-emoji-input">批量添加表情包</label>
+                                <textarea id="batch-emoji-input" rows="8" placeholder="请按格式输入，每个表情包占一行：\n表情包名称：表情包链接\n可爱猫猫：https://.../cat.gif"></textarea>
+                            </div>
+                            <p style="font-size:0.8rem; color:#aaa;">名称与链接之间请使用中文冒号“：”隔开。不符合格式的行将被自动忽略。</p>
+                        </div>
                     `,
                     actions: [
                         { text: '取消', class: 'btn-secondary', handler: () => UIManager.hideModal() },
                         { text: '添加', class: 'btn-primary', handler: async () => {
-                            const url = $('#custom-emoji-url').value.trim();
-                            const name = $('#custom-emoji-name').value.trim();
-
-                            if (!url || !name) {
-                                return UIManager.showToast("链接和名称都不能为空。");
-                            }
-                            if (!url.startsWith('http')) {
-                                return UIManager.showToast("请输入一个有效的URL。");
-                            }
-
+                            const isBatchMode = $('#add-emoji-batch-panel').style.display !== 'none';
                             const profile = await DBHelper.get('profile', 'myProfile');
-                            if (!profile.customEmojis) {
-                                profile.customEmojis = {};
-                            }
+                            if (!profile.customEmojis) profile.customEmojis = {};
                             
-                            const emojiId = Utils.generateId('custom-');
-                            profile.customEmojis[emojiId] = { url, name };
-                            await DBHelper.put('profile', profile);
+                            if (isBatchMode) {
+                                const batchInput = $('#batch-emoji-input').value.trim();
+                                if (!batchInput) return UIManager.showToast("批量输入内容不能为空。");
 
-                            // Update in-memory maps
-                            appState.customEmojis[emojiId] = { url, name };
-                            appState.playerEmojiMap[emojiId] = name;
-                            appState.aiEmojiMap[emojiId] = name;
+                                const lines = batchInput.split('\n');
+                                const addedEmojis = [];
+                                let successCount = 0;
 
-                            UIManager.hideModal();
-                            UIManager.showToast("自定义表情添加成功！");
-                            
-                            if (!appState.favoriteEmojis.includes(emojiId)) {
-                                appState.favoriteEmojis.push(emojiId);
-                                profile.favoriteEmojis = appState.favoriteEmojis;
+                                for (const line of lines) {
+                                    const parts = line.split('：');
+                                    if (parts.length < 2) continue;
+
+                                    const name = parts[0].trim();
+                                    const url = parts.slice(1).join('：').trim();
+
+                                    if (name && url && url.startsWith('http')) {
+                                        const emojiId = Utils.generateId('custom-');
+                                        profile.customEmojis[emojiId] = { url, name };
+                                        
+                                        appState.customEmojis[emojiId] = { url, name };
+                                        appState.playerEmojiMap[emojiId] = name;
+                                        appState.aiEmojiMap[emojiId] = name;
+                                        
+                                        addedEmojis.push({ id: emojiId, name: name });
+                                        successCount++;
+                                    }
+                                }
+
+                                if (successCount > 0) {
+                                    await DBHelper.put('profile', profile);
+                                    UIManager.hideModal();
+                                    this.showBatchAddEmojiResultModal(addedEmojis);
+                                    this.renderFavoriteEmojiPage();
+                                } else {
+                                    UIManager.showToast("没有找到任何符合格式的有效表情包。");
+                                }
+                            } else {
+                                const url = $('#custom-emoji-url').value.trim();
+                                const name = $('#custom-emoji-name').value.trim();
+
+                                if (!url || !name) return UIManager.showToast("链接和名称都不能为空。");
+                                if (!url.startsWith('http')) return UIManager.showToast("请输入一个有效的URL。");
+
+                                const emojiId = Utils.generateId('custom-');
+                                profile.customEmojis[emojiId] = { url, name };
                                 await DBHelper.put('profile', profile);
+
+                                appState.customEmojis[emojiId] = { url, name };
+                                appState.playerEmojiMap[emojiId] = name;
+                                appState.aiEmojiMap[emojiId] = name;
+
+                                UIManager.hideModal();
+                                UIManager.showToast("自定义表情添加成功！");
+                                
+                                if (!appState.favoriteEmojis.includes(emojiId)) {
+                                    appState.favoriteEmojis.push(emojiId);
+                                    profile.favoriteEmojis = appState.favoriteEmojis;
+                                    await DBHelper.put('profile', profile);
+                                }
+                                this.renderFavoriteEmojiPage();
                             }
-                            this.renderFavoriteEmojiPage();
                         }}
                     ]
+                });
+
+                const singlePanel = $('#add-emoji-single-panel');
+                const batchPanel = $('#add-emoji-batch-panel');
+                $$('.creation-mode-tabs .mode-btn').forEach(btn => {
+                    btn.onclick = (e) => {
+                        $$('.creation-mode-tabs .mode-btn').forEach(b => b.classList.remove('active'));
+                        e.target.classList.add('active');
+                        const isBatch = e.target.dataset.mode === 'batch';
+                        singlePanel.style.display = isBatch ? 'none' : 'block';
+                        batchPanel.style.display = isBatch ? 'block' : 'none';
+                    };
                 });
             },
 
@@ -11441,7 +11870,10 @@ if (entity && entity.autoSummaryEnabled && chatMetadata.totalPlayerTurns > 0 && 
 
                 UIManager.showModal({
                     title: "删除自定义表情",
-                    body: `<div class="member-select-list" style="max-height: 40vh;">${emojiListHtml}</div>`,
+                    body: `
+                        <button id="select-all-emojis-btn" class="modal-btn btn-secondary" style="width: 100%; margin-bottom: 10px; padding: 8px;">全选</button>
+                        <div class="member-select-list" style="max-height: 40vh;">${emojiListHtml}</div>
+                    `,
                     actions: [
                         { text: '取消', class: 'btn-secondary', handler: () => UIManager.hideModal() },
                         { text: '删除选中', class: 'btn-danger', handler: async () => {
@@ -11455,26 +11887,16 @@ if (entity && entity.autoSummaryEnabled && chatMetadata.totalPlayerTurns > 0 && 
                             if (!profile.customEmojis) profile.customEmojis = {};
                             if (!profile.favoriteEmojis) profile.favoriteEmojis = [];
 
-                            // --- 核心修复：同时更新 appState ---
                             idsToDelete.forEach(id => {
-                                // 从数据库对象中删除
                                 delete profile.customEmojis[id];
                                 const favIndexDB = profile.favoriteEmojis.indexOf(id);
-                                if (favIndexDB > -1) {
-                                    profile.favoriteEmojis.splice(favIndexDB, 1);
-                                }
+                                if (favIndexDB > -1) profile.favoriteEmojis.splice(favIndexDB, 1);
                                 
-                                // 从当前应用状态中删除
                                 const favIndexApp = appState.favoriteEmojis.indexOf(id);
-                                if (favIndexApp > -1) {
-                                    appState.favoriteEmojis.splice(favIndexApp, 1);
-                                }
+                                if (favIndexApp > -1) appState.favoriteEmojis.splice(favIndexApp, 1);
                             });
-                            // --- 修复结束 ---
                             
                             await DBHelper.put('profile', profile);
-
-                            // Update app state maps and re-render
                             await this.setupEmojiMaps();
                             this.renderFavoriteEmojiPage();
 
@@ -11482,6 +11904,10 @@ if (entity && entity.autoSummaryEnabled && chatMetadata.totalPlayerTurns > 0 && 
                             UIManager.showToast("选中的表情已删除");
                         }}
                     ]
+                });
+
+                $('#select-all-emojis-btn').addEventListener('click', () => {
+                    $$('input[name="delete-custom-emoji"]').forEach(cb => cb.checked = true);
                 });
             },
 
@@ -11732,8 +12158,17 @@ if (entity && entity.autoSummaryEnabled && chatMetadata.totalPlayerTurns > 0 && 
                 if (!messageData || messageData.isRetracted) return;
 
                 appState.quotingMessage = messageData;
-                const contact = await DBHelper.get('contacts', messageData.senderId);
-                const senderName = contact ? (contact.remark || contact.name) : '对方';
+                
+                let senderName = '对方'; // Default value
+                if (messageData.type === 'sent') {
+                    // It's the player's own message
+                    const profile = await this.getPlayerProfileForContext(appState.currentChatId);
+                    senderName = profile.name;
+                } else {
+                    // It's a received message
+                    const contact = await DBHelper.get('contacts', messageData.senderId);
+                    senderName = contact ? (contact.remark || contact.name) : '对方';
+                }
 
                 let quotedContentText;
                 switch (messageData.segmentType) {
@@ -11781,6 +12216,7 @@ if (entity && entity.autoSummaryEnabled && chatMetadata.totalPlayerTurns > 0 && 
                     buttonsHtml = `
                         <button class="retract-btn" data-action="delete"><i class="fas fa-trash"></i> 删除</button>
                         <button class="retract-btn" data-action="retract"><i class="fas fa-undo"></i> 撤回</button>
+                        <button class="retract-btn" data-action="quote"><i class="fas fa-quote-left"></i> 引用</button>
                     `;
                 } else { // received
                     buttonsHtml = `
@@ -14784,7 +15220,9 @@ if (entity && entity.autoSummaryEnabled && chatMetadata.totalPlayerTurns > 0 && 
                     bottomBarOffset: false,
                     enterToSend: false,
                     promptTurnFrequency: 1, 
-                    activeReplyInterval: 0, 
+                    activeReplyInterval: 0,
+                    useBuiltinEmojis: true,
+                    useCustomEmojisInPrompt: true,
                 };
                 if (!chatSettings) {
                     chatSettings = defaults;
@@ -14838,6 +15276,8 @@ if (entity && entity.autoSummaryEnabled && chatMetadata.totalPlayerTurns > 0 && 
                         ${createSwitch('show-names-in-private-switch', '私聊显示名字', '开启后，私聊时双方的消息上方都会显示名字。', chatSettings.showNamesInPrivate)}
                         ${createSwitch('bottom-bar-offset-switch', '底部状态栏上移', '开启后，为手机自带的底部导航条预留空间，防止遮挡。', chatSettings.bottomBarOffset)}
                         ${createSwitch('enter-to-send-switch', '回车自动发送', '开启后，在输入框内按回车键将直接发送消息。', chatSettings.enterToSend)}
+                        ${createSwitch('use-builtin-emojis-switch', '内置表情包', '启用后可使用内置添加的表情包，关闭后无法使用且ai将不获得这些表情的id提示。如果关闭&没有自己添加的表情包，ai可能会频繁发送错误表情包', chatSettings.useBuiltinEmojis)}
+                        ${createSwitch('use-custom-emojis-in-prompt-switch', '自定义表情启用为提示词', '开启后，你所添加的所有表情包id将提示给ai，但过多的表情包会影响回复速度和tk', chatSettings.useCustomEmojisInPrompt)}
                         
                         ${createNumberInput('聊天记录字数上限', '设定每次请求AI时附带的聊天记录字数，影响记忆和Token消耗。', 'history-char-limit-input', chatSettings.historyCharLimit, '字')}
                         ${createNumberInput('提示词发送频率', '每N个玩家回合发送一次包含自定义提示词的完整Prompt，以节省Token。', 'prompt-freq-input', chatSettings.promptTurnFrequency)}
@@ -14854,6 +15294,8 @@ if (entity && entity.autoSummaryEnabled && chatMetadata.totalPlayerTurns > 0 && 
                                 showNamesInPrivate: $('#show-names-in-private-switch').checked,
                                 bottomBarOffset: $('#bottom-bar-offset-switch').checked,
                                 enterToSend: $('#enter-to-send-switch').checked,
+                                useBuiltinEmojis: $('#use-builtin-emojis-switch').checked,
+                                useCustomEmojisInPrompt: $('#use-custom-emojis-in-prompt-switch').checked,
                                 promptTurnFrequency: parseInt($('#prompt-freq-input').value, 10),
                                 activeReplyInterval: parseInt($('#active-reply-interval-input').value, 10), 
                             };
@@ -16268,9 +16710,9 @@ handleImmediateSummary(entityId, isGroup) {
                     const promptCard = target.closest('.prompt-card');
 
                     if (folderSwitch) {
-                        
                         e.stopPropagation(); 
                         const folderId = folderSwitch.closest('.prompt-folder').dataset.folderId;
+                        // 直接调用修复后的函数
                         await this.toggleFolderState(folderId, folderSwitch.checked);
                     } else if (deleteFolderBtn) {
                         
@@ -16678,15 +17120,11 @@ handleImmediateSummary(entityId, isGroup) {
             
             async toggleFolderState(folderId, isActive) {
                 const folder = await DBHelper.get('promptFolders', folderId);
-                folder.isActive = isActive;
-                await DBHelper.put('promptFolders', folder);
-
-                const promptsInFolder = (await DBHelper.getAll('prompts')).filter(p => p.folderId === folderId);
-                for (const prompt of promptsInFolder) {
-                    prompt.isActive = isActive;
-                    await DBHelper.put('prompts', prompt);
+                if (folder) {
+                    folder.isActive = isActive;
+                    await DBHelper.put('promptFolders', folder);
                 }
-                this.renderPromptsPage();
+                // 注意：这里不再重新渲染页面(renderPromptsPage)或修改子提示词的状态，从而修复闪烁问题。
             },
             
             confirmDeleteFolder(folderId) {
@@ -16839,6 +17277,61 @@ handleImmediateSummary(entityId, isGroup) {
                     const file = e.target.files[0];
                     if (file) {
                         $('#sim-image-preview').src = await Utils.fileToBase64(file);
+                    }
+                });
+            },
+
+            async handleVisionImageSend() {
+                UIManager.showModal({
+                    title: "发送图片 (AI识图)",
+                    body: `
+                        <div class="form-group">
+                            <label>选择图片 (必填)</label>
+                            <div class="avatar-uploader">
+                                <img src="data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=" id="vision-image-preview" style="width: 100px; height: 100px; border-radius: 8px; object-fit: cover; background-color: #f0f0f0; display: none;">
+                                <input type="file" id="vision-image-input" accept="image/*" style="display:none;">
+                                <button class="upload-btn" onclick="document.getElementById('vision-image-input').click()">上传图片</button>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="vision-image-prompt">附言 (选填)</label>
+                            <textarea id="vision-image-prompt" rows="2" placeholder="可以对图片提问或补充说明..."></textarea>
+                        </div>
+                        <p style="font-size: 0.8rem; color: #aaa;">提示：此功能会调用多模态模型进行识图，请确保你选择的模型支持此功能 (如 Gemini 2.5, GPT-4o 等)，并可能产生比普通消息更高的tk。发送带有该功能图片的回复会比正常回复更慢，这是正常现象。</p>
+                    `,
+                    actions: [
+                        { text: '取消', class: 'btn-secondary', handler: () => UIManager.hideModal() },
+                        { text: '发送', class: 'btn-primary', handler: async () => {
+                            const imagePreview = $('#vision-image-preview');
+                            const textPrompt = $('#vision-image-prompt').value.trim();
+
+                            if (!imagePreview.src || imagePreview.src.startsWith('data:image/gif')) {
+                                return UIManager.showToast('请先上传一张图片');
+                            }
+
+                            const message = {
+                                messageId: Utils.generateId('msg'),
+                                content: textPrompt || "[图片]",
+                                type: 'sent',
+                                segmentType: 'image_vision',
+                                cardData: {
+                                    base64: imagePreview.src,
+                                    prompt: textPrompt,
+                                }
+                            };
+
+                            await this.handlePlayerSendMessage(message);
+                            UIManager.hideModal();
+                        }}
+                    ]
+                });
+
+                $('#vision-image-input').addEventListener('change', async (e) => {
+                    const file = e.target.files[0];
+                    if (file) {
+                        const compressedBase64 = await Utils.compressImage(file, 1024, 1024, 0.8);
+                        $('#vision-image-preview').src = compressedBase64;
+                        $('#vision-image-preview').style.display = 'block';
                     }
                 });
             },
@@ -18441,7 +18934,7 @@ async showGiftDetailsModal(messageId) {
 
                 UIManager.showModal({
                     title: "确认删除",
-                    body: `<p>确定要删除 ${senderName} 的最新 ${messagesToDelete.length} 条消息吗？</p>`,
+                    body: `<p>确定要删除 ${senderName} 的最新 ${messagesToDelete.length} 条消息吗？(含心声随笔)</p>`,
                     actions: [
                         { text: '取消', class: 'btn-secondary', handler: () => UIManager.hideModal() },
                         { text: '删除', class: 'btn-danger', handler: async () => {
@@ -18643,13 +19136,23 @@ async showGiftDetailsModal(messageId) {
 
                 UIManager.showModal({
                     title: "选择要提取ID的表情包",
-                    body: `<div class="member-select-list" style="max-height: 40vh;">${emojiListHtml}</div>`,
+                    body: `
+                        <button id="select-all-extract-emojis-btn" class="modal-btn btn-secondary" style="width: 100%; margin-bottom: 10px; padding: 8px;">全选</button>
+                        <div class="member-select-list" style="max-height: 35vh;">${emojiListHtml}</div>
+                        <p style="font-size: 0.8rem; color: var(--text-color-medium); margin-top: 15px; line-height: 1.5;">
+                            <strong>提示：</strong>生成后长按复制内容，然后前往 <strong>设置 > 自定义提示词</strong>，新建一个提示词（如“我的表情包”），将复制的内容粘贴进去，最后为需要的好友/群聊绑定这个提示词即可。
+                        </p>
+                    `,
                     actions: [
                         { text: '取消', class: 'btn-secondary', handler: () => UIManager.hideModal() },
                         { text: '生成', class: 'btn-primary', handler: () => {
                             this.displayGeneratedEmojiIds();
                         }}
                     ]
+                });
+
+                $('#select-all-extract-emojis-btn').addEventListener('click', () => {
+                    $$('input[name="extract-emoji-id"]').forEach(cb => cb.checked = true);
                 });
             },
 
@@ -19012,12 +19515,25 @@ async showGiftDetailsModal(messageId) {
 
                 const settingsToSave = await DBHelper.get('apiConfig', 'themeSettings') || { id: 'themeSettings' };
                 settingsToSave.customBubbleCSS = css;
+                // 新增：点击预览时，自动将气泡样式切换为'custom'
+                settingsToSave.bubbleStyle = 'custom'; 
                 await DBHelper.put('apiConfig', settingsToSave);
 
                 const scopedCss = this._scopeCSS(css, '#custom-bubble-preview');
                 previewStyle.textContent = scopedCss;
 
-                UIManager.showToast("已保存并更新预览！");
+                // 新增：应用全局气泡样式更改
+                await this.applyBubbleSettings();
+
+                // 新增：同步更新设置页面的UI，让“自定义”选项高亮
+                $$('.bubble-style-option').forEach(opt => {
+                    opt.classList.toggle('selected', opt.dataset.styleKey === 'custom');
+                });
+                
+                // 新增：由于'custom'是B类样式，隐藏A类颜色设置
+                $('#bubble-color-card').style.display = 'none';
+
+                UIManager.showToast("已更新预览");
             },
 
             async handleApplyCustomCSS() {
@@ -19041,6 +19557,7 @@ async showGiftDetailsModal(messageId) {
             
             async handleResetCustomCSS() {
                  UIManager.showModal({
+                    customClass: 'modal-default-style', // 新增这一行，强制使用默认弹窗样式
                     title: "确认重置",
                     body: `<p>确定要清空自定义CSS代码吗？</p>`,
                     actions: [
@@ -19096,11 +19613,17 @@ async showGiftDetailsModal(messageId) {
         
         async function initApp() {
             
-            setTimeout(() => {
+            setTimeout(async () => { // Make this async
                 const splash = $('#splash-screen');
                 if (splash) {
                     splash.classList.add('hidden');
                     
+                    // Check for announcement after splash is hidden
+                    const config = await DBHelper.get('apiConfig', 'mainConfig') || {};
+                    if (!config.announcementReadV1) {
+                        EventManager.showAnnouncementModal();
+                    }
+
                     setTimeout(() => {
                         splash.style.display = 'none';
                     }, 500);
@@ -19167,27 +19690,27 @@ async showGiftDetailsModal(messageId) {
                 $('#my-avatar').src = profile.avatar;
                 appState.favoriteEmojis = profile.favoriteEmojis || [];
 
-                // Check and initialize default prompt folders and prompts
+                // Check and initialize default prompt folders and prompts for the very first run
                 const existingFolders = await DBHelper.getAll('promptFolders');
                 const existingContacts = await DBHelper.getAll('contacts');
                 if (existingFolders.length === 0 && existingContacts.length === 0) {
-                    console.log("No prompts or contacts found, assuming fresh start. Initializing default writing style folder.");
+                    console.log("No prompts or contacts found, assuming fresh start. Initializing all default folders.");
 
-                    const folderId = 'default-style-folder-01';
-                    const newFolder = {
-                        id: folderId,
+                    // 1. Create Writing Style folder and prompts
+                    const styleFolderId = 'default-style-folder-01';
+                    await DBHelper.put('promptFolders', {
+                        id: styleFolderId,
                         name: '文风设定',
-                        isActive: false, // 默认关闭
+                        isActive: false,
                         createdAt: Date.now()
-                    };
-                    await DBHelper.put('promptFolders', newFolder);
+                    });
 
-                    const defaultPrompts = [
+                    const defaultStylePrompts = [
                         {
                             id: Utils.generateId('prompt'),
                             createdAt: Date.now() + 1,
                             name: '“日系轻小说”欢乐跳脱',
-                            folderId: folderId,
+                            folderId: styleFolderId,
                             type: 'explicit',
                             keywords: '[]',
                             content: `**# 核心指令**
@@ -19223,7 +19746,7 @@ async showGiftDetailsModal(messageId) {
                             id: Utils.generateId('prompt'),
                             createdAt: Date.now() + 2,
                             name: '“低温慢煮”日常风',
-                            folderId: folderId,
+                            folderId: styleFolderId,
                             type: 'explicit',
                             keywords: '[]',
                             content: `**核心原则：克制、留白、张力**  你需要扮演一位冷静、耐心且观察入微的叙事者。你的镜头始终对准人物最细微的互动，捕捉那些被日常琐碎掩盖，却在缝隙中不断泄露的真实情感。叙事的魅力不在于宣告情感，而在于**展示情感发生的证据**。  ---  **一、 叙事视角与基调 (Narrative Perspective & Tone)**  1. **视角锁定：** 严格采用**第三人称有限视角（以女主为主）**。我们可以深入女主的内心感受、她的困惑、猜测和细微的情绪波动。但对于男主，我们是和女主一样的“局外人”。 2. **男主塑造的铁律：【绝对禁止】直接描写男主角的任何心理活动、内心独白或情感状态。** 他的所有情绪、意图和挣扎，都必须且只能通过以下方式“泄露”出来： * **动作 (Action):** 他倒水的动作是流畅还是停顿？他递东西时指尖是否触碰？关门的声音是轻是重？ * **语言 (Dialogue):** 话语的节奏、用词的选择、未说完的话、突然的沉默。 * **神态/微表情 (Expression/Micro-expression):** 眼神的流转与闪躲、嘴角稍纵即逝的弧度、喉结的滚动、眉头的微蹙。 3. **叙事基调：** 冷静、客观，甚至带一丝疏离感。像在观看一部纪录片。语言风格追求**朴素、精准、洗练**，摒弃一切华丽、浮夸、煽情的形容词。每一个字都应服务于场景和氛围的构建，力求达到“一字一句，回味无穷”的效果。---  **三、 对话风格 (Dialogue Style)**  1. **简洁与留白：** 对话要生活化，避免大段的抒情和哲学辩论。多用短句。对话的重点不在于说了什么，而在于**没说什么**。 2. **潜台词与沉默：** 对话间的沉默和停顿与台词本身同等重要。必须描写沉默时的空气、人物的视线、无意识的小动作。 * **示例：** 她问：“你周末……有安排吗？” 他手上的动作停顿了一下，过了足有两秒，才重新拿起那本书，翻过一页。纸张发出轻微的摩擦声。 “嗯，”他应道，“有点事。” 他没有说是何事。空气仿佛凝滞了一瞬，只剩下窗外微弱的风声。  ---  **四、 动作与神态描写 (Action & Expression Description)**  1. **细节的信徒：** 成为细节的信徒。专注于感官描写：视觉、听觉、触觉、嗅觉。 * **视觉：** 他衬衫袖口卷起的褶皱，她发梢滴落的水珠，灯光下尘埃的浮动。 * **听觉：** 钥匙插入锁孔的声音，他略带沙哑的声线，雨点击打窗户的节奏。 * **触觉：** 他递来的外套上残留的温度，微风拂过皮肤的凉意，她指尖的冰冷。 2. **“矛盾”的动作：** 设计一些人物言行不一的细节，以体现其内心的矛盾与张力。 * **示例：** 他嘴上说着“你早点休息”，但人却没有要离开的意思，只是站在门口，手指无意识地摩挲着门框的边缘。  ---  **五、 严禁事项 (What to Avoid)**  1. **禁止滥用情感浓烈的词汇：** 严格避免“心碎”、“绝望”、“撕心裂肺”、“空洞”、“救赎”等词语。用“微涩”、“滞涩”、“僵持”、“无言”等更具克制感和质感的词汇替代。 2. **禁止大开大合的情节：** 杜绝车祸、失忆、绝症、身世之谜等强戏剧性桥段。 3. **禁止华丽的修辞：** 避免复杂的比喻和象征，除非它能极其精准地服务于当下的情景。文字的美感来源于其**准确性**，而非装饰性。 4. **禁止上帝视角的全知全能：** 叙事者不是上帝，而是一个在场的观察者。不要做出任何超越角色认知范围的评判和总结。  ---  **总结：** 你的任务是创造一个“空气中都充满着未说出口的话”的世界。让读者像侦探一样，通过你提供的线索（动作、眼神、沉默），去拼凑和感受男主角那隐藏在冰山之下的、汹涌而克制的情感。最终，当情感的张力积累到顶点时，一个极小的动作或一句话，就能产生核爆级的效果。`,
@@ -19233,18 +19756,56 @@ async showGiftDetailsModal(messageId) {
                             id: Utils.generateId('prompt'),
                             createdAt: Date.now() + 3,
                             name: '文风来源',
-                            folderId: folderId,
+                            folderId: styleFolderId,
                             type: 'explicit',
                             keywords: '[]',
                             content: '（此提示词为来源标注）日系轻小说与低温慢煮文风设定，来源于 xhs @DD老师的分享。',
                             isActive: false,
                         }
                     ];
-
-                    for (const prompt of defaultPrompts) {
+                    for (const prompt of defaultStylePrompts) {
                         await DBHelper.put('prompts', prompt);
                     }
-                    console.log("Default writing style folder and prompts created.");
+                    
+                    // 2. Create Emoji folder and prompt
+                    const emojiFolderId = 'default-emoji-folder-01';
+                    await DBHelper.put('promptFolders', {
+                        id: emojiFolderId,
+                        name: '内置表情包',
+                        isActive: false,
+                        createdAt: Date.now() + 4
+                    });
+                    await DBHelper.put('prompts', {
+                        id: Utils.generateId('prompt'),
+                        createdAt: Date.now() + 5,
+                        name: '示例表情包提示词',
+                        folderId: emojiFolderId,
+                        type: 'explicit',
+                        keywords: '[]',
+                        content: '**以下是额外的表情包id，你需要使用冒号左边的字符作为表情包id，禁止自己捏造不存在的表情包id**\n（此处存放表情包id和名称）',
+                        isActive: true,
+                    });
+
+                    // 3. Create Narrator folder and prompt
+                    const narratorFolderId = 'default-narrator-folder-01';
+                    await DBHelper.put('promptFolders', {
+                        id: narratorFolderId,
+                        name: '旁白规则',
+                        isActive: false,
+                        createdAt: Date.now() + 6
+                    });
+                    await DBHelper.put('prompts', {
+                        id: Utils.generateId('prompt'),
+                        createdAt: Date.now() + 7,
+                        name: '示例旁白规则',
+                        folderId: narratorFolderId,
+                        type: 'explicit',
+                        keywords: '[]',
+                        content: '**你必须在每次回复时使用 <旁白>旁白内容</旁白> 的回复格式来进行环境描写、动作描写或其他推动剧情发展的描写。**',
+                        isActive: true,
+                    });
+
+                    console.log("All default folders and prompts created.");
                 }
 
 // --- 恢复番茄钟状态的函数 ---
@@ -19303,7 +19864,7 @@ async showGiftDetailsModal(messageId) {
                 
                 await EventManager.initEmojiPanel(); 
                 await UIManager.navigateTo('messages');
-                
+
             } catch (error) {
                 console.error("应用初始化失败:", error);
                 document.body.innerHTML = `<div style="text-align:center; padding: 50px; color: red;">应用初始化失败，请检查浏览器是否支持IndexedDB或清除网站数据后重试。错误: ${error}</div>`;
