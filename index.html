@@ -503,7 +503,7 @@
             display: flex;
             flex-direction: column;
             gap: 20px;
-            /* 关键修复：让聊天区域拥有自己的背景，而不是透明 */
+            /* 关键让聊天区域拥有自己的背景，而不是透明 */
             background-color: var(--theme-color-1); 
             background-size: cover;
             background-position: center;
@@ -1012,6 +1012,14 @@
         .voice-wave-bar:nth-child(3) { height: 16px; animation-delay: 0.4s; }
         .voice-wave-bar:nth-child(4) { height: 12px; animation-delay: 0.6s; }
         .voice-wave-bar:nth-child(5) { height: 8px; animation-delay: 0.8s; }
+
+        .bubble-timestamp {
+            font-size: 0.7rem;
+            color: var(--text-color-light);
+            margin-top: 4px; /* 气泡与时间戳之间的间距 */
+            padding: 0 8px;  /* 水平对齐 */
+            user-select: none;
+        }
 
         /* --- 剩余基础样式保持不变 --- */
         .bubble-emoji {
@@ -2042,7 +2050,7 @@
 
         /* --- 8.7. Toast 轻量提示 --- */
         .toast-notification {
-            position: fixed; /* 修复：使用fixed定位，相对于视口 */
+            position: fixed; /* 使用fixed定位，相对于视口 */
             bottom: 20%;
             left: 50%;
             transform: translateX(-50%);
@@ -2945,7 +2953,7 @@
             transform: translateY(-3px) scale(1.02);
             box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12);
         }
-        /* --- 核心修复：针对所有主题，强制重置特殊消息的气泡样式 --- */
+        /* --- 核心针对所有主题，强制重置特殊消息的气泡样式 --- */
         #app-container[class*="app-bubble-style-"] .chat-area .message-content .bubble.transfer-or-red-packet-bubble,
         #app-container[class*="app-bubble-style-"] .chat-area .message-content .bubble.card-bubble,
         #app-container[class*="app-bubble-style-"] .chat-area .message-content .bubble.forwarded-moment-bubble,
@@ -2960,7 +2968,7 @@
             filter: none !important;
         }
         
-        /* --- 核心修复：专门禁用自定义CSS在特殊气泡上的伪元素 --- */
+        /* --- 核心专门禁用自定义CSS在特殊气泡上的伪元素 --- */
         #app-container[class*="app-bubble-style-"] .chat-area .message-content .bubble.transfer-or-red-packet-bubble::before,
         #app-container[class*="app-bubble-style-"] .chat-area .message-content .bubble.transfer-or-red-packet-bubble::after,
         #app-container[class*="app-bubble-style-"] .chat-area .message-content .bubble.card-bubble::before,
@@ -4157,10 +4165,109 @@
             padding: 6px 15px;
             font-size: 0.9rem;
         }
+
+        /* --- API配置页面样式 --- */
+        #page-api-settings .form-group {
+            background: white;
+            padding: 18px 15px;
+            margin: 0 0 1px;
+        }
+        #page-api-settings .settings-list {
+            padding-top: 10px;
+        }
+        .api-key-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin: 10px 0;
+            max-height: 150px;
+            overflow-y: auto;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 8px;
+        }
+        .api-key-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: #f9f9f9;
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-family: monospace;
+            font-size: 0.9rem;
+        }
+        .api-key-item .key-value {
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 70%;
+        }
+        .api-key-item .delete-key-btn {
+            background: none;
+            border: none;
+            color: #e74c3c;
+            cursor: pointer;
+            font-size: 1rem;
+        }
+        .api-key-add-form {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+        }
+        .api-key-add-form input {
+            flex-grow: 1;
+        }
+
+        .api-key-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .api-key-header .header-icon {
+            padding: 5px;
+            cursor: pointer;
+        }
+
         #announcement-close-btn:disabled {
             background-color: #ccc;
             cursor: not-allowed;
             color: #666;
+        }
+
+        /* --- 聊天设置页面美化 --- */
+        #page-chat-settings .settings-list {
+            padding: 10px;
+            background-color: var(--bg-main);
+        }
+        #page-chat-settings .setting-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: rgba(255, 255, 255, 0.8); /* 移除模糊效果，适当增加不透明度以保证可读性 */
+            /* backdrop-filter: blur(8px); <-- 移除性能消耗巨大的模糊效果 */
+            border: 1px solid var(--border-color); /* 使用更柔和的通用边框颜色 */
+            box-shadow: var(--shadow-light); /* 使用更简单、性能更好的阴影 */
+            margin-bottom: 15px;
+            border-radius: 16px;
+            gap: 15px;
+            transform: translateZ(0); /* 新增：开启硬件加速，让滚动更丝滑 */
+        }
+        #page-chat-settings .setting-item span {
+            font-size: 1rem; /* 统一标题字体大小 */
+        }
+        #page-chat-settings .setting-item input[type="number"] {
+            border: 1px solid var(--border-color);
+            background-color: var(--text-color-white);
+            border-radius: 10px; /* 增加圆角 */
+            font-size: 1rem;
+            font-family: var(--font-main);
+            outline-color: var(--accent-color);
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.05); /* 增加内阴影 */
+            transition: all 0.2s;
+        }
+        #page-chat-settings .setting-item input[type="number"]:focus {
+            border-color: var(--accent-color);
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.05), 0 0 0 3px rgba(167, 199, 231, 0.3); /* 聚焦效果 */
         }
 
 </style>
@@ -4283,6 +4390,72 @@
                     </div>
                 </div>
             </div>
+
+            <!-- 聊天设置页面 (新) -->
+            <div id="page-chat-settings" class="page">
+                <div class="page-header">
+                    <div id="chat-settings-back-btn" class="header-icon"><i class="fas fa-chevron-left"></i></div>
+                    <h1>聊天设置</h1>
+                </div>
+                <div class="page-content" id="chat-settings-content">
+                    <!-- 设置项将由JS动态生成 -->
+                </div>
+                <div class="page-footer" style="padding: 10px; text-align: center; border-top: 1px solid var(--border-color); background: rgba(255,255,255,0.5);">
+                    <button id="save-chat-settings-btn" class="modal-btn btn-primary" style="width: 90%;"><i class="fas fa-save"></i> 保存设置</button>
+                </div>
+            </div>
+
+            <!-- API配置页面 (新) -->
+            <div id="page-api-settings" class="page">
+                <div class="page-header">
+                    <div id="api-settings-back-btn" class="header-icon"><i class="fas fa-chevron-left"></i></div>
+                    <h1>API 配置</h1>
+                </div>
+                <div class="page-content">
+                    <div class="settings-list">
+                        <div class="form-group" style="padding: 0 15px;">
+                            <label for="api-provider">API提供商</label>
+                            <select id="api-provider">
+                                <!-- Options will be generated by JS -->
+                            </select>
+                        </div>
+                        <div class="form-group" style="padding: 0 15px;">
+                            <label for="api-url">API URL</label>
+                            <input type="text" id="api-url" placeholder="输入API URL">
+                        </div>
+
+                        <div class="form-group" style="padding: 0 15px;">
+                            <div class="api-key-header">
+                                <label>API Keys (<span id="api-key-count">0</span>)</label>
+                                <div id="toggle-all-keys-visibility" class="header-icon" title="显示/隐藏"><i class="fas fa-eye"></i></div>
+                            </div>
+                            <div id="api-key-list" class="api-key-list">
+                                <!-- Keys will be generated by JS -->
+                            </div>
+                            <div class="api-key-add-form">
+                                <input type="password" id="new-api-key-input" placeholder="添加新Key...">
+                                <button id="add-api-key-btn" class="modal-btn btn-primary" style="padding: 8px 15px; border-radius: 8px;">添加</button>
+                            </div>
+                        </div>
+
+                        <div class="form-group" style="padding: 0 15px;">
+                            <label for="api-model-select">模型</label>
+                            <div style="display: flex; gap: 10px; align-items: center;">
+                                <select id="api-model-select" style="flex-grow: 1;"></select>
+                                <input type="text" id="api-model-input" placeholder="输入自定义模型名称" style="display:none; flex-grow: 1;">
+                                <button id="fetch-models-btn" class="modal-btn btn-secondary" style="padding: 8px 15px; flex-shrink: 0;">获取</button>
+                            </div>
+                        </div>
+                        <div class="form-group" style="padding: 0 15px;">
+                            <label for="temperature">温度 (0-1)</label>
+                            <input type="number" id="temperature" min="0" max="1" step="0.1">
+                        </div>
+                    </div>
+                </div>
+                <div class="page-footer" style="padding: 10px; text-align: center; border-top: 1px solid var(--border-color); background: rgba(255,255,255,0.5);">
+                    <button id="save-api-settings-btn" class="modal-btn btn-primary" style="width: 90%;"><i class="fas fa-save"></i> 保存配置</button>
+                </div>
+            </div>
             
             <!-- 聊天页面 -->
             <div id="page-chat" class="page">
@@ -4329,6 +4502,7 @@
                             <button class="feature-btn" id="image-vision-btn" title="发送图片 (AI识图)"><i class="fas fa-camera"></i></button>
                             <button class="feature-btn" id="gift-btn" title="送礼物"><i class="fas fa-gift"></i></button>
                             <button class="feature-btn" id="card-btn" title="发送卡片"><i class="fas fa-share-square"></i></button>
+                            <button class="feature-btn" id="edit-last-reply-btn" title="编辑最新AI回复"><i class="fas fa-pencil-alt"></i></button>
                             <button class="feature-btn" id="delete-last-turn-btn" title="删除最新一轮回复"><i class="fas fa-eraser"></i></button>
                         </div>
                     </div>
@@ -4689,7 +4863,9 @@
             tutorial: $('#page-tutorial'),
             pomodoro: $('#page-pomodoro'),
             gifts: $('#page-gifts'),
+            'chat-settings': $('#page-chat-settings'),
             settings: $('#page-settings'),
+            'api-settings': $('#page-api-settings'),
             'theme-settings': $('#page-theme-settings'),
             'bubble-settings': $('#page-bubble-settings'),
             chat: $('#page-chat'),
@@ -4780,7 +4956,7 @@
 
             async init() {
                 
-                this.DB_VERSION = 19;
+                this.DB_VERSION = 20;
 
                 return new Promise((resolve, reject) => {
                     if (this.db) {
@@ -4939,6 +5115,13 @@
                             if (!db.objectStoreNames.contains('giftApiConfig')) {
                                 db.createObjectStore('giftApiConfig', { keyPath: 'id' });
                             }
+                        }
+
+                        // --- 版本 20 升级：为 chatMetadata 新增 lastRawAiResponse 字段 ---
+                        if (event.oldVersion < 20) {
+                            console.log("数据库升级至版本 20：为 chatMetadata 添加 lastRawAiResponse...");
+                            // 因为 chatMetadata 表已经存在，我们不需要创建它，只需要确保数据在后续操作中能被正确写入即可。
+                            // IndexedDB 不支持直接 ALTER TABLE 添加字段，我们通过在后续的 put 操作中包含新字段来实现。
                         }
                         
                         console.log("数据库升级完成");
@@ -5155,6 +5338,27 @@
                 }
             },
 
+
+            formatTimestampForBubble(timestamp) {
+                const date = new Date(timestamp);
+                const now = new Date();
+
+                const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+                const yesterdayStart = new Date(todayStart);
+                yesterdayStart.setDate(yesterdayStart.getDate() - 1);
+
+                const formatTime = (d) => d.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', hour12: false });
+
+                if (date >= todayStart) {
+                    return formatTime(date);
+                } else if (date >= yesterdayStart) {
+                    return `昨天 ${formatTime(date)}`;
+                } else {
+                    const month = date.getMonth() + 1;
+                    const day = date.getDate();
+                    return `${month}/${day} ${formatTime(date)}`;
+                }
+            },
             formatTimestampForPrompt(timestamp) {
                 const d = new Date(timestamp);
                 return `${d.getMonth() + 1}月${d.getDate()}日 ${d.getHours()}:${String(d.getMinutes()).padStart(2, '0')}`;
@@ -5263,6 +5467,7 @@
                 case 'discover':  break;
                 case 'moments': await this.renderMomentsPage(); break;
                 case 'settings': break; 
+                case 'api-settings': await EventManager.renderApiSettingsPage(); break;
                 case 'gifts': await UIManager.renderGiftsPage(); break;
                 case 'theme-settings': await EventManager.renderThemeSettingsPage(); break;
                 case 'bubble-settings': await EventManager.renderBubbleSettingsPage(); break;
@@ -5289,7 +5494,7 @@
                 const unpinnedChats = [];
 
                 for (const metadata of allMetadata) {
-                    if (!metadata) continue; // 核心修复：如果 metadata 为空，则跳过本次循环
+                    if (!metadata) continue; // 核心如果 metadata 为空，则跳过本次循环
                     
                     const { chatId, lastMessage, unreadCount, isPinned, pinnedTimestamp } = metadata;
                     if (!lastMessage) continue;
@@ -5468,7 +5673,7 @@
                                     await DBHelper.delete('chatMetadata', chatId);
                                     await DBHelper.deleteMessagesForChat(chatId);
 
-                                    // --- BUG修复：同时清除自动总结 ---
+                                    // --- BUG同时清除自动总结 ---
                                     const isGroup = chatId.startsWith('group-');
                                     const storeName = isGroup ? 'groups' : 'contacts';
                                     const entity = await DBHelper.get(storeName, chatId);
@@ -5530,6 +5735,12 @@
             },
 
             async updateChatMetadata(chatId, newLastMessage = null, unreadChange = 0) {
+                // --- 核心修复：在这里添加一个“保险”，防止空的chatId污染数据库 ---
+                if (!chatId) {
+                    console.error("尝试更新一个空的 chatId 的元数据，操作已阻止。");
+                    return;
+                }
+
                 const metadata = await DBHelper.get('chatMetadata', chatId) || { chatId, unreadCount: 0 };
                 
                 if (newLastMessage) {
@@ -5720,13 +5931,20 @@
             for (let i = messagesToLoad.length - 1; i >= 0; i--) {
                 const msg = messagesToLoad[i];
                 
-                // 时间戳分隔符逻辑 (修复：首次加载时不显示顶部的多余时间)
+                // 时间戳分隔符逻辑 (首次加载时不显示顶部的多余时间)
                 if (nextMessageTimestamp - msg.timestamp > 5 * 60 * 1000 && !isInitialLoad) {
                     const timeDiv = this.createTimeDividerElement(nextMessageTimestamp);
                     fragment.prepend(timeDiv); // 注意是 prepend
                 }
                 
+                const chatSettings = await DBHelper.get('apiConfig', 'chatSettings') || {};
                 if (!(['inner_voice', 'essay'].includes(msg.segmentType) || msg.isHidden)) {
+                    // 如果拍一拍功能关闭，则跳过渲染
+                    if (msg.segmentType === 'pat_a_pat' && chatSettings.enablePatAPat === false) {
+                        nextMessageTimestamp = msg.timestamp;
+                        continue;
+                    }
+
                     let senderInfo = (msg.type === 'sent') ? profile : contacts.find(c => c.id === msg.senderId) || { name: '未知成员', avatar: Utils.createAvatarDataUrl('#ccc') };
                     
                     // --- 新增逻辑开始 ---
@@ -6090,13 +6308,27 @@
                 }
             }
             
-            return messageRow;
-        },
+                // Add bubble timestamp if enabled
+                if (chatSettings.showBubbleTimestamp && !isTyping && !isReadOnly && !msg.isAutoReply && ['text', 'quote', 'voice'].includes(msg.segmentType)) {
+                    const wrapper = messageRow.querySelector('.bubble-and-tag-wrapper');
+                    if (wrapper) {
+                        const timestampEl = document.createElement('div');
+                        timestampEl.className = 'bubble-timestamp';
+                        timestampEl.textContent = Utils.formatTimestampForBubble(msg.timestamp);
+                        wrapper.appendChild(timestampEl);
+                    }
+                }
+            
+                return messageRow;
+            },
 
         async addMessageToDOM(msg, senderInfo, isTyping = false, isAnimating = false) {
-            if (msg.isHidden) return;
+            const chatSettings = await DBHelper.get('apiConfig', 'chatSettings') || {};
+            if (msg.isHidden || (msg.segmentType === 'pat_a_pat' && chatSettings.enablePatAPat === false)) {
+                return;
+            }
 
-            // --- 核心修复：在这里获取最新的 senderInfo ---
+            // --- 核心在这里获取最新的 senderInfo ---
             let freshSenderInfo = senderInfo;
             if (msg.type === 'received' && msg.senderId) {
                 // 对于收到的消息，总是从数据库获取最新的联系人信息
@@ -6123,6 +6355,7 @@
                 messageElement = document.createElement('div');
                 messageElement.className = 'pat-notice';
                 messageElement.id = msg.messageId;
+                messageElement.dataset.messageId = msg.messageId; // 新增这一行
                 messageElement.textContent = msg.content.displayText;
             } else {
                 // 使用我们刚刚获取到的最新信息来创建元素
@@ -6167,7 +6400,7 @@
             createRetractionNotice(msg, senderInfo) {
                 const notice = document.createElement('div');
                 notice.className = 'retracted-notice';
-                notice.id = msg.messageId; // 关键修复：为撤回提示添加ID
+                notice.id = msg.messageId; // 关键为撤回提示添加ID
                 const isGroup = appState.currentChatId.startsWith('group-');
                 const senderName = msg.type === 'sent' ? '你' : (senderInfo.remark || senderInfo.name);
                 notice.textContent = `${senderName} 撤回了一条消息`;
@@ -6827,8 +7060,8 @@
                         }},
                         { text: `确认${actionText}`, class: 'btn-danger', handler: async () => {
                             await DBHelper.delete('groups', groupId);
-                            await DBHelper.delete('chats', groupId);
-                            await DBHelper.delete('chatMetadata', groupId); // 删除聊天元数据
+                            await DBHelper.delete('chatMetadata', groupId);
+                            await DBHelper.deleteMessagesForChat(groupId); // 核心删除messages表中的记录
                             this.hideModal();
                             this.hideSidebar();
                             
@@ -6858,8 +7091,8 @@
                         { text: '取消', class: 'btn-secondary', handler: () => this.showContactInfo(contactId) },
                         { text: '确认删除', class: 'btn-danger', handler: async () => {
                             await DBHelper.delete('contacts', contactId);
-                            await DBHelper.delete('chats', contactId);
-                            await DBHelper.delete('chatMetadata', contactId); // 删除聊天元数据
+                            await DBHelper.delete('chatMetadata', contactId);
+                            await DBHelper.deleteMessagesForChat(contactId); // 核心删除messages表中的记录
                             this.hideModal();
                             await this.renderContactsPage();
                             await this.renderMessagesListPage(); // 刷新消息列表
@@ -7200,7 +7433,7 @@
                 $('#sidebar-delete-friend').addEventListener('click', async () => {
                     const groups = await DBHelper.getAll('groups');
                     const isInGroup = groups.some(g => g.members.includes(contact.id));
-                    this.confirmDeleteContact(contact.id, isInGroup);
+                    UIManager.confirmDeleteContact(contact.id, isInGroup);
                 });
             },
 
@@ -7209,25 +7442,28 @@
                 if (isInGroup) {
                     const groups = (await DBHelper.getAll('groups')).filter(g => g.members.includes(contactId));
                     const groupNames = groups.map(g => g.name).join('、');
-                    this.showModal({
+                    UIManager.showModal({
                         title: "无法删除",
                         body: `<p>无法删除好友，因为对方仍在群聊：<strong>${groupNames}</strong> 中。请先将其移出或解散相关群聊。</p>`,
-                        actions: [{ text: '好的', class: 'btn-primary', handler: () => this.hideModal() }]
+                        actions: [{ text: '好的', class: 'btn-primary', handler: () => UIManager.hideModal() }]
                     });
                     return;
                 }
                 
-                this.showModal({
+                UIManager.showModal({
                     title: "确认删除",
                     body: `<p>确定要删除该好友吗？所有聊天记录将被清空且无法恢复。</p>`,
                     actions: [
-                        { text: '取消', class: 'btn-secondary', handler: () => this.hideModal() },
+                        { text: '取消', class: 'btn-secondary', handler: () => UIManager.hideModal() },
                         { text: '确认删除', class: 'btn-danger', handler: async () => {
                             await DBHelper.delete('contacts', contactId);
-                            await DBHelper.delete('chats', contactId);
-                            this.hideModal();
-                            this.hideSidebar();
-                            await this.navigateTo('messages'); 
+                            await DBHelper.delete('chatMetadata', contactId);
+                            await DBHelper.deleteMessagesForChat(contactId);
+                            UIManager.hideModal();
+                            UIManager.hideSidebar();
+                            await UIManager.navigateTo('messages');
+                            await UIManager.renderContactsPage();
+                            await UIManager.renderMessagesListPage();
                         }}
                     ]
                 });
@@ -7237,6 +7473,10 @@ async showAutoSummaryModal(entityId, isGroup) {
     const storeName = isGroup ? 'groups' : 'contacts';
     const entity = await DBHelper.get(storeName, entityId);
     if (!entity) return;
+
+    const chatSettings = await DBHelper.get('apiConfig', 'chatSettings') || {};
+    const defaultSummaryPrompt = `你是一个聊天记录总结助手。请根据“最新聊天记录”，为我生成一段不超过350个字的新总结。新的总结需要融合旧总结的核心内容和新聊天记录的要点，保持故事的连贯性。请重点关注时间的发生时间、人物关系的变化、关键事件的进展、以及重要信息的交换。内容应客观、信息丰富且凝练。`;
+    const userSummaryPrompt = chatSettings.summaryPrompt || defaultSummaryPrompt;
 
     const summaryEnabled = entity.autoSummaryEnabled || false;
     const summaryText = entity.autoSummary || '';
@@ -7262,6 +7502,10 @@ async showAutoSummaryModal(entityId, isGroup) {
             <p style="font-size: 0.8rem; color: var(--text-color-medium); margin-top: -10px; margin-bottom: 20px;">
                 开启后，每隔30个玩家回合，AI会自动总结一次聊天内容。
             </p>
+            <div class="form-group">
+                <label for="summary-prompt-input">总结提示词 (可修改)</label>
+                <textarea id="summary-prompt-input" rows="6">${userSummaryPrompt}</textarea>
+            </div>
             <button id="immediate-summary-btn" class="modal-btn btn-secondary" style="width: 100%; margin-bottom: 20px;" ${isSummarizing ? 'disabled' : ''}>
                 <i class="fas fa-magic"></i> 立即总结
             </button>
@@ -7281,6 +7525,11 @@ async showAutoSummaryModal(entityId, isGroup) {
                 updatedEntity.autoSummaryEnabled = $('#auto-summary-switch').checked;
                 updatedEntity.autoSummary = $('#auto-summary-content').value.trim();
                 await DBHelper.put(storeName, updatedEntity);
+                
+                const currentChatSettings = await DBHelper.get('apiConfig', 'chatSettings') || { id: 'chatSettings' };
+                currentChatSettings.summaryPrompt = $('#summary-prompt-input').value.trim();
+                await DBHelper.put('apiConfig', currentChatSettings);
+
                 UIManager.hideModal();
                 UIManager.showToast("设置已保存！");
             }}
@@ -7732,15 +7981,7 @@ async showAutoSummaryModal(entityId, isGroup) {
 礼物介绍：xxx（不超过50字）
 寄语：xxx（简单一句话）
 </礼物>
-11. **拍一拍**: 当你想表达一些俏皮、提醒或想互动但无话可说的场景时，可以使用拍一拍。你必须使用被拍者的自定义动作和内容，使用此格式：<拍一拍>拍人角色名 (被拍人设定的动作) 被拍角色名 (被拍人设定的内容)</拍一拍>。
-例如，如果玩家的拍一拍内容是“被弹飞了”，则格式为：<拍一拍>33 拍了拍 {PLAYER_NAME} 被弹飞了</拍一拍>。
-绝对不能用拍人者的自定义动作和内容来回复，这是错误的。
-12. **修改拍一拍**: 当角色基于聊天语境下想修改自己的拍一拍设置时，使用此格式：
-<修改拍一拍>
-修改人：角色名
-拍一拍动作：xxx（不超过5个字，例如:捏了捏）
-拍一拍内容：xxx（不超过20个字，例如:的脸，并说好软好软;或者:的头,被弹飞了）
-</修改拍一拍>
+{PAT_A_PAT_RULES}
 13. **心声 (强制要求)**: 在你本次所有消息内容之后，你必须以【心声|角色名|你的心声内容】的格式来结束你的整个回复。**字数不超过30字。**
 14. **随笔 (概率出现)**: 你有一定概率会在【心声】之后，额外写一段「随笔|角色名|你的随笔内容」。这段随笔是角色在当前情境下，有感而发的一些思考或经历，可以与当前对话内容相关，也可以是独立的小故事或心情记录。字数请控制在50到250字之间。
 15. **严禁事项(1)**：绝不允许你代入玩家（“{PLAYER_NAME}”）的角色发言或为其生成心声。
@@ -7768,15 +8009,7 @@ async showAutoSummaryModal(entityId, isGroup) {
 礼物介绍：xxx（不超过50字）
 寄语：xxx（简单一句话）
 </礼物>
-11. **拍一拍**: 当你想表达一些俏皮、提醒或想互动但无话可说的场景时，可以使用拍一拍。你必须使用被拍者的自定义动作和内容，使用此格式：<拍一拍>拍人角色名 (被拍人设定的动作) 被拍角色名 (被拍人设定的内容)</拍一拍>。
-例如，如果玩家的拍一拍内容是“被弹飞了”，则格式为：<拍一拍>33 拍了拍 {PLAYER_NAME} 被弹飞了</拍一拍>。
-绝对不能用拍人者的自定义动作和内容来回复，这是错误的。
-12. **修改拍一拍**: 当角色基于聊天语境想修改自己的拍一拍设置时，使用此格式：
-<修改拍一拍>
-修改人：角色名
-拍一拍动作：xxx（不超过5个字，例如:捏了捏）
-拍一拍内容：xxx（不超过20个字，例如:的脸，并说好软好软;或者:的头,被弹飞了）
-</修改拍一拍>
+{PAT_A_PAT_RULES}
 13. **心声 (强制要求)**: 在你本次所有消息内容之后，你必须以【心声|角色名|你的心声内容】的格式来结束你的整个回复。字数不超过30字。
 14. **随笔 (概率出现)**: 你有一定概率会在【心声】之后，额外写一段「随笔|角色名|你的随笔内容」。这段随笔是角色在当前情境下，有感而发的一些思考或经历，可以与当前对话内容相关，也可以是独立的小故事或心情记录。字数请控制在50到250字之间。
 15. **严禁事项(1)**：绝不允许你代入玩家（“{PLAYER_NAME}”）的角色发言或为其生成心声。
@@ -7815,7 +8048,7 @@ async showAutoSummaryModal(entityId, isGroup) {
                         case 'gift': return `<礼物>\n发送方：${senderName}\n接收方：${recipientName}\n礼物名称：${msg.cardData.name}\n礼物价格：${msg.cardData.price}\n礼物介绍：${msg.cardData.description || '无'}\n寄语：${msg.cardData.message}\n</礼物>`;
                         case 'pat_a_pat':
                             const pat = msg.content;
-                            // 修复：移除括号，并确保内容前有空格
+                            // 移除括号，并确保内容前有空格
                             const actionText = pat.action || '拍了拍';
                             const contentText = pat.content ? ` ${pat.content}` : '';
                             return `<拍一拍>${pat.patterName} ${actionText} ${pat.patteeName}${contentText}</拍一拍>`;
@@ -7836,7 +8069,7 @@ async showAutoSummaryModal(entityId, isGroup) {
                     }
                 };
 
-                const relevantHistory = history.filter(m => m.segmentType !== 'essay' && !m.isHidden);
+                const relevantHistory = history.filter(m => m.segmentType !== 'essay' && (!m.isHidden || (m.isHidden && m.forAi === true)));
                 if (relevantHistory.length === 0) return [];
 
                 let turns = [];
@@ -7882,18 +8115,74 @@ async showAutoSummaryModal(entityId, isGroup) {
                         id: 'mainConfig',
                         provider: 'gemini',
                         url: 'https://generativelanguage.googleapis.com/v1beta/models/',
-                        key: '',
-                        model: 'gemini-2.5-flash', 
-                        temperature: 0.7
+                        model: 'gemini-2.5-flash',
+                        temperature: 0.7,
+                        keys: { gemini: [], siliconflow: [], paioupu: [], volcano: [], custom: [] } // 新结构
                     };
                     await DBHelper.put('apiConfig', config);
                 }
+
+                // 数据迁移逻辑：从旧的单key结构迁移到新的多key结构
+                if (config.key && !config.keys) {
+                    console.log("正在迁移旧的API Key结构...");
+                    config.keys = { gemini: [], siliconflow: [], paioupu: [], volcano: [], custom: [] };
+                    // 假设旧的key属于当时保存的provider
+                    if (config.provider && config.keys[config.provider]) {
+                        config.keys[config.provider].push(config.key);
+                    }
+                    delete config.key; // 删除旧字段
+                    await DBHelper.put('apiConfig', config);
+                    console.log("API Key结构迁移完成。");
+                }
+                
+                // 确保所有提供商的key数组都存在
+                if (!config.keys) {
+                     config.keys = { gemini: [], siliconflow: [], paioupu: [], volcano: [], custom: [] };
+                }
+
+
                 this.apiConfig = config;
             },
 
             async saveApiConfig(newConfig) {
-                this.apiConfig = { ...this.apiConfig, ...newConfig, id: 'mainConfig' };
+                // 1. 将新传入的设置合并到当前内存中的配置
+                Object.assign(this.apiConfig, newConfig);
+            
+                // 2. 安全地处理从旧的 model 属性到新的 models 对象的迁移
+                // 仅当 newConfig 中明确传入了 model 属性时（通常来自设置页面）才执行
+                if (newConfig.model) {
+                    if (!this.apiConfig.models) {
+                        this.apiConfig.models = {};
+                    }
+                    // 将 model 存入对应服务商的槽位
+                    this.apiConfig.models[this.apiConfig.provider] = this.apiConfig.model;
+                    // 清理掉顶层的旧 model 属性
+                    delete this.apiConfig.model;
+                }
+            
+                // 3. 确保 id 总是正确的
+                this.apiConfig.id = 'mainConfig';
+            
+                // 4. 将整理好的、完整的配置对象保存到数据库
                 await DBHelper.put('apiConfig', this.apiConfig);
+            },
+
+            async getApiKeyAndRotate() {
+                await this.loadApiConfig(); // 确保获取最新配置
+                const provider = this.apiConfig.provider;
+                const keyArray = this.apiConfig.keys[provider] || [];
+
+                if (keyArray.length === 0) {
+                    throw new Error(`当前提供商 (${provider}) 没有可用的API Key。`);
+                }
+
+                const keyToUse = keyArray.shift(); // 取出第一个key
+                keyArray.push(keyToUse); // 将用过的key放到最后
+
+                this.apiConfig.keys[provider] = keyArray;
+                await this.saveApiConfig(this.apiConfig); // 保存新的顺序
+
+                return keyToUse;
             },
 
             async getPendingTransfersPrompt(chatId, aiCharactersInChat) {
@@ -8022,7 +8311,7 @@ ${promptLines.join('\n')}
                 let aiCharactersInChat = isGroup ? chatEntity.members.map(id => allContacts.find(c => c.id === id)).filter(Boolean) : [chatEntity];
                 pendingTransfersPrompt = await this.getPendingTransfersPrompt(chatId, aiCharactersInChat);
 
-                const playerInfoPrompt = `玩家（“${myProfile.name}”）的信息如下：\n性别: ${myProfile.gender}\n拍一拍动作: ${myProfile.patAction || '拍了拍'}\n拍一拍内容: ${myProfile.patContent || ''}\n背景: ${myProfile.background || '无'}`;
+                const playerInfoPrompt = `玩家（“${myProfile.name}”）的信息如下：\n性别: ${myProfile.gender}\n${chatSettings.enablePatAPat !== false ? `拍一拍动作: ${myProfile.patAction || '拍了拍'}\n拍一拍内容: ${myProfile.patContent || ''}\n` : ''}背景: ${myProfile.background || '无'}`;
 
                 let pomodoroPromptSection = '';
                 if (appState.pomodoro && appState.pomodoro.isActive && appState.pomodoro.endTime) {
@@ -8056,7 +8345,7 @@ ${promptLines.join('\n')}
                     momentsPromptSection = `
 ---
 即时朋友圈动态规则 (可选):
-1. 在本次聊天回复中，你有一定几率可以发布一条或多条朋友圈动态。
+1. 在本次聊天回复中，你有一定几率可以发布一条或多条朋友圈动态。结合历史聊天记录里的朋友圈的发送情况，**不允许频繁、连续发送朋友圈动态**
 2. 动态内容需要与当前聊天情景、角色近期经历或人设紧密相关。
 3. 每条动态都必须被一个 <朋友圈> 标签包裹。
 4. 动态格式: 【作者角色名：动态内容|动态时间(月/日 HH:mm)】
@@ -8137,7 +8426,21 @@ ${promptLines.join('\n')}
                 }
 
                 const emojiListString = Object.entries(emojiMapForPrompt).map(([id, desc]) => `${id}：${desc}`).join('\n');
-                const formatPrompt = AIHandler.formatPromptTpl.replace('{EMOJI_LIST}', emojiListString).replace('{PLAYER_NAME}', myProfile.name);
+                
+                let patAPatRulesForPrompt = '';
+                if (chatSettings.enablePatAPat !== false) {
+                    patAPatRulesForPrompt = `11. **拍一拍**: 当你想表达一些俏皮、提醒或想互动但无话可说的场景时，可以使用拍一拍。你必须使用被拍者的自定义动作和内容，使用此格式：<拍一拍>拍人角色名 (被拍人设定的动作) 被拍角色名 (被拍人设定的内容)</拍一拍>。
+例如，如果玩家的拍一拍内容是“被弹飞了”，则格式为：<拍一拍>33 拍了拍 {PLAYER_NAME} 被弹飞了</拍一拍>。
+绝对不能用拍人者的自定义动作和内容来回复，这是错误的。
+12. **修改拍一拍**: 当角色基于聊天语境下想修改自己的拍一拍设置时，使用此格式：
+<修改拍一拍>
+修改人：角色名
+拍一拍动作：xxx（不超过5个字，例如:捏了捏）
+拍一拍内容：xxx（不超过20个字，例如:的脸，并说好软好软;或者:的头,被弹飞了）
+</修改拍一拍>`;
+                }
+
+                const formatPrompt = AIHandler.formatPromptTpl.replace('{EMOJI_LIST}', emojiListString).replace('{PLAYER_NAME}', myProfile.name).replace('{PAT_A_PAT_RULES}', patAPatRulesForPrompt);
                 let summaryPromptSection = '';
                 if (chatEntity && chatEntity.autoSummary) {
                     summaryPromptSection = `--- 会话概要---\n${chatEntity.autoSummary}\n---`;
@@ -8173,7 +8476,17 @@ ${promptLines.join('\n')}
             },
 
             async getApiResponse(textPrompt, images, signal) {
-                const { provider, url, key, model, temperature } = this.apiConfig;
+                // 在每次调用时都先加载最新的API配置，确保数据是最新的
+                await this.loadApiConfig();
+
+                // --- 核心修复：从新的 models 对象结构中获取模型 ---
+                const { provider, url, temperature, models } = this.apiConfig;
+                const model = models ? models[provider] : null; // 从 models 对象中根据当前 provider 获取模型
+                
+                // 通过新函数获取key
+                const key = await this.getApiKeyAndRotate();
+
+                // 检查现在包含了新的 model 变量
                 if (!key || !url || !model) {
                     throw new Error('API配置不完整，请在设置中检查。');
                 }
@@ -8318,7 +8631,7 @@ ${promptLines.join('\n')}
                          return;
                     }
                     
-                    // 新增：扫描玩家最后一轮消息，看有没有图片
+                    // 扫描玩家最后一轮消息，看有没有图片
                     const allMessages = await DBHelper.getMessages(requestedChatId, 15);
                     const imagesForApi = [];
                     
@@ -8334,6 +8647,11 @@ ${promptLines.join('\n')}
                     }
 
                     const aiRawResponse = await this.getApiResponse(textPrompt, imagesForApi.reverse(), this.abortController.signal);
+                    // 保存原始回复到数据库
+                    const metadata = await DBHelper.get('chatMetadata', requestedChatId) || { chatId: requestedChatId };
+                    metadata.lastRawAiResponse = aiRawResponse;
+                    await DBHelper.put('chatMetadata', metadata);
+                    
                     console.log("--- AI 原始回复 ---\n", aiRawResponse);
                     await this.parseAndDisplayAIResponse(aiRawResponse, requestedChatId);
                 } catch (error) {
@@ -8399,7 +8717,12 @@ ${promptLines.join('\n')}
                 }
 
                 try {
-                    const aiRawResponse = await this.getApiResponse(prompt, this.abortController.signal);
+                    const aiRawResponse = await this.getApiResponse(prompt, null, this.abortController.signal); // 确保参数对齐
+                    // 保存原始回复到数据库
+                    const metadata = await DBHelper.get('chatMetadata', requestedChatId) || { chatId: requestedChatId };
+                    metadata.lastRawAiResponse = aiRawResponse;
+                    await DBHelper.put('chatMetadata', metadata);
+                    
                     console.log("--- AI 主动回复 (原始) ---\n", aiRawResponse);
                     await this.parseAndDisplayActiveAIResponse(aiRawResponse, requestedChatId);
                 } catch (error) {
@@ -8431,7 +8754,7 @@ ${promptLines.join('\n')}
                 const allGroups = await DBHelper.getAll('groups');
                 const isGroup = chatId.startsWith('group-');
                 const chatEntity = await DBHelper.get(isGroup ? 'groups' : 'contacts', chatId);
-                const fullHistory = await DBHelper.getMessages(chatId, 100); // 修复：从正确的 'messages' 表获取历史记录
+                const fullHistory = await DBHelper.getMessages(chatId, 100); // 从正确的 'messages' 表获取历史记录
                 const chatSettings = await DBHelper.get('apiConfig', 'chatSettings') || {};
                 const historyLength = 10; // 定义历史记录的轮数
 
@@ -8447,11 +8770,11 @@ ${promptLines.join('\n')}
                 if (isGroup) {
                     situationPrompt = `你们上次聊天是${lastTimeFormatted}，距离现在过去${durationString}了，在这段时间内，玩家“${myProfile.name}”并不在线，你们可以自由交流，交流内容可以与玩家有关，也可以与玩家无关。`;
                 } else {
-                    situationPrompt = `“${myProfile.name}”上次和你聊天时间是${lastTimeFormatted}，距离现在已经过去了${durationString}。请你根据你的人设，说一些在这段时间里你可能会对“${myProfile.name}”说的话，也可能是这段时间内你遇到的新鲜的事，想和TA分享。这些话不一定是同一时间发的，有时候只隔了一两分钟，有可能你可能隔了十几二十分钟才发下一条，所以注意消息的口吻。禁止超出这个时间范围，禁止出现比现在时间还要晚的时间，如果对方离开的时间只有几个小时或者只是晚上到白天(睡觉)，可以不用发很多条消息。`;
+                    situationPrompt = `“${myProfile.name}”上次和你聊天时间是${lastTimeFormatted}，距离现在已经过去了${durationString}。请你根据你的人设，说一些在这段时间里你可能会对“${myProfile.name}”说的话，也可能是这段时间内你遇到的新鲜的事，想和TA分享。这些话不一定是同一时间发的，有时候只隔了一两分钟，有可能你可能隔了十几二十分钟才发下一条，所以注意消息的口吻。**禁止超出这个时间范围，禁止出现比现在时间还要晚的时间**，如果对方离开的时间只有几个小时或者只是晚上到白天(睡觉)，可以不用发很多条消息。`;
                 }
 
                 const formatMessageContent = (msg, senderName, myName) => { 
-                    const recipientName = msg.cardData?.recipientName || '对方'; // 修复：定义 recipientName
+                    const recipientName = msg.cardData?.recipientName || '对方'; // 定义 recipientName
                     if (msg.isRetracted) return `{${(msg.type === 'sent') ? myName : senderName}|${msg.content}}`;
                     if (msg.segmentType === 'inner_voice') return `【心声|${senderName}|${msg.content}】`;
                     switch (msg.segmentType) {
@@ -8502,7 +8825,7 @@ ${promptLines.join('\n')}
 
                 if (chatSettings.memoryInterconnection) {
                      if (isGroup) {
-                        historyPrompt += buildHistoryBlock(fullHistory, '当前群聊记录', historyLength); // 修复：使用 fullHistory
+                        historyPrompt += buildHistoryBlock(fullHistory, '当前群聊记录', historyLength); // 使用 fullHistory
                         let privateContext = '--- 以下是各角色的私聊记忆 (仅角色自己可见) ---\n';
                         for (const member of chatEntity.members.map(id => allContacts.find(c => c.id === id)).filter(Boolean)) {
                             const privateChatHistory = await DBHelper.getMessages(member.id, 20);
@@ -8510,7 +8833,7 @@ ${promptLines.join('\n')}
                         }
                         historyPrompt += privateContext;
                     } else {
-                        historyPrompt += buildHistoryBlock(fullHistory, '当前私聊记录', historyLength); // 修复：使用 fullHistory
+                        historyPrompt += buildHistoryBlock(fullHistory, '当前私聊记录', historyLength); // 使用 fullHistory
                         const relatedGroups = allGroups.filter(g => g.members.includes(chatEntity.id));
                         let groupContext = '--- 以下是相关的群聊记忆 ---\n';
                         for (const group of relatedGroups) {
@@ -8520,7 +8843,7 @@ ${promptLines.join('\n')}
                         historyPrompt += groupContext;
                     }
                 } else {
-                    historyPrompt += buildHistoryBlock(fullHistory, '当前聊天记录', historyLength); // 修复：使用 fullHistory
+                    historyPrompt += buildHistoryBlock(fullHistory, '当前聊天记录', historyLength); // 使用 fullHistory
                 }
 
                 const taskPrompt = isGroup ? 
@@ -8547,13 +8870,27 @@ ${promptLines.join('\n')}
                 }
 
                 const emojiListString = Object.entries(emojiMapForPrompt).map(([id, desc]) => `${id}：${desc}`).join('\n');
+
+                let patAPatRulesForPrompt = '';
+                if (chatSettings.enablePatAPat !== false) {
+                    patAPatRulesForPrompt = `11. **拍一拍**: 当你想表达一些俏皮、提醒或想互动但无话可说的场景时，可以使用拍一拍。你必须使用被拍者的自定义动作和内容，使用此格式：<拍一拍>拍人角色名 (被拍人设定的动作) 被拍角色名 (被拍人设定的内容)</拍一拍>。
+例如，如果玩家的拍一拍内容是“被弹飞了”，则格式为：<拍一拍>33 拍了拍 {PLAYER_NAME} 被弹飞了</拍一拍>。
+绝对不能用拍人者的自定义动作和内容来回复，这是错误的。
+12. **修改拍一拍**: 当角色基于聊天语境想修改自己的拍一拍设置时，使用此格式：
+<修改拍一拍>
+修改人：角色名
+拍一拍动作：xxx（不超过5个字，例如:捏了捏）
+拍一拍内容：xxx（不超过20个字，例如:的脸，并说好软好软;或者:的头,被弹飞了）
+</修改拍一拍>`;
+                }
+                
                 const finalPrompt = [
                     situationPrompt,
                     taskPrompt,
                     characterInfoPrompt,
                     playerInfoPrompt, 
                     historyPrompt,
-                    AIHandler.activeReplyPromptTpl.replace('{EMOJI_LIST}', emojiListString).replace('{PLAYER_NAME}', myProfile.name)
+                    AIHandler.activeReplyPromptTpl.replace('{EMOJI_LIST}', emojiListString).replace('{PLAYER_NAME}', myProfile.name).replace('{PAT_A_PAT_RULES}', patAPatRulesForPrompt)
                 ].join('\n\n');
 
                 console.log(`--- ACTIVE REPLY PROMPT SENT TO AI ---\n`, finalPrompt);
@@ -8639,7 +8976,12 @@ ${promptLines.join('\n')}
                 }
 
                 try {
-                    const aiRawResponse = await this.getApiResponse(newPrompt, this.abortController.signal);
+                    const aiRawResponse = await this.getApiResponse(newPrompt, null, this.abortController.signal); // 确保参数对齐
+                    // 保存原始回复到数据库
+                    const metadata = await DBHelper.get('chatMetadata', chatId) || { chatId: chatId };
+                    metadata.lastRawAiResponse = aiRawResponse;
+                    await DBHelper.put('chatMetadata', metadata);
+
                     console.log("--- AI 原始回复 ---\n", aiRawResponse);
 
                     await this.parseAndDisplayAIResponse(aiRawResponse, chatId);
@@ -8664,22 +9006,17 @@ async buildSummaryPrompt(chatId) {
     const myProfile = await EventManager.getPlayerProfileForContext(chatId);
     const allContacts = await DBHelper.getAll('contacts');
     
-    // 获取最近60条消息以确保能组成约30个回合
-    const history = await DBHelper.getMessages(chatId, 60); 
+    const history = await DBHelper.getMessages(chatId, 60);
     const turns = this.buildTurnsFromHistory(history, allContacts, myProfile);
     const last30turns = turns.slice(-30);
-    if (last30turns.length === 0) return null; // 如果没有聊天记录，不进行总结
-
-    const previousSummary = entity.autoSummary || '';
-
-    let prompt = `你是一个聊天记录总结助手。请根据“过往总结”（如果有）和“最新聊天记录”，为我生成一段不超过350个字的新总结。新的总结需要融合旧总结的核心内容和新聊天记录的要点，保持故事的连贯性。请重点关注时间的发生时间、人物关系的变化、关键事件的进展、以及重要信息的交换。内容应客观、信息丰富且凝练。\n\n`;
+    if (last30turns.length === 0) return null;
     
-    if (previousSummary) {
-        prompt += `--- 过往总结 ---\n${previousSummary}\n\n`;
-    }
-    
+    const chatSettings = await DBHelper.get('apiConfig', 'chatSettings') || {};
+    const defaultSummaryPrompt = `你是一个聊天记录总结助手。请根据“最新聊天记录”，为我生成一段不超过350个字的新总结。新的总结需要融合旧总结的核心内容和新聊天记录的要点，保持故事的连贯性。请重点关注时间的发生时间、人物关系的变化、关键事件的进展、以及重要信息的交换。内容应客观、信息丰富且凝练。`;
+    const userSummaryPrompt = chatSettings.summaryPrompt || defaultSummaryPrompt;
+
+    let prompt = `${userSummaryPrompt}\n\n`;
     prompt += `--- 最新聊天记录 (最近30轮) ---\n${last30turns.map(turn => `${turn.role}: ${turn.content}`).join('\n')}\n\n`;
-    prompt += `--- 旧的总结 ---\n`;
 
     return prompt;
 },
@@ -8712,8 +9049,14 @@ async handleAutoSummaryRequest(chatId) {
             const storeName = isGroup ? 'groups' : 'contacts';
             const entity = await DBHelper.get(storeName, chatId);
             
-            // 确保不超过350字
-            entity.autoSummary = summaryResponse.trim().slice(0, 350);
+const newSummaryPart = summaryResponse.trim().slice(0, 350);
+const separator = `\n\n--- ${new Date().toLocaleString()} ---\n`;
+
+if (entity.autoSummary) {
+    entity.autoSummary += separator + newSummaryPart;
+} else {
+    entity.autoSummary = newSummaryPart;
+}
             
             await DBHelper.put(storeName, entity);
             console.log("新总结已保存:", entity.autoSummary);
@@ -8758,7 +9101,7 @@ async handleAutoSummaryRequest(chatId) {
                     characterInfoPrompt = `你的角色资料如下：\n角色名: ${chatEntity.name}\n性别: ${chatEntity.gender}\n喜好: ${chatEntity.likes || '无'}\n厌恶: ${chatEntity.dislikes || '无'}\n习惯: ${chatEntity.habits || '无'}\n背景: ${chatEntity.background || '无'}`;
                 }
                 
-                // --- 新增：读取并构建绑定的提示词 ---
+                // --- 读取并构建绑定的提示词 ---
                 let customPromptsSection = '';
                 if (chatEntity && chatEntity.boundPromptFolderIds?.length > 0) {
                     const allFolders = await DBHelper.getAll('promptFolders');
@@ -8815,7 +9158,12 @@ async handleAutoSummaryRequest(chatId) {
                 }
 
                 try {
-                    const aiRawResponse = await this.getApiResponse(finalPrompt, this.abortController.signal);
+                    const aiRawResponse = await this.getApiResponse(finalPrompt, null, this.abortController.signal); // 确保参数对齐
+                    // 保存原始回复到数据库
+                    const metadata = await DBHelper.get('chatMetadata', chatId) || { chatId: chatId };
+                    metadata.lastRawAiResponse = aiRawResponse;
+                    await DBHelper.put('chatMetadata', metadata);
+                    
                     console.log("--- AI 原始回复 ---\n", aiRawResponse);
                     await this.parseAndDisplayAIResponse(aiRawResponse, chatId);
                 } catch (error) {
@@ -9363,7 +9711,7 @@ async handleAutoSummaryRequest(chatId) {
                 const baseTimestamp = Date.now();
                 let timestampOffset = 0;
                 const displayableMessages = [];
-
+                const contactUpdates = {};
                 const createBaseMessage = (senderName, displayTimestamp) => {
                     const sender = contacts.find(c => c.name === senderName);
                     if (!sender) {
@@ -9372,7 +9720,7 @@ async handleAutoSummaryRequest(chatId) {
                     }
                     return {
                         messageId: Utils.generateId('msg'),
-                        chatId: chatId, // 修复：为主动回复消息添加chatId，确保数据正确关联
+                        chatId: chatId, // 为主动回复消息添加chatId，确保数据正确关联
                         senderId: sender.id,
                         timestamp: baseTimestamp + timestampOffset++,
                         type: 'received',
@@ -9394,14 +9742,22 @@ async handleAutoSummaryRequest(chatId) {
                         const parts = innerVoiceContent.split('|').map(p => p.trim());
                         const sender = contacts.find(c => c.name === parts[1]);
                         if (sender) {
+                            let message;
                             if (parts[0] === '心声' && parts.length === 3) {
-                                messagesToSave.push({ messageId: Utils.generateId('msg'), chatId: chatId, senderId: sender.id, content: parts[2], timestamp: baseTimestamp + timestampOffset++, type: 'received', segmentType: 'inner_voice' });
+                                message = { messageId: Utils.generateId('msg'), chatId: chatId, senderId: sender.id, content: parts[2], timestamp: baseTimestamp + timestampOffset++, type: 'received', segmentType: 'inner_voice' };
+                                if (!contactUpdates[sender.id]) contactUpdates[sender.id] = {};
+                                contactUpdates[sender.id].lastInnerVoiceId = message.messageId;
                             } else if (parts[0] === '随笔' && parts.length === 3) {
-                                messagesToSave.push({ messageId: Utils.generateId('msg'), chatId: chatId, senderId: sender.id, content: parts[2], timestamp: baseTimestamp + timestampOffset++, type: 'received', segmentType: 'essay' });
+                                message = { messageId: Utils.generateId('msg'), chatId: chatId, senderId: sender.id, content: parts[2], timestamp: baseTimestamp + timestampOffset++, type: 'received', segmentType: 'essay' };
+                                if (!contactUpdates[sender.id]) contactUpdates[sender.id] = {};
+                                contactUpdates[sender.id].lastEssayId = message.messageId;
                                 UIManager.showEssayNotification(sender.remark || sender.name, sender.id);
                             }
+                            if (message) {
+                                messagesToSave.push(message);
+                            }
                         }
-                        return; 
+                        return;
                     }
                     // 合并处理「随笔」
                     if (essayContent) {
@@ -9514,7 +9870,14 @@ async handleAutoSummaryRequest(chatId) {
                 for (const msg of messagesToSave) {
                     await DBHelper.put('messages', msg);
                 }
-
+                // 核心在批量保存消息前，执行所有暂存的联系人更新
+                for (const [contactId, updates] of Object.entries(contactUpdates)) {
+                    const contactToUpdate = await DBHelper.get('contacts', contactId);
+                    if (contactToUpdate) {
+                        Object.assign(contactToUpdate, updates);
+                        await DBHelper.put('contacts', contactToUpdate);
+                    }
+                }
                 if (displayableMessages.length > 0 || messagesToSave.some(m => m.segmentType === 'inner_voice' || m.segmentType === 'essay')) {
                     const chatMetadata = await DBHelper.get('chatMetadata', chatId) || { chatId: chatId, unreadCount: 0 };
                     chatMetadata.lastAiReplyTimestamp = Date.now();
@@ -9537,29 +9900,33 @@ async handleAutoSummaryRequest(chatId) {
 
                 for (const msg of displayableMessages) {
                     await new Promise(resolve => setTimeout(resolve, Math.random() * 400 + 200));
+                    
+                    // 查找发送者信息以备后用
+                    const senderForDisplay = contacts.find(c => c.id === msg.senderId) || { name: '未知用户', avatar: Utils.createAvatarDataUrl('#ccc') };
 
                     if (chatId === appState.currentChatId) {
-                        // 显示时查找发送者信息
-                        const senderForDisplay = contacts.find(c => c.id === msg.senderId) || { name: '未知用户', avatar: Utils.createAvatarDataUrl('#ccc') };
                         UIManager.addMessageToDOM(msg, senderForDisplay, false, true);
 
                         if (msg.toBeRetracted) {
                             const retractDelay = Math.random() * 1000 + 1000;
                             setTimeout(async () => {
-                                const chatToUpdate = await DBHelper.get('chats', chatId);
-                                const msgToRetract = chatToUpdate.history.find(m => m.messageId === msg.messageId);
+                                // 直接从 messages 表中获取和更新消息，而不是从旧的 chats.history
+                                const msgToRetract = await DBHelper.get('messages', msg.messageId);
                                 if (msgToRetract) {
                                     msgToRetract.isRetracted = true;
-                                    await DBHelper.put('chats', chatToUpdate);
+                                    await DBHelper.put('messages', msgToRetract);
                                     const bubbleEl = $(`#${msg.messageId}`);
                                     if (bubbleEl) {
-                                        const retractionNotice = UIManager.createRetractionNotice(msgToRetract, msg.senderInfo);
+                                        // 使用 senderForDisplay 来创建撤回提示，因为它包含了正确的信息
+                                        const retractionNotice = UIManager.createRetractionNotice(msgToRetract, senderForDisplay);
                                         bubbleEl.replaceWith(retractionNotice);
                                     }
                                 }
                             }, retractDelay);
                         }
                     } else {
+                        // 确保传递 senderInfo 给通知
+                        msg.senderInfo = senderForDisplay;
                         UIManager.showTopNotification(msg);
                     }
                 }
@@ -9588,7 +9955,7 @@ async handleAutoSummaryRequest(chatId) {
                         return;
                     }
                     
-                    const aiRawResponse = await this.getApiResponse(prompt, this.abortController.signal);
+                    const aiRawResponse = await this.getApiResponse(prompt, null, this.abortController.signal);
                     console.log("--- AI 朋友圈动态 (原始) ---\n", aiRawResponse);
                     await this.parseAndDisplayMomentsResponse(aiRawResponse);
                     
@@ -9662,7 +10029,7 @@ async handleAutoSummaryRequest(chatId) {
                     const prompt = await this.buildMomentsCommentPrompt(momentId);
                     if (!prompt) return;
 
-                    const aiRawResponse = await this.getApiResponse(prompt, this.abortController.signal);
+                    const aiRawResponse = await this.getApiResponse(prompt, null, this.abortController.signal);
                     console.log("--- AI 朋友圈评论 (原始) ---\n", aiRawResponse);
                     await this.parseAndDisplayMomentsCommentsResponse(momentId, aiRawResponse);
 
@@ -9698,7 +10065,7 @@ async handleAutoSummaryRequest(chatId) {
                     const prompt = await this.buildMomentsPlayerCommentPrompt(momentId, playerComment);
                     if (!prompt) return;
 
-                    const aiRawResponse = await this.getApiResponse(prompt, this.abortController.signal);
+                    const aiRawResponse = await this.getApiResponse(prompt, null, this.abortController.signal);
                     console.log("--- AI 朋友圈玩家评论回复 (原始) ---\n", aiRawResponse);
                     await this.parseAndDisplayMomentsPlayerCommentResponse(momentId, aiRawResponse);
 
@@ -9756,7 +10123,7 @@ async handleAutoSummaryRequest(chatId) {
 
                 let contextHistory = '';
 for (const member of selectedMembers) {
-    // 修复：从 'messages' 表获取私聊记录
+    // 从 'messages' 表获取私聊记录
     const privateChatHistory = await DBHelper.getMessages(member.id, 10); // 获取最近10条消息以构建轮次
     if (privateChatHistory && privateChatHistory.length > 0) {
         const turns = this.buildTurnsFromHistory(privateChatHistory, allContacts, myProfile);
@@ -9766,7 +10133,7 @@ for (const member of selectedMembers) {
         }
     }
     
-    // 修复：从 'messages' 表获取群聊记录
+    // 从 'messages' 表获取群聊记录
     const groupsWithMember = allGroups.filter(g => g.members.includes(member.id));
     for (const group of groupsWithMember) {
         const groupChatHistory = await DBHelper.getMessages(group.id, 10); // 获取最近10条消息
@@ -9791,7 +10158,7 @@ for (const member of selectedMembers) {
 7.  动态内容要符合角色人设，可以图文并茂（用文字描述图片），也可以只是纯文字。
 8.  生成1到4条不等的动态，内容不能重复。
 9.  作者和评论者的角色名必须是角色的名字（例如：${selectedMembers.map(m=>m.name).join(', ')}）、额外好友的名字。
-10. **严禁OOC，严禁生成格式之外的内容，严禁代替玩家进行评论、回复或者点赞**。
+10. **严禁OOC，严禁生成格式之外的内容，严禁代替玩家进行评论、回复或者点赞**。**禁止代替玩家进行评论、回复或点赞**
 11.举例：
 <朋友圈>
 【33：今天天气真不错，有没有要一起出去玩的？|7/3 8:36】
@@ -9894,7 +10261,7 @@ for (const member of selectedMembers) {
 2.  点赞格式：用中文括号包裹点赞列表，格式为（已点赞：张三,李四,王五）。点赞者可以是圈内任何AI角色或额外好友。
 3.  严格按照以下格式，每条评论都是一个独立的单元: 〖评论者角色名：评论内容〗，禁止在〖〗内嵌套〖〗。
 4.  评论内容要符合角色人设，不超过20个字。
-5.  **严禁OOC，严禁生成格式之外的内容，严禁代替玩家进行评论或回复**。
+5.  **严禁OOC，严禁生成格式之外的内容，严禁代替玩家进行评论或回复**。**禁止代替玩家进行评论、回复或点赞**
 6.  至少生成2条评论，最多生成5条评论。
 7.  举例：
 （已点赞：33,vv,入入）
@@ -10457,9 +10824,10 @@ for (const member of selectedMembers) {
             async showAnnouncementModal(isFromTutorial = false) {
                 const page1Content = `
                     <h4>为了33聊天室保持友好和谐的交流气氛，我们在这里作出以下提醒：</h4>
-                    <p>1. 聊天室内设有自定义角色功能，角色卡并非强制购买。</p>
+                    <p>1. 聊天室内具有自定义角色功能，角色卡并非强制购买。</p>
                     <p>2. 请尊重原创，不要使用其他老师未授权的角色设定或其他设定。如果因使用未授权内容引发侵权问题，后果需自行承担。</p>
                     <p>3. 请大家尊重所有人的产出，不要在任何公开平台上将33聊天室与其他ai聊天工具进行拉踩、比较。</p>
+                    <p>4. 禁止直接外传网址或外传带有33聊天室网址的截图，否则过多非购买33聊天器的访客访问网址，将导致网址失效，所有人的记录全都会被清除。我们将不予负责，请各自维护好自身权益。</p>
                     <p><strong>在这里诚挚地祝愿各位在聊天室玩得开心。</strong></p>
                 `;
 
@@ -10762,8 +11130,13 @@ for (const member of selectedMembers) {
                 $$('.tab-btn').forEach(btn => btn.addEventListener('click', () => UIManager.renderContactsPage(btn.dataset.tab)));
                 $('#sort-friends-btn').addEventListener('click', () => this.handleSortContacts());
                 $('#sort-groups-btn').addEventListener('click', () => this.handleSortGroups());
-                $('#setting-chat').addEventListener('click', () => this.handleChatSettings());
-                $('#setting-api').addEventListener('click', () => this.handleApiSettings());
+                $('#chat-settings-back-btn').onclick = () => UIManager.navigateTo('settings');
+                $('#save-chat-settings-btn').onclick = () => this.handleSaveChatSettings();
+                $('#setting-chat').addEventListener('click', async () => {
+                    await UIManager.navigateTo('chat-settings', 'settings');
+                    await this.renderChatSettingsPage();
+                });
+                $('#setting-api').addEventListener('click', () => UIManager.navigateTo('api-settings', 'settings'));
                 $('#setting-prompts').addEventListener('click', () => UIManager.navigateTo('prompts', 'settings'));
                 $('#setting-theme').addEventListener('click', () => UIManager.navigateTo('theme-settings', 'settings'));
                 $('#setting-bubble').addEventListener('click', () => UIManager.navigateTo('bubble-settings', 'settings'));
@@ -11123,6 +11496,7 @@ for (const member of selectedMembers) {
                 $('#image-vision-btn').addEventListener('click', () => this.handleVisionImageSend());
                 $('#card-btn').addEventListener('click', () => this.handlePlayerCardSend());
                 $('#delete-last-turn-btn').addEventListener('click', () => this.handleDeleteLastTurn());
+                $('#edit-last-reply-btn').addEventListener('click', () => this.handleEditLastReply());
                 voiceBtn.addEventListener('click', () => this.handleVoiceInput());
                 $('#transfer-btn').addEventListener('click', () => this.handlePlayerTransfer());
                 $('#red-packet-btn').addEventListener('click', () => this.handlePlayerRedPacket());
@@ -11263,7 +11637,7 @@ for (const member of selectedMembers) {
                 if (contextId.startsWith('group-')) { // Group Chat
                     const group = await DBHelper.get('groups', contextId);
                     boundId = group?.boundPersonaPresetId;
-                } else if (contextId.startsWith('contact-')) { // Private Chat
+                } else if (contextId.startsWith('contact')) { // Private Chat (FIXED: removed hyphen)
                     const contact = await DBHelper.get('contacts', contextId);
                     if (contact) {
                         if (contact.boundPersonaPresetId) {
@@ -11273,7 +11647,7 @@ for (const member of selectedMembers) {
                             boundId = folder?.boundPersonaPresetId;
                         }
                     }
-                } else if (contextId.startsWith('circle-')) { // Moments Circle
+                } else if (contextId.startsWith('circle')) {
                     const circle = await DBHelper.get('circles', contextId);
                     boundId = circle?.boundPersonaPresetId;
                 }
@@ -11281,7 +11655,7 @@ for (const member of selectedMembers) {
                 if (boundId && baseProfile.presets && Array.isArray(baseProfile.presets)) {
                     const boundProfile = baseProfile.presets.find(p => p && p.presetId === boundId);
                     if (boundProfile) {
-                        // 核心修复：合并基础配置（确保有 'id'）和绑定的预设（使用新的名字和头像等）
+                        // 核心合并基础配置（确保有 'id'）和绑定的预设（使用新的名字和头像等）
                         return { ...baseProfile, ...boundProfile };
                     }
                 }
@@ -12118,10 +12492,10 @@ if (entity && entity.autoSummaryEnabled && chatMetadata.totalPlayerTurns > 0 && 
             handleInteractionStart(e, type) {
                 if (appState.selectionMode.active) return; // 选择模式下禁用长按
 
-                const targetElement = e.target.closest('.bubble, .narrator-notice');
+                const targetElement = e.target.closest('.bubble, .narrator-notice, .pat-notice');
                 if (!targetElement) return;
 
-                const messageRow = targetElement.closest('.message-row, .narrator-notice');
+                const messageRow = targetElement.closest('.message-row, .narrator-notice, .pat-notice');
                 if (!messageRow || !messageRow.dataset.messageId) return;
 
                 clearTimeout(appState.longPressTimer);
@@ -12134,6 +12508,8 @@ if (entity && entity.autoSummaryEnabled && chatMetadata.totalPlayerTurns > 0 && 
                     
                     if (messageRow.classList.contains('narrator-notice')) {
                         this.showMessageOptions(messageRow, 'narrator');
+                    } else if (messageRow.classList.contains('pat-notice')) {
+                        this.showMessageOptions(messageRow, 'pat_a_pat');
                     } else if (messageRow.classList.contains('received')) {
                         this.showMessageOptions(messageRow, 'received');
                     } else if (messageRow.classList.contains('sent')) {
@@ -12210,7 +12586,7 @@ if (entity && entity.autoSummaryEnabled && chatMetadata.totalPlayerTurns > 0 && 
                 wrapper.className = 'retract-button-wrapper';
 
                 let buttonsHtml = '';
-                if (messageType === 'narrator') {
+                if (messageType === 'narrator' || messageType === 'pat_a_pat') {
                     buttonsHtml = `<button class="retract-btn" data-action="delete"><i class="fas fa-trash"></i> 删除</button>`;
                 } else if (messageType === 'sent') {
                     buttonsHtml = `
@@ -12258,7 +12634,7 @@ if (entity && entity.autoSummaryEnabled && chatMetadata.totalPlayerTurns > 0 && 
                 });
 
                 let attachTarget;
-                if (messageType === 'narrator') {
+                if (messageType === 'narrator' || messageType === 'pat_a_pat') {
                     attachTarget = messageRowElement;
                     messageRowElement.style.position = 'relative';
                 } else {
@@ -12985,9 +13361,9 @@ if (entity && entity.autoSummaryEnabled && chatMetadata.totalPlayerTurns > 0 && 
                             
                             await DBHelper.put('groups', newGroup);
                             
-                            const invitedNames = (await Promise.all(newGroup.members.filter(id => id !== myProfile.id).map(id => DBHelper.get('contacts', id)))).map(c => c.remark || c.name).join('、');
+                            const invitedNames = (await Promise.all(newGroup.members.filter(id => id !== myProfile.id).map(id => DBHelper.get('contacts', id)))).map(c => c.name).join('、'); 
                             const creatorContact = creatorId === myProfile.id ? myProfile : await DBHelper.get('contacts', creatorId);
-                            const creatorNameForScene = creatorContact ? (creatorContact.remark || creatorContact.name) : "一位朋友";
+                            const creatorNameForScene = creatorContact ? creatorContact.name : "一位朋友";
                             const defaultSceneContent = `${creatorNameForScene} 创建了群聊 “${newGroup.name}”，群聊成员有：${invitedNames}。现在，大家开始积极发言吧！`;
                             await DBHelper.put('openingScenes', {id: Utils.generateId('scene'), groupId: newGroup.id, name: '默认开场白', content: defaultSceneContent});
 
@@ -13122,8 +13498,8 @@ if (entity && entity.autoSummaryEnabled && chatMetadata.totalPlayerTurns > 0 && 
                             const storeName = activeTab === 'friends' ? 'contacts' : 'groups';
                             for (const id of idsToDelete) {
                                 await DBHelper.delete(storeName, id);
-                                await DBHelper.delete('chats', id);
-                                await DBHelper.delete('chatMetadata', id); // 删除聊天元数据
+                                await DBHelper.delete('chatMetadata', id);
+                                await DBHelper.deleteMessagesForChat(id); // 核心删除messages表中的记录
                             }
                             UIManager.hideModal();
                             UIManager.showToast("删除成功");
@@ -13293,7 +13669,6 @@ if (entity && entity.autoSummaryEnabled && chatMetadata.totalPlayerTurns > 0 && 
                         }},
                         { text: '覆盖角色', class: 'btn-danger', handler: async () => {
                             // Delete existing data associated with the conflicting contact
-                            await DBHelper.delete('chats', existingContact.id);
                             await DBHelper.deleteMessagesForChat(existingContact.id); // <-- 这是关键的修复
                             await DBHelper.delete('chatMetadata', existingContact.id); 
                             const oldScenes = (await DBHelper.getAll('openingScenes')).filter(s => s.contactId === existingContact.id);
@@ -13370,7 +13745,7 @@ if (entity && entity.autoSummaryEnabled && chatMetadata.totalPlayerTurns > 0 && 
                             
                             const newMemberIds = importedGroup.members.map(oldId => memberIdMap[oldId]).filter(Boolean);
                             const newCreatorId = memberIdMap[importedGroup.creatorId] || importedGroup.creatorId;
-                            const newGroup = { ...importedGroup, id: Utils.generateId('group'), createdAt: Date.now(), members: newMemberIds, creatorId: newCreatorId };
+                            const newGroup = { ...importedGroup, id: Utils.generateId('group-'), createdAt: Date.now(), members: newMemberIds, creatorId: newCreatorId };
                             delete newGroup.openingScenes;
 
                             await DBHelper.put('groups', newGroup);
@@ -13793,6 +14168,7 @@ if (entity && entity.autoSummaryEnabled && chatMetadata.totalPlayerTurns > 0 && 
                         <div class="member-select-list" style="max-height: 50vh;">
                             <label class="member-select-item"><input type="checkbox" name="export-parts" value="characters" checked> 角色与群聊数据</label>
                             <label class="member-select-item"><input type="checkbox" name="export-parts" value="player" checked> 玩家数据 (人设预设等)</label>
+                            <label class="member-select-item"><input type="checkbox" name="export-parts" value="emojis" checked> 自定义表情包</label>
                             <label class="member-select-item"><input type="checkbox" name="export-parts" value="moments" checked> 朋友圈数据</label>
                             <label class="member-select-item"><input type="checkbox" name="export-parts" value="theme" checked> 主题与字体设置</label>
                             <label class="member-select-item"><input type="checkbox" name="export-parts" value="others" checked> 其他 (提示词、表情包、礼物配置等)</label>
@@ -13871,12 +14247,38 @@ if (entity && entity.autoSummaryEnabled && chatMetadata.totalPlayerTurns > 0 && 
                         await new Promise(resolve => setTimeout(resolve, 50));
                     }
                     
-                    await processSimplePart('profile', 10, 20, "玩家数据", async () => {
-                        const profile = await DBHelper.get('profile', 'myProfile');
-                        if(profile) delete profile.apiKey;
-                        return profile;
-                    });
-                    
+                    if (partsToExport.includes('player') || partsToExport.includes('emojis')) {
+                        updateProgress("正在读取玩家数据...", 10);
+                        const fullProfile = await DBHelper.get('profile', 'myProfile');
+                        if (fullProfile) {
+                            // 创建一个干净的导出对象，避免意外泄露数据
+                            const profileToExport = {
+                                id: fullProfile.id,
+                                name: fullProfile.name,
+                                gender: fullProfile.gender,
+                                avatar: fullProfile.avatar,
+                                background: fullProfile.background,
+                                patAction: fullProfile.patAction,
+                                patContent: fullProfile.patContent,
+                                favoriteEmojis: fullProfile.favoriteEmojis,
+                                // 根据勾选情况决定是否导出预设和自定义表情
+                            };
+
+                            if (partsToExport.includes('player')) {
+                                profileToExport.presets = fullProfile.presets || [];
+                            }
+
+                            if (partsToExport.includes('emojis')) {
+                                profileToExport.customEmojis = fullProfile.customEmojis || {};
+                            }
+
+                            appendDataPart('profile', profileToExport);
+                        }
+                        updateProgress("处理完成: 玩家数据", 25);
+                        await new Promise(resolve => setTimeout(resolve, 50));
+                    }
+
+
                     if (partsToExport.includes('moments')) {
                         updateProgress("正在读取朋友圈数据...", 20);
                         appendDataPart('circles', await DBHelper.getAll('circles'));
@@ -13896,6 +14298,12 @@ if (entity && entity.autoSummaryEnabled && chatMetadata.totalPlayerTurns > 0 && 
                         if (giftConfig) {
                             delete giftConfig.key;
                             appendDataPart('giftApiConfig', giftConfig);
+                        }
+                        const apiConfig = await DBHelper.get('apiConfig', 'mainConfig');
+                        if (apiConfig) {
+                            // 为了安全，不导出API Keys
+                            delete apiConfig.keys;
+                            appendDataPart('apiConfig', apiConfig);
                         }
                         updateProgress("处理完成: 其他配置", 50);
                         await new Promise(resolve => setTimeout(resolve, 50));
@@ -14055,7 +14463,6 @@ if (entity && entity.autoSummaryEnabled && chatMetadata.totalPlayerTurns > 0 && 
                                     deleteRequest.onsuccess = () => resolve();
                                     deleteRequest.onerror = (e) => reject(`删除旧数据库失败: ${e.target.error}`);
                                     deleteRequest.onblocked = () => {
-                                        // This can happen if another tab has the DB open.
                                         reject("数据库删除被阻止，请关闭其他所有打开此应用的标签页后重试。");
                                     };
                                 });
@@ -14063,16 +14470,15 @@ if (entity && entity.autoSummaryEnabled && chatMetadata.totalPlayerTurns > 0 && 
                                 // 3. 重新初始化以创建空的表结构
                                 await DBHelper.init();
 
-                                // 4. 逐个导入数据
                                 // --- 修复开始：单独处理 profile 对象 ---
                                 if (dataToImport.profile) {
-                                    // The profile is a single object, not an array. Use `put`.
+                                    // 确保导入的 profile 对象有正确的 id
+                                    dataToImport.profile.id = 'myProfile';
                                     await DBHelper.put('profile', dataToImport.profile);
                                 }
                                 // --- 修复结束 ---
 
                                 const storesToImport = [
-                                    // 'profile' is now handled above
                                     'contacts', 'groups', 'friendFolders', 
                                     'circles', 'moments', 'prompts', 'promptFolders', 
                                     'openingScenes', 'messages', 'chatMetadata'
@@ -14084,9 +14490,11 @@ if (entity && entity.autoSummaryEnabled && chatMetadata.totalPlayerTurns > 0 && 
                                     }
                                 }
 
-                                // 导入特殊配置
+                                // --- 修复开始：导入特殊配置（包括主API配置） ---
+                                if(dataToImport.apiConfig) await DBHelper.put('apiConfig', dataToImport.apiConfig);
                                 if(dataToImport.themeSettings) await DBHelper.put('apiConfig', dataToImport.themeSettings);
                                 if(dataToImport.giftApiConfig) await DBHelper.put('giftApiConfig', dataToImport.giftApiConfig);
+                                // --- 修复结束 ---
 
                                 UIManager.showModal({
                                     title: "导入成功",
@@ -14438,8 +14846,7 @@ if (entity && entity.autoSummaryEnabled && chatMetadata.totalPlayerTurns > 0 && 
                     <div class="theme-setting-card">
                         <h3>教程与示例</h3>
                         <p style="font-size:0.9rem; color:var(--text-color-medium); margin-bottom:16px;">您可以复制以下示例代码作为起点进行修改或发送给AI进行修改。请注意，为了安全，仅支持基础的CSS选择器和属性。</p>
-                        <p style="font-size:0.9rem; color:var(--text-color-medium); margin-bottom:13px;"><strong>注意：</strong>请确保你使用的气泡代码是<strong>自己编写/自己使用AI生成/其他制作老师同意使用的，否则后续问题自行负责</strong></p>
-                        <p style="font-size:0.9rem; color:var(--text-color-medium); margin-bottom:10px;"><strong>请尊重所有人的产出</strong></p>
+                        <p style="font-size:0.9rem; color:var(--text-color-medium); margin-bottom:10px;"><strong>注意：</strong>请确保你使用的气泡代码是<strong>自己编写/自己使用AI生成/其他制作老师同意使用的</strong>。请勿未经授权/允许二用他人的任何设定或产出，<span style="color: red; font-weight: bold;">请尊重所有人的任何产出</span>，否则后续问题需自行负责。</p>
                         <pre id="css-tutorial-code-block" class="css-tutorial-code"><button class="copy-btn">复制</button><code>/* --- 好友的气泡 --- */
 .bubble.received {
   background-color: #FFFFFF;
@@ -14566,7 +14973,7 @@ if (entity && entity.autoSummaryEnabled && chatMetadata.totalPlayerTurns > 0 && 
                     const file = e.target.files[0];
                     if (!file) return;
                     try {
-                        const base64 = await Utils.compressImage(file, 800, 800, 0.7);
+                        const base64 = await Utils.fileToBase64(file);
                         preview.src = base64;
                         preview.style.display = 'block';
                         removeBtn.style.display = 'inline-block';
@@ -15208,113 +15615,16 @@ if (entity && entity.autoSummaryEnabled && chatMetadata.totalPlayerTurns > 0 && 
                 }
             },
 
-            async handleChatSettings() {
-                
-                let chatSettings = await DBHelper.get('apiConfig', 'chatSettings');
-                const defaults = {
-                    id: 'chatSettings',
-                    memoryInterconnection: false,
-                    historyCharLimit: 5000,
-                    showMyNameInGroup: true,
-                    showNamesInPrivate: false,
-                    bottomBarOffset: false,
-                    enterToSend: false,
-                    promptTurnFrequency: 1, 
-                    activeReplyInterval: 0,
-                    useBuiltinEmojis: true,
-                    useCustomEmojisInPrompt: true,
-                };
-                if (!chatSettings) {
-                    chatSettings = defaults;
-                } else {
-                    
-                    chatSettings = { ...defaults, ...chatSettings };
-                }
-
-                
-                const createSwitch = (id, label, description, isChecked) => `
-                    <div class="form-group" style="display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--border-color);">
-                        <div style="flex-grow: 1;">
-                            <label style="margin-bottom: 5px; font-size: 1.1rem;">${label}</label>
-                            <p style="font-size: 0.8rem; color: var(--text-color-medium); margin-top: 0; line-height: 1.4;">
-                                ${description}
-                            </p>
-                        </div>
-                        <div style="flex-shrink: 0; margin-left: 20px;">
-                            <label class="switch">
-                                <input type="checkbox" id="${id}" ${isChecked ? 'checked' : ''}>
-                                <span class="slider"></span>
-                            </label>
-                        </div>
-                    </div>
-                `;
-                
-                
-                const createNumberInput = (label, description, inputId, initialValue, unit = '') => `
-                    <div class="form-group" style="display: flex; justify-content: space-between; align-items: center; padding: 10px 0; margin-top: 15px;">
-                        <div style="flex-grow: 1;">
-                            <label style="margin-bottom: 5px; font-size: 1.1rem;" for="${inputId}">${label}</label>
-                            <p style="font-size: 0.8rem; color: var(--text-color-medium); margin-top: 0; line-height: 1.4;">
-                                ${description}
-                            </p>
-                        </div>
-                        <div style="flex-shrink: 0; margin-left: 20px; display: flex; align-items: center;">
-                            <input type="number" id="${inputId}" value="${initialValue}" min="0" step="1" class="form-group" style="width: 70px; text-align: center; padding: 8px; margin: 0;">
-                            ${unit ? `<span style="margin-left: 8px; font-size: 0.9rem; color: var(--text-color-medium);">${unit}</span>` : ''}
-                        </div>
-                    </div>
-                `;
-
-
-                
-                UIManager.showModal({
-                    title: '聊天设置',
-                    body: `
-                        <style>.switch{position:relative;display:inline-block;width:52px;height:30px}.switch input{opacity:0;width:0;height:0}.slider{position:absolute;cursor:pointer;top:0;left:0;right:0;bottom:0;background-color:#ccc;transition:.4s;border-radius:30px}.slider:before{position:absolute;content:"";height:24px;width:24px;left:3px;bottom:3px;background-color:white;transition:.4s;border-radius:50%;box-shadow:0 1px 3px rgba(0,0,0,0.2)}input:checked+.slider{background-color:var(--accent-color)}input:checked+.slider:before{transform:translateX(22px)}</style>
-                        ${createSwitch('memory-interconnection-switch', '记忆互通', '开启后，好友会获取相关群聊+私聊作为记忆参考，对话更连贯。', chatSettings.memoryInterconnection)}
-                        ${createSwitch('show-my-name-in-group-switch', '群聊显示自己名字', '开启后，你在群聊中发送的消息上方会显示你的名字。', chatSettings.showMyNameInGroup)}
-                        ${createSwitch('show-names-in-private-switch', '私聊显示名字', '开启后，私聊时双方的消息上方都会显示名字。', chatSettings.showNamesInPrivate)}
-                        ${createSwitch('bottom-bar-offset-switch', '底部状态栏上移', '开启后，为手机自带的底部导航条预留空间，防止遮挡。', chatSettings.bottomBarOffset)}
-                        ${createSwitch('enter-to-send-switch', '回车自动发送', '开启后，在输入框内按回车键将直接发送消息。', chatSettings.enterToSend)}
-                        ${createSwitch('use-builtin-emojis-switch', '内置表情包', '启用后可使用内置添加的表情包，关闭后无法使用且ai将不获得这些表情的id提示。如果关闭&没有自己添加的表情包，ai可能会频繁发送错误表情包', chatSettings.useBuiltinEmojis)}
-                        ${createSwitch('use-custom-emojis-in-prompt-switch', '自定义表情启用为提示词', '开启后，你所添加的所有表情包id将提示给ai，但过多的表情包会影响回复速度和tk', chatSettings.useCustomEmojisInPrompt)}
-                        
-                        ${createNumberInput('聊天记录字数上限', '设定每次请求AI时附带的聊天记录字数，影响记忆和Token消耗。', 'history-char-limit-input', chatSettings.historyCharLimit, '字')}
-                        ${createNumberInput('提示词发送频率', '每N个玩家回合发送一次包含自定义提示词的完整Prompt，以节省Token。', 'prompt-freq-input', chatSettings.promptTurnFrequency)}
-                        ${createNumberInput('主动回复间隔', '当距离AI上次回复超过N小时后，进入聊天会自动触发AI主动回复。输入0可关闭。', 'active-reply-interval-input', chatSettings.activeReplyInterval)}
-                    `,
-                    actions: [
-                        { text: '取消', class: 'btn-secondary', handler: () => UIManager.hideModal() },
-                        { text: '保存', class: 'btn-primary', handler: async () => {
-                            const newSettings = {
-                                id: 'chatSettings',
-                                memoryInterconnection: $('#memory-interconnection-switch').checked,
-                                historyCharLimit: parseInt($('#history-char-limit-input').value, 10),
-                                showMyNameInGroup: $('#show-my-name-in-group-switch').checked,
-                                showNamesInPrivate: $('#show-names-in-private-switch').checked,
-                                bottomBarOffset: $('#bottom-bar-offset-switch').checked,
-                                enterToSend: $('#enter-to-send-switch').checked,
-                                useBuiltinEmojis: $('#use-builtin-emojis-switch').checked,
-                                useCustomEmojisInPrompt: $('#use-custom-emojis-in-prompt-switch').checked,
-                                promptTurnFrequency: parseInt($('#prompt-freq-input').value, 10),
-                                activeReplyInterval: parseInt($('#active-reply-interval-input').value, 10), 
-                            };
-                            await DBHelper.put('apiConfig', newSettings);
-                            this.applyChatSettings(newSettings); 
-                            UIManager.hideModal();
-                        }}
-                    ]
-                });
-            },
-            
-            applyChatSettings(settings) {
-                
-                appContainer.classList.toggle('bottom-offset-active', settings.bottomBarOffset);
-            },
-            async handleApiSettings() {
-                await AIHandler.loadApiConfig(); 
+            async renderApiSettingsPage() {
+                await AIHandler.loadApiConfig();
                 const config = AIHandler.apiConfig;
-                
+
+                const providerSelect = $('#api-provider');
+                const urlInput = $('#api-url');
+                const modelSelect = $('#api-model-select');
+                const modelInput = $('#api-model-input');
+                const tempInput = $('#temperature');
+
                 const getApiProviderOptions = () => `
                     <option value="gemini" ${config.provider === 'gemini' ? 'selected' : ''}>Google Gemini</option>
                     <option value="siliconflow" ${config.provider === 'siliconflow' ? 'selected' : ''}>SiliconFlow</option>
@@ -15322,83 +15632,169 @@ if (entity && entity.autoSummaryEnabled && chatMetadata.totalPlayerTurns > 0 && 
                     <option value="volcano" ${config.provider === 'volcano' ? 'selected' : ''}>火山</option>
                     <option value="custom" ${config.provider === 'custom' ? 'selected' : ''}>自定义</option>
                 `;
-                
-                UIManager.showModal({
-                    title: 'API 配置',
-                    body: `
-                        <div class="form-group">
-                            <label for="api-provider">API提供商</label>
-                            <select id="api-provider">${getApiProviderOptions()}</select>
-                        </div>
-                        <div class="form-group">
-                            <label for="api-url">API URL</label>
-                            <input type="text" id="api-url" value="${config.url}" placeholder="输入API URL">
-                        </div>
-                        <div class="form-group">
-                            <label for="api-key">API Key</label>
-                            <div style="position: relative; display: flex; align-items: center;">
-                                <input type="password" id="api-key" value="${config.key}" placeholder="输入API密钥" style="width: 100%; padding-right: 40px;">
-                                <i class="fas fa-eye" id="toggle-api-key-visibility" style="position: absolute; right: 15px; cursor: pointer; color: #aaa;"></i>
-                            </div>
-                        </div>
-                        <div class="form-group">
-                            <label for="api-model-select">模型</label>
-                            <div style="display: flex; gap: 10px; align-items: center;">
-                                <select id="api-model-select" style="flex-grow: 1;"></select>
-                                <input type="text" id="api-model-input" value="${config.model}" placeholder="输入自定义模型名称" style="display:none; flex-grow: 1;">
-                                <button id="fetch-models-btn" class="modal-btn btn-secondary" style="padding: 8px 15px; flex-shrink: 0;">获取</button>
-                            </div>
-                        </div>
-                        <div class="form-group">
-                            <label for="temperature">温度 (0-1)</label>
-                            <input type="number" id="temperature" min="0" max="1" step="0.1" value="${config.temperature}">
-                        </div>
-                    `,
-                    actions: [
-                        { text: '取消', class: 'btn-secondary', handler: () => UIManager.hideModal() },
-                        { text: '保存', class: 'btn-primary', handler: async () => {
-                            const newConfig = {
-                                provider: $('#api-provider').value,
-                                url: $('#api-url').value.trim(),
-                                key: $('#api-key').value.trim(),
-                                temperature: parseFloat($('#temperature').value)
-                            };
-                            
-                            if (isNaN(newConfig.temperature) || newConfig.temperature < 0 || newConfig.temperature > 1) {
-                                newConfig.temperature = 0.7; 
-                            }
-                            
-                            const modelSelect = $('#api-model-select');
-                            const modelInput = $('#api-model-input');
-                            if (modelInput.style.display !== 'none') {
-                                newConfig.model = modelInput.value.trim();
-                            } else {
-                                newConfig.model = modelSelect.value;
-                            }
-                            
-                            await AIHandler.saveApiConfig(newConfig);
-                            UIManager.hideModal();
-                            UIManager.showModal({
-                                title: "操作成功",
-                                body: `<p>API配置已成功保存！<br>聊天需要点击左下角<i class="fas fa-feather-alt"></i>小羽毛按钮<br>其他可见设置页面的食用指南<br><br>33祝你游玩愉快⌯>ᴗo⌯ .ᐟ.ᐟ</p>`,
-                                actions: [{ text: '好的', class: 'btn-primary', handler: () => UIManager.hideModal() }]
-                            });
-                        }}
-                    ]
-                });
+                providerSelect.innerHTML = getApiProviderOptions();
+                tempInput.value = config.temperature;
 
-                // 获取可用模型按钮的逻辑
-                $('#fetch-models-btn').addEventListener('click', async () => {
-                    const provider = $('#api-provider').value;
-                    const apiUrlBase = $('#api-url').value.trim();
-                    const apiKey = $('#api-key').value.trim();
-                    const modelSelect = $('#api-model-select');
-                    const modelInput = $('#api-model-input');
+                const _renderKeyList = (provider) => {
+                    const keyListContainer = $('#api-key-list');
+                    const keyCountSpan = $('#api-key-count');
+                    const keys = config.keys[provider] || [];
+                    const toggleBtn = $('#toggle-all-keys-visibility');
+                    const areKeysVisible = toggleBtn.classList.contains('visible');
+                    
+                    keyListContainer.innerHTML = '';
+                    keyCountSpan.textContent = keys.length;
+
+                    keys.forEach((key, index) => {
+                        const item = document.createElement('div');
+                        item.className = 'api-key-item';
+                        let displayKey;
+                        if (areKeysVisible) {
+                            displayKey = key;
+                        } else {
+                            displayKey = key.length > 8 ? `${key.substring(0, 4)}...${key.substring(key.length - 4)}` : key;
+                        }
+                        item.innerHTML = `
+                            <span class="key-value" title="${key}">${displayKey}</span>
+                            <button class="delete-key-btn" data-index="${index}">×</button>
+                        `;
+                        keyListContainer.appendChild(item);
+                    });
+                };
+
+                const updateApiFields = () => {
+                    const provider = providerSelect.value;
+                    const savedModel = config.models ? config.models[provider] : null;
+
+                    const providerData = {
+                        gemini: { url: 'https://generativelanguage.googleapis.com/v1beta/models/', models: ["gemini-2.5-pro", "gemini-2.5-flash", "gemini-1.5-flash-latest", "gemini-1.5-pro-latest"], defaultModel: 'gemini-2.5-flash' },
+                        siliconflow: { url: 'https://api.siliconflow.cn/v1/chat/completions', models: ["deepseek-ai/DeepSeek-V3", "deepseek-ai/DeepSeek-R1-0528-Qwen3-8B", "Qwen/Qwen2-7B-Instruct", "Qwen/Qwen2-72B-Instruct"], defaultModel: 'deepseek-ai/DeepSeek-V3' },
+                        paioupu: { url: 'https://api.ppinfra.com/v1/chat/completions', models: ["deepseek/deepseek-v3"], defaultModel: 'deepseek/deepseek-v3' },
+                        volcano: { url: 'https://ark.cn-beijing.volces.com/api/v3', models: [], defaultModel: '' },
+                        custom: { url: '', models: [], defaultModel: '' }
+                    };
+                    
+                    const data = providerData[provider] || providerData.custom;
+                    urlInput.value = config.url || data.url;
+
+                    if (provider === 'custom' || provider === 'volcano') {
+                        modelSelect.style.display = 'none';
+                        modelInput.style.display = 'block';
+                        modelInput.value = savedModel;
+                    } else {
+                        modelSelect.style.display = 'block';
+                        modelInput.style.display = 'none';
+                        const finalOptions = [...data.models];
+                        if (savedModel && !finalOptions.includes(savedModel)) {
+                            finalOptions.unshift(savedModel);
+                        }
+                        modelSelect.innerHTML = finalOptions.map(opt => `<option value="${opt}">${opt}</option>`).join('');
+                        modelSelect.value = savedModel || data.defaultModel;
+                    }
+
+                    _renderKeyList(provider);
+                };
+                
+                providerSelect.onchange = () => {
+                    const newProvider = providerSelect.value;
+                    const providerDefaults = {
+                        gemini: { url: 'https://generativelanguage.googleapis.com/v1beta/models/', defaultModel: 'gemini-2.5-flash' },
+                        siliconflow: { url: 'https://api.siliconflow.cn/v1/chat/completions', defaultModel: 'deepseek-ai/DeepSeek-V3' },
+                        paioupu: { url: 'https://api.ppinfra.com/v1/chat/completions', defaultModel: 'deepseek/deepseek-v3' },
+                        volcano: { url: 'https://ark.cn-beijing.volces.com/api/v3', defaultModel: '' },
+                        custom: { url: '', defaultModel: '' }
+                    };
+                    
+                    if (!config.models) {
+                        config.models = {};
+                    }
+
+                    // 核心修改：切换时，URL更新为默认值，但模型尝试读取已保存的，否则才用默认值
+                    config.url = providerDefaults[newProvider].url;
+                    // model的设置移到 saveApiConfig 中，这里只更新 provider
+                    config.provider = newProvider;
+                    updateApiFields();
+                };
+
+                $('#api-key-list').onclick = (e) => {
+                    if (e.target.classList.contains('delete-key-btn')) {
+                        const index = parseInt(e.target.dataset.index, 10);
+                        const provider = providerSelect.value;
+                        config.keys[provider].splice(index, 1);
+                        _renderKeyList(provider);
+                    }
+                };
+                
+                $('#add-api-key-btn').onclick = () => {
+                    const newKeyInput = $('#new-api-key-input');
+                    const newKey = newKeyInput.value.trim();
+                    if (!newKey) return;
+
+                    const provider = providerSelect.value;
+                    if (!config.keys[provider]) {
+                        config.keys[provider] = [];
+                    }
+                    config.keys[provider].push(newKey);
+                    newKeyInput.value = '';
+                    _renderKeyList(provider);
+                };
+
+                $('#new-api-key-input').onkeypress = (e) => {
+                    if (e.key === 'Enter') {
+                        e.preventDefault();
+                        $('#add-api-key-btn').click();
+                    }
+                };
+
+                $('#toggle-all-keys-visibility').onclick = (e) => {
+                    const btn = e.currentTarget;
+                    const icon = btn.querySelector('i');
+                    btn.classList.toggle('visible');
+                    const isVisible = btn.classList.contains('visible');
+                    icon.className = isVisible ? 'fas fa-eye-slash' : 'fas fa-eye';
+                    _renderKeyList(providerSelect.value);
+                };
+
+                $('#api-settings-back-btn').onclick = () => UIManager.navigateTo('settings');
+                $('#save-api-settings-btn').onclick = async () => {
+                    const provider = providerSelect.value;
+                    let selectedModel;
+
+                    // 无论之前状态如何，都直接从当前显示的输入控件获取模型值
+                    if (modelInput.style.display !== 'none') {
+                        selectedModel = modelInput.value.trim();
+                    } else {
+                        selectedModel = modelSelect.value;
+                    }
+
+                    // 确保模型名称不为空
+                    if (!selectedModel) {
+                        UIManager.showToast("模型名称不能为空，请选择或输入一个模型。");
+                        return;
+                    }
+
+                    // 准备要保存的新配置
+                    const newConfig = {
+                        provider: provider,
+                        url: urlInput.value.trim(),
+                        keys: config.keys, // keys已经在添加/删除时实时更新到config对象了
+                        temperature: parseFloat(tempInput.value),
+                        model: selectedModel // 直接使用我们刚刚获取的值
+                    };
+                    
+                    await AIHandler.saveApiConfig(newConfig);
+                    UIManager.showToast("API配置已保存！");
+                    UIManager.navigateTo('settings');
+                };
+
+                $('#fetch-models-btn').onclick = async () => {
+                    const provider = providerSelect.value;
+                    const apiUrlBase = urlInput.value.trim();
+                    const apiKey = (config.keys[provider] && config.keys[provider][0]) || '';
                     const fetchBtn = $('#fetch-models-btn');
 
                     if (!apiUrlBase || !apiKey) {
-                        UIManager.showToast("请先填写API URL和API Key");
-                        return;
+                        return UIManager.showToast("请先填写API URL并至少添加一个Key");
                     }
 
                     const originalBtnText = fetchBtn.innerHTML;
@@ -15409,68 +15805,37 @@ if (entity && entity.autoSummaryEnabled && chatMetadata.totalPlayerTurns > 0 && 
                     try {
                         let data;
                         if (provider === 'gemini') {
-                            // --- Gemini 特别通道 ---
-                            const geminiModelsUrl = `${apiUrlBase.replace(/\/$/, '')}?key=${apiKey}`;
-                            console.log("Attempting to fetch models for Gemini from:", geminiModelsUrl);
+                            const geminiModelsUrl = `https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`;
                             const response = await fetch(geminiModelsUrl);
-                            if (!response.ok) {
-                                throw new Error(`Gemini请求失败，状态码: ${response.status}`);
-                            }
+                            if (!response.ok) throw new Error(`Gemini请求失败: ${response.status}`);
                             data = await response.json();
-                            // Gemini返回的数据结构是 { "models": [...] }
-                            // 并且模型信息在 model.name 中，例如 "models/gemini-1.5-pro-latest"
                             if (data.models && Array.isArray(data.models)) {
                                 const modelNames = data.models
                                     .map(model => model.name.replace('models/', ''))
-                                    // 过滤出支持内容生成的模型
                                     .filter(name => data.models.find(m => m.name.endsWith(name))?.supportedGenerationMethods.includes("generateContent"));
                                 populateSelectWithOptions(modelNames);
                             } else {
                                 throw new Error("Gemini API返回了无效的模型列表格式");
                             }
-
                         } else {
-                            // --- OpenAI 兼容的通用寻宝逻辑 (已更新) ---
-                            // 清理掉常见的API路径后缀，以获取真正的基础URL
                             const cleanedBase = apiUrlBase.replace(/\/v1beta\/?$|\/v1\/?$|\/chat\/completions\/?$|\/$/, '');
-                            
-                            const potentialEndpoints = [
-                                `${cleanedBase}/v1/models`,
-                                `${cleanedBase}/v1beta/models`, // 新增 v1beta 路径
-                                `${cleanedBase}/models`
-                            ];
-                            
-                            const uniqueEndpoints = [...new Set(potentialEndpoints)];
-
+                            const potentialEndpoints = [`${cleanedBase}/v1/models`, `${cleanedBase}/v1beta/models`, `${cleanedBase}/models`];
                             let success = false;
-                            for (const endpoint of uniqueEndpoints) {
+                            for (const endpoint of [...new Set(potentialEndpoints)]) {
                                 try {
-                                    console.log("Attempting to fetch models from (OpenAI compatible):", endpoint);
-                                    const response = await fetch(endpoint, {
-                                        method: 'GET',
-                                        headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' }
-                                    });
-
-                                    if (!response.ok) {
-                                        throw new Error(`请求失败，状态码: ${response.status}`);
-                                    }
-                                    
+                                    const response = await fetch(endpoint, { headers: { 'Authorization': `Bearer ${apiKey}` } });
+                                    if (!response.ok) continue;
                                     data = await response.json();
                                     const modelsList = data.data || data;
                                     if (Array.isArray(modelsList)) {
-                                        const modelIds = modelsList.map(model => typeof model === 'object' ? model.id : model).filter(Boolean);
+                                        const modelIds = modelsList.map(model => (typeof model === 'object' ? model.id : model)).filter(Boolean);
                                         populateSelectWithOptions(modelIds);
                                         success = true;
                                         break;
                                     }
-                                } catch (error) {
-                                    console.warn(`从 ${endpoint} 获取失败:`, error.message);
-                                }
+                                } catch (error) { console.warn(`从 ${endpoint} 获取失败:`, error.message); }
                             }
-
-                            if (!success) {
-                                throw new Error("未能获取到模型列表，不支持获取该url的模型或你的Key填写错误");
-                            }
+                            if (!success) throw new Error("未能获取到模型列表，请检查URL和Key。");
                         }
                     } catch (error) {
                         console.error("获取模型列表失败:", error);
@@ -15480,112 +15845,98 @@ if (entity && entity.autoSummaryEnabled && chatMetadata.totalPlayerTurns > 0 && 
                         fetchBtn.disabled = false;
                     }
 
-                    // 辅助函数，用来填充下拉列表
                     function populateSelectWithOptions(options) {
                         if (!Array.isArray(options) || options.length === 0) {
                             throw new Error("API返回了空或无效的模型列表");
                         }
-
-                        modelSelect.innerHTML = ''; // 清空旧选项
-                        options.forEach(optionValue => {
-                            const option = document.createElement('option');
-                            option.value = optionValue;
-                            option.textContent = optionValue;
-                            modelSelect.appendChild(option);
-});
-
+                        modelSelect.innerHTML = options.map(opt => `<option value="${opt}">${opt}</option>`).join('');
                         modelSelect.style.display = 'block';
                         modelInput.style.display = 'none';
                         UIManager.showToast(`成功获取 ${options.length} 个模型！`);
                     }
-                });
-                
-                const toggleBtn = $('#toggle-api-key-visibility');
-                const apiKeyInput = $('#api-key');
-                toggleBtn.addEventListener('click', () => {
-                    if (apiKeyInput.type === 'password') {
-                        apiKeyInput.type = 'text';
-                        toggleBtn.classList.remove('fa-eye');
-                        toggleBtn.classList.add('fa-eye-slash');
-                    } else {
-                        apiKeyInput.type = 'password';
-                        toggleBtn.classList.remove('fa-eye-slash');
-                        toggleBtn.classList.add('fa-eye');
-                    }
-                });
-
-                const updateApiFields = () => {
-                    const provider = $('#api-provider').value;
-                    const apiUrlInput = $('#api-url');
-                    const modelSelect = $('#api-model-select');
-                    const modelInput = $('#api-model-input');
-                    const savedModel = config.model; // 使用从数据库加载的config
-
-                    const modelOptions = {
-                        gemini: [
-                            "gemini-2.5-flash", "gemini-2.5-pro", "gemini-1.5-flash-latest", "gemini-1.5-pro-latest"
-                        ],
-                        siliconflow: [
-                            "deepseek-ai/DeepSeek-V3", "deepseek-ai/DeepSeek-R1-0528-Qwen3-8B", "Qwen/Qwen2-7B-Instruct", "Qwen/Qwen2-72B-Instruct"
-                        ],
-                        paioupu: [
-                            "deepseek/deepseek-v3"
-                        ],
-                        // 为自定义和火山留空，因为它们使用输入框
-                        volcano: [],
-                        custom: []
-                    };
-                    
-                    const providerData = {
-                        gemini: { url: 'https://generativelanguage.googleapis.com/v1beta/models/', models: modelOptions.gemini, defaultModel: 'gemini-1.5-flash-latest' },
-                        siliconflow: { url: 'https://api.siliconflow.cn/v1/chat/completions', models: modelOptions.siliconflow, defaultModel: 'deepseek-ai/DeepSeek-V2-Chat' },
-                        paioupu: { url: 'https://api.ppinfra.com/v3/openai/chat/completions', models: modelOptions.paioupu, defaultModel: 'deepseek/deepseek-v2' },
-                        volcano: { url: 'https://ark.cn-beijing.volces.com/api/v3', models: [], defaultModel: '' },
-                        custom: { url: '', models: [], defaultModel: '' }
-                    };
-
-                    const data = providerData[provider] || providerData.custom;
-                    apiUrlInput.value = config.url || data.url;
-
-                    if (provider === 'custom' || provider === 'volcano') {
-                        modelSelect.style.display = 'none';
-                        modelInput.style.display = 'block';
-                        modelInput.value = savedModel;
-                    } else {
-                        modelSelect.style.display = 'block';
-                        modelInput.style.display = 'none';
-                        
-                        let finalOptions = [...data.models];
-
-                        // --- 核心修复逻辑 ---
-                        // 如果已保存的模型不在我们的预设列表里，就把它加进去！
-                        if (savedModel && !finalOptions.includes(savedModel)) {
-                            finalOptions.unshift(savedModel);
-                        }
-
-                        modelSelect.innerHTML = finalOptions.map(opt => `<option value="${opt}">${opt}</option>`).join('');
-                        
-                        // 现在可以安全地设置值了，因为它肯定在列表里
-                        modelSelect.value = savedModel || data.defaultModel;
-                    }
                 };
-
-                $('#api-provider').addEventListener('change', () => {
-                    // 切换提供商时，重置URL和模型以使用新默认值
-                    const provider = $('#api-provider').value;
-                    const providerDefaults = {
-                        gemini: { url: 'https://generativelanguage.googleapis.com/v1beta/models/', model: 'gemini-1.5-flash-latest' },
-                        siliconflow: { url: 'https://api.siliconflow.cn/v1/chat/completions', model: 'deepseek-ai/DeepSeek-V2-Chat' },
-                        paioupu: { url: 'https://api.ppinfra.com/v3/openai/chat/completions', model: 'deepseek/deepseek-v2' },
-                        volcano: { url: 'https://ark.cn-beijing.volces.com/api/v3', model: '' },
-                        custom: { url: '', model: '' }
-                    };
-                    config.url = providerDefaults[provider].url;
-                    config.model = providerDefaults[provider].model;
-                    updateApiFields();
-                });
-                updateApiFields(); 
+                
+                updateApiFields();
             },
+
+            async renderChatSettingsPage() {
+                const contentArea = $('#chat-settings-content');
+                let chatSettings = await DBHelper.get('apiConfig', 'chatSettings');
+                const defaults = {
+                    id: 'chatSettings', memoryInterconnection: false, historyCharLimit: 5000,
+                    showMyNameInGroup: true, showNamesInPrivate: false, showBubbleTimestamp: false,
+                    bottomBarOffset: false, enterToSend: false, promptTurnFrequency: 1,
+                    activeReplyInterval: 0, useBuiltinEmojis: true, useCustomEmojisInPrompt: true,
+                    enablePatAPat: true,
+                };
+                chatSettings = { ...defaults, ...chatSettings };
+
+                const createSwitch = (id, label, description, isChecked) => `
+                    <div class="setting-item" style="padding: 15px;">
+                        <div style="flex-grow: 1;">
+                            <span style="font-size: 1rem; display: block; margin-bottom: 5px;">${label}</span>
+                            <p style="font-size: 0.8rem; color: var(--text-color-medium); margin: 0; line-height: 1.4;">${description}</p>
+                        </div>
+                        <label class="switch" style="flex-shrink: 0;"><input type="checkbox" id="${id}" ${isChecked ? 'checked' : ''}><span class="slider"></span></label>
+                    </div>`;
+
+                const createNumberInput = (label, description, inputId, initialValue, unit = '') => `
+                    <div class="setting-item" style="padding: 15px;">
+                        <div style="flex-grow: 1;">
+                             <span style="font-size: 1rem; display: block; margin-bottom: 5px;">${label}</span>
+                            <p style="font-size: 0.8rem; color: var(--text-color-medium); margin: 0; line-height: 1.4;">${description}</p>
+                        </div>
+                        <div style="display: flex; align-items: center; flex-shrink: 0;">
+                            <input type="number" id="${inputId}" value="${initialValue}" min="0" step="1" style="width: 70px; text-align: center; padding: 8px; margin: 0;">
+                            ${unit ? `<span style="margin-left: 8px; font-size: 0.9rem;">${unit}</span>` : ''}
+                        </div>
+                    </div>`;
+                
+                contentArea.innerHTML = `
+                    <div class="settings-list" style="padding:0; margin:0;">
+                        ${createSwitch('memory-interconnection-switch', '记忆互通', '开启后，好友会获取相关群聊+私聊作为记忆参考，对话更连贯。', chatSettings.memoryInterconnection)}
+                        ${createSwitch('enable-pat-a-pat-switch', '启用拍一拍功能', '关闭后，AI将不会收到拍一拍的提示，聊天界面也不会显示拍一拍消息。', chatSettings.enablePatAPat)}
+                        ${createSwitch('show-my-name-in-group-switch', '群聊显示自己名字', '开启后，你在群聊中发送的消息上方会显示你的名字。', chatSettings.showMyNameInGroup)}
+                        ${createSwitch('show-names-in-private-switch', '私聊显示名字', '开启后，私聊时双方的消息上方都会显示名字。', chatSettings.showNamesInPrivate)}
+                        ${createSwitch('show-bubble-timestamp-switch', '气泡显示时间', '开启后，在普通消息、引用消息、语音消息的气泡下方显示发送时间。', chatSettings.showBubbleTimestamp)}
+                        ${createSwitch('bottom-bar-offset-switch', '底部状态栏上移', '开启后，为手机自带的底部导航条预留空间，防止遮挡。', chatSettings.bottomBarOffset)}
+                        ${createSwitch('enter-to-send-switch', '回车自动发送', '开启后，在输入框内按回车键将直接发送消息。', chatSettings.enterToSend)}
+                        ${createSwitch('use-builtin-emojis-switch', '内置表情包', '启用后可使用内置添加的表情包，关闭后无法使用且ai将不获得这些表情的id提示。如果关闭&没有自己添加的表情包，ai可能会频繁发送错误表情包', chatSettings.useBuiltinEmojis)}
+                        ${createSwitch('use-custom-emojis-in-prompt-switch', '自定义表情启用为提示词', '开启后，你所添加的所有表情包id将提示给ai，但过多的表情包会影响回复速度和tk', chatSettings.useCustomEmojisInPrompt)}
+                        ${createNumberInput('聊天记录字数上限', '设定每次请求AI时附带的聊天记录字数，影响记忆和Token消耗。', 'history-char-limit-input', chatSettings.historyCharLimit, '字')}
+                        ${createNumberInput('提示词发送频率', '每N个玩家回合发送一次完整Prompt，以节省Token。', 'prompt-freq-input', chatSettings.promptTurnFrequency, '回合')}
+                        ${createNumberInput('主动回复间隔', '当距离AI上次回复超过N小时后，进入聊天会自动触发AI主动回复。输入0可关闭。', 'active-reply-interval-input', chatSettings.activeReplyInterval, '小时')}
+                    </div>`;
+            },
+            
+            async handleSaveChatSettings() {
+                const newSettings = {
+                    id: 'chatSettings',
+                    memoryInterconnection: $('#memory-interconnection-switch').checked,
+                    enablePatAPat: $('#enable-pat-a-pat-switch').checked,
+                    historyCharLimit: parseInt($('#history-char-limit-input').value, 10),
+                    showMyNameInGroup: $('#show-my-name-in-group-switch').checked,
+                    showNamesInPrivate: $('#show-names-in-private-switch').checked,
+                    showBubbleTimestamp: $('#show-bubble-timestamp-switch').checked,
+                    bottomBarOffset: $('#bottom-bar-offset-switch').checked,
+                    enterToSend: $('#enter-to-send-switch').checked,
+                    useBuiltinEmojis: $('#use-builtin-emojis-switch').checked,
+                    useCustomEmojisInPrompt: $('#use-custom-emojis-in-prompt-switch').checked,
+                    promptTurnFrequency: parseInt($('#prompt-freq-input').value, 10),
+                    activeReplyInterval: parseInt($('#active-reply-interval-input').value, 10),
+                };
+                await DBHelper.put('apiConfig', newSettings);
+                this.applyChatSettings(newSettings);
+                UIManager.showToast("聊天设置已保存！");
+                UIManager.navigateTo('settings');
+            },
+            
+            applyChatSettings(settings) {
+                
+                appContainer.classList.toggle('bottom-offset-active', settings.bottomBarOffset);
+                appContainer.classList.toggle('show-bubble-timestamps', settings.showBubbleTimestamp);
+            },
+
             
             async handleForwardMoment(momentId) {
                 const allMetadata = await DBHelper.getAll('chatMetadata');
@@ -15803,7 +16154,7 @@ if (entity && entity.autoSummaryEnabled && chatMetadata.totalPlayerTurns > 0 && 
 
                 const allContacts = await DBHelper.getAll('contacts');
 
-                // --- 核心修复：复用朋友圈页面显示正确人设的逻辑 ---
+                // --- 核心复用朋友圈页面显示正确人设的逻辑 ---
                 const circle = await DBHelper.get('circles', moment.circleId);
                 const baseProfile = await DBHelper.get('profile', 'myProfile');
                 let correctMyProfile = { ...baseProfile }; // 先用基础人设作为默认值
@@ -15843,7 +16194,7 @@ if (entity && entity.autoSummaryEnabled && chatMetadata.totalPlayerTurns > 0 && 
                 if (moment.comments && moment.comments.length > 0) {
                     commentsHtml = moment.comments.map(comment => {
                         let cAuthorName = '未知用户';
-                        // --- 核心修复：在判断评论作者时，也使用 correctMyProfile ---
+                        // --- 核心在判断评论作者时，也使用 correctMyProfile ---
                         if (comment.authorId === correctMyProfile.id) {
                             cAuthorName = correctMyProfile.name;
                         } else {
@@ -16214,7 +16565,7 @@ handleImmediateSummary(entityId, isGroup) {
                             await DBHelper.deleteMessagesForChat(chatId);
                             await DBHelper.delete('chatMetadata', chatId);
 
-                            // --- BUG修复：同时清除自动总结 ---
+                            // --- BUG同时清除自动总结 ---
                             const isGroup = !!scene.groupId;
                             const storeName = isGroup ? 'groups' : 'contacts';
                             const entity = await DBHelper.get(storeName, chatId);
@@ -16272,9 +16623,9 @@ handleImmediateSummary(entityId, isGroup) {
                         { text: '关闭', class: 'btn-secondary', handler: () => UIManager.hideModal() },
                         {
                             text: '退回',
-                            class: `btn-secondary ${!canReturn ? 'disabled' : ''}`, // 修复：根据能否退回动态添加class
+                            class: `btn-secondary ${!canReturn ? 'disabled' : ''}`, // 根据能否退回动态添加class
                             handler: async () => {
-                                // 修复：增加权限判断
+                                // 增加权限判断
                                 if (!canReturn) {
                                     UIManager.showToast("只有收款方才能退还未处理的转账");
                                     return;
@@ -16310,9 +16661,9 @@ handleImmediateSummary(entityId, isGroup) {
                         },
                         {
                             text: '收款',
-                            class: `btn-primary ${!isRecipientPlayer || msg.cardData.isClaimed ? 'disabled' : ''}`, // 修复：增加是否已处理的判断
+                            class: `btn-primary ${!isRecipientPlayer || msg.cardData.isClaimed ? 'disabled' : ''}`, // 增加是否已处理的判断
                             handler: async () => {
-                                // 修复：增加权限判断
+                                // 增加权限判断
                                 if (!isRecipientPlayer) {
                                     UIManager.showToast('你不是该转账的收款对象');
                                     return;
@@ -17297,7 +17648,7 @@ handleImmediateSummary(entityId, isGroup) {
                             <label for="vision-image-prompt">附言 (选填)</label>
                             <textarea id="vision-image-prompt" rows="2" placeholder="可以对图片提问或补充说明..."></textarea>
                         </div>
-                        <p style="font-size: 0.8rem; color: #aaa;">提示：此功能会调用多模态模型进行识图，请确保你选择的模型支持此功能 (如 Gemini 2.5, GPT-4o 等)，并可能产生比普通消息更高的tk。发送带有该功能图片的回复会比正常回复更慢，这是正常现象。</p>
+                        <p style="font-size: 0.8rem; color: #aaa;">提示：此功能会调用多模态模型进行识图，请确保你选择的模型和api提供方支持此功能 (如 Gemini 2.5, GPT-4o 等)，并可能产生比普通消息更高的tk。发送带有该功能图片的回复会比正常回复<strong>更慢</strong>，这是正常现象。相同模型下，<strong>部分API提供方不支持ai识图功能</strong></p>
                     `,
                     actions: [
                         { text: '取消', class: 'btn-secondary', handler: () => UIManager.hideModal() },
@@ -17556,7 +17907,7 @@ handleImmediateSummary(entityId, isGroup) {
                 const moment = await DBHelper.get('moments', momentId);
                 if (!moment) return;
 
-                // --- 核心修复：直接从 renderMomentsPage 复制获取正确人设的逻辑 ---
+                // --- 核心直接从 renderMomentsPage 复制获取正确人设的逻辑 ---
                 const circle = await DBHelper.get('circles', moment.circleId);
                 const baseProfile = await DBHelper.get('profile', 'myProfile');
                 let myProfile = { ...baseProfile }; // 默认使用当前人设的副本
@@ -17642,7 +17993,7 @@ handleImmediateSummary(entityId, isGroup) {
                 const moment = await DBHelper.get('moments', momentId);
                 if (!moment) return;
 
-                // --- 核心修复：直接从 renderMomentsPage 复制获取正确人设的逻辑 ---
+                // --- 核心直接从 renderMomentsPage 复制获取正确人设的逻辑 ---
                 const circle = await DBHelper.get('circles', moment.circleId);
                 const baseProfile = await DBHelper.get('profile', 'myProfile');
                 let myProfile = { ...baseProfile }; // 默认使用当前人设的副本
@@ -17860,7 +18211,7 @@ handleImmediateSummary(entityId, isGroup) {
                     return UIManager.showToast("通讯录中还没有好友，无法创建圈子。");
                 }
                 
-                let selectedPersonaId = null; // 修复：变量名更清晰，与编辑功能保持一致
+                let selectedPersonaId = null; // 变量名更清晰，与编辑功能保持一致
 
                 const membersHtml = allContacts.map(f => `<label class="member-select-item"><input type="checkbox" name="circle-members" value="${f.id}"><span>${f.name}</span></label>`).join('');
                 const foldersHtml = allFolders.map(f => `<label class="member-select-item"><input type="checkbox" name="circle-folders" value="${f.id}"><span>${f.name}</span></label>`).join('');
@@ -17900,7 +18251,7 @@ handleImmediateSummary(entityId, isGroup) {
                                 memberIds: memberIds,
                                 extraMembers: $('#circle-extra-input').value.trim(),
                                 boundPromptFolderIds: boundPromptFolderIds,
-                                boundPersonaPresetId: selectedPersonaId, // 修复：使用正确的变量
+                                boundPersonaPresetId: selectedPersonaId, // 使用正确的变量
                                 backgroundImage: null,
                                 createdAt: Date.now(),
                                 lastRefreshed: 0
@@ -17928,7 +18279,7 @@ handleImmediateSummary(entityId, isGroup) {
                         title: '选择玩家人设',
                         items: items,
                         onSelect: (value, text) => {
-                            selectedPersonaId = (value === 'null') ? null : value; // 修复：更新正确的变量
+                            selectedPersonaId = (value === 'null') ? null : value; // 更新正确的变量
                             if (selectedPersonaId === null) {
                                 $('#circle-persona-name').textContent = '未绑定 (使用当前人设)';
                             } else {
@@ -17947,9 +18298,9 @@ handleImmediateSummary(entityId, isGroup) {
                 const myProfile = await DBHelper.get('profile', 'myProfile');
                 const presets = myProfile.presets || [];
 
-                let selectedPersonaId = circle.boundPersonaPresetId; // 修复：使用ID
+                let selectedPersonaId = circle.boundPersonaPresetId; // 使用ID
                 let personaName = '未绑定 (使用当前人设)';
-                if (selectedPersonaId) { // 修复：通过ID查找
+                if (selectedPersonaId) { // 通过ID查找
                     const boundPreset = presets.find(p => p.presetId === selectedPersonaId);
                     if (boundPreset) {
                         personaName = boundPreset.name;
@@ -17993,7 +18344,7 @@ handleImmediateSummary(entityId, isGroup) {
                                 name, 
                                 memberIds, 
                                 boundPromptFolderIds, 
-                                boundPersonaPresetId: selectedPersonaId, // 修复：使用正确的变量
+                                boundPersonaPresetId: selectedPersonaId, // 使用正确的变量
                                 extraMembers: $('#circle-extra-input').value.trim() 
                             };
                             await DBHelper.put('circles', updatedCircle);
@@ -18015,7 +18366,7 @@ handleImmediateSummary(entityId, isGroup) {
                         title: '选择玩家人设',
                         items: items,
                         onSelect: (value, text) => {
-                            selectedPersonaId = (value === 'null') ? null : value; // 修复：更新正确的变量
+                            selectedPersonaId = (value === 'null') ? null : value; // 更新正确的变量
                             if (selectedPersonaId === null) {
                                 $('#circle-persona-name').textContent = '不绑定 (使用当前人设)';
                             } else {
@@ -19023,20 +19374,24 @@ async showGiftDetailsModal(messageId) {
                     ]
                 });
 
-                const updateGiftApiFields = () => {
+                // 修复：将事件监听移到函数顶部，并确保在函数内部定义
                 const giftToggleBtn = $('#toggle-gift-api-key-visibility');
                 const giftApiKeyInput = $('#gift-api-key');
-                giftToggleBtn.addEventListener('click', () => {
-                    if (giftApiKeyInput.type === 'password') {
-                        giftApiKeyInput.type = 'text';
-                        giftToggleBtn.classList.remove('fa-eye');
-                        giftToggleBtn.classList.add('fa-eye-slash');
-                    } else {
-                        giftApiKeyInput.type = 'password';
-                        giftToggleBtn.classList.remove('fa-eye-slash');
-                        giftToggleBtn.classList.add('fa-eye');
-                    }
-                });
+                if (giftToggleBtn && giftApiKeyInput) {
+                    giftToggleBtn.addEventListener('click', () => {
+                        if (giftApiKeyInput.type === 'password') {
+                            giftApiKeyInput.type = 'text';
+                            giftToggleBtn.classList.remove('fa-eye');
+                            giftToggleBtn.classList.add('fa-eye-slash');
+                        } else {
+                            giftApiKeyInput.type = 'password';
+                            giftToggleBtn.classList.remove('fa-eye-slash');
+                            giftToggleBtn.classList.add('fa-eye');
+                        }
+                    });
+                }
+
+                const updateGiftApiFields = () => {
                     const provider = $('#gift-api-provider').value;
                     const apiUrlInput = $('#gift-api-url');
                     const modelSelect = $('#gift-api-model-select');
@@ -19109,13 +19464,31 @@ async showGiftDetailsModal(messageId) {
                 $('#use-default-api-btn').onclick = async () => {
                     const mainApiConfig = await DBHelper.get('apiConfig', 'mainConfig');
                     if (mainApiConfig) {
-                        $('#gift-api-provider').value = mainApiConfig.provider;
+                        const provider = mainApiConfig.provider;
+                        const keysForProvider = mainApiConfig.keys ? (mainApiConfig.keys[provider] || []) : [];
+                        const firstKey = keysForProvider.length > 0 ? keysForProvider[0] : '';
+                        
+                        if (!firstKey) {
+                            UIManager.showToast(`主配置中“${provider}”提供商没有设置API Key`);
+                            return;
+                        }
+
+                        // 更新表单UI
+                        $('#gift-api-provider').value = provider;
+                        $('#gift-api-url').value = mainApiConfig.url;
+                        $('#gift-api-key').value = firstKey;
+                        
+                        // 更新内部config对象以便updateGiftApiFields能正确工作
+                        config.provider = provider;
                         config.url = mainApiConfig.url;
-                        config.key = mainApiConfig.key;
-                        config.model = mainApiConfig.model;
-                        updateGiftApiFields(); // 更新UI
-                        $('#gift-api-key').value = mainApiConfig.key;
+                        config.key = firstKey;
+                        config.model = mainApiConfig.models ? mainApiConfig.models[provider] : ''; // 从新的models对象读取
+
+                        updateGiftApiFields(); // 使用更新后的config刷新UI
+                        
                         UIManager.showToast("已载入主API配置");
+                    } else {
+                        UIManager.showToast("未找到主API配置");
                     }
                 };
             },
@@ -19140,7 +19513,7 @@ async showGiftDetailsModal(messageId) {
                         <button id="select-all-extract-emojis-btn" class="modal-btn btn-secondary" style="width: 100%; margin-bottom: 10px; padding: 8px;">全选</button>
                         <div class="member-select-list" style="max-height: 35vh;">${emojiListHtml}</div>
                         <p style="font-size: 0.8rem; color: var(--text-color-medium); margin-top: 15px; line-height: 1.5;">
-                            <strong>提示：</strong>生成后长按复制内容，然后前往 <strong>设置 > 自定义提示词</strong>，新建一个提示词（如“我的表情包”），将复制的内容粘贴进去，最后为需要的好友/群聊绑定这个提示词即可。
+                            <strong>提示：</strong>如果你在聊天设置里关闭了<strong>自定义表情启用为提示词</strong>，同时希望ai发送自定义的表情包，你需要提取id后长按复制内容，然后前往 <strong>设置 > 自定义提示词</strong>，新建一个提示词（如“我的表情包”），将复制的内容粘贴进去，最后为需要的好友/群聊绑定这个提示词即可。<strong>没有关闭该按钮则忽略此提示</strong>
                         </p>
                     `,
                     actions: [
@@ -19507,7 +19880,108 @@ async showGiftDetailsModal(messageId) {
 
                 UIManager.navigateTo('forwarded-history');
             },
-        
+
+            showAiReplyFormatHelpModal() {
+                UIManager.showModal({
+                    title: "AI回复格式指南",
+                    body: `
+                        <p>AI的回复由多种格式的短句组成，你可以修改这些内容来调整AI的反应。<strong>请注意：修改时务必保证格式、角色名和标点符号的正确，否则可能导致显示异常。</strong></p>
+                        <ul style="list-style: none; padding-left: 0; line-height: 1.8;">
+                            <li><strong>普通文本:</strong> <code>[角色名|消息内容]</code></li>
+                            <li><strong>表情包:</strong> <code><角色名|表情包ID></code></li>
+                            <li><strong>语音消息:</strong> <code>[角色名|语音|时长|语音内容]</code></li>
+                            <li><strong>撤回消息:</strong> <code>{角色名|要撤回的内容}</code></li>
+                            <li><strong>引用消息:</strong> <code>[角色名|引用|被引用人|被引用内容|新内容]</code></li>
+                            <li><strong>转账:</strong> <code>[角色名|转账|收款人|金额|备注]</code></li>
+                            <li><strong>红包:</strong> <code>[角色名|红包|祝福语|金额|个数]</code></li>
+                            <li><strong>心声:</strong> <code>【心声|角色名|内心想法】</code></li>
+                            <li><strong>随笔:</strong> <code>「随笔|角色名|随笔内容」</code></li>
+                            <li><strong>旁白:</strong> <code>&lt;旁白&gt;场景或动作描述&lt;/旁白&gt;</code></li>
+                        </ul>
+                    `,
+                    actions: [{ text: '我明白了', class: 'btn-primary', handler: () => UIManager.hideModal() }]
+                });
+            },
+
+            async handleEditLastReply() {
+                const chatId = appState.currentChatId;
+                const metadata = await DBHelper.get('chatMetadata', chatId);
+
+                if (!metadata || !metadata.lastRawAiResponse) {
+                    return UIManager.showToast("当前聊天没有可编辑的原始回复。");
+                }
+
+                UIManager.showModal({
+                    title: `
+                        <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
+                            <span>编辑AI原始回复</span>
+                            <i id="edit-reply-help-btn" class="fas fa-question-circle" style="cursor: pointer; font-size: 1rem; color: #aaa;"></i>
+                        </div>
+                    `,
+                    body: `
+                        <div class="form-group">
+                            <label for="edit-ai-reply-textarea">原始回复内容</label>
+                            <textarea id="edit-ai-reply-textarea" rows="10" style="font-family: monospace; font-size: 0.9em;">${metadata.lastRawAiResponse}</textarea>
+                        </div>
+                    `,
+                    actions: [
+                        { text: '取消', class: 'btn-secondary', handler: () => UIManager.hideModal() },
+                        { text: '确认修改', class: 'btn-primary', handler: async () => {
+                            const editedText = $('#edit-ai-reply-textarea').value;
+                            
+                            // 1. 找到并删除旧的AI回复 (只删除最后一轮AI消息)
+                            const allMessages = await DBHelper.getMessages(chatId, 50);
+                            const messagesToDelete = [];
+
+                            // 从后往前遍历，收集最后一轮连续的 'received' 消息
+                            for (let i = allMessages.length - 1; i >= 0; i--) {
+                                const currentMessage = allMessages[i];
+                                if (currentMessage.type === 'received') {
+                                    messagesToDelete.push(currentMessage);
+                                } else {
+                                    // 遇到非AI消息（如玩家自己的消息），就停止
+                                    break;
+                                }
+                            }
+
+                            // 如果没有找到任何要删除的AI消息（例如，最后一轮是玩家发的），则提前返回
+                            if (messagesToDelete.length === 0) {
+                                UIManager.hideModal();
+                                UIManager.showToast("没有可编辑的AI回复。");
+                                return;
+                            }
+
+                            for (const msg of messagesToDelete) {
+                                await DBHelper.delete('messages', msg.messageId);
+                                const element = $(`#${msg.messageId}`);
+                                if (element) element.remove();
+                            }
+                            
+                            UIManager.hideModal();
+                            
+                            // 2. 更新数据库中的原始回复
+                            const updatedMetadata = await DBHelper.get('chatMetadata', chatId);
+                            updatedMetadata.lastRawAiResponse = editedText;
+                            await DBHelper.put('chatMetadata', updatedMetadata);
+
+                            // 3. 判断格式并调用对应的解析函数
+                            // 新的、更精确的正则表达式，仅匹配以 `|时间戳]` 或 `|时间戳>` 或 `|时间戳』` 结尾的格式
+                            const isActiveReplyFormat = /\|\s*(\d{1,2}\/\d{1,2}\s+)?\d{1,2}:\d{2}\s*[\]>』]$/.test(editedText.trim());
+                            if (isActiveReplyFormat) {
+                                console.log("检测到主动回复格式，使用 active parser");
+                                await AIHandler.parseAndDisplayActiveAIResponse(editedText, chatId);
+                            } else {
+                                console.log("使用标准回复格式 parser");
+                                await AIHandler.parseAndDisplayAIResponse(editedText, chatId);
+                            }
+                            
+                            UIManager.showToast("回复已成功修改！");
+                        }}
+                    ]
+                });
+                $('#edit-reply-help-btn').addEventListener('click', () => this.showAiReplyFormatHelpModal());
+            },
+
             async handleSaveAndPreviewCustomCSS() {
                 const cssInput = $('#custom-bubble-css-input');
                 const previewStyle = $('#custom-bubble-preview-style');
@@ -19515,22 +19989,22 @@ async showGiftDetailsModal(messageId) {
 
                 const settingsToSave = await DBHelper.get('apiConfig', 'themeSettings') || { id: 'themeSettings' };
                 settingsToSave.customBubbleCSS = css;
-                // 新增：点击预览时，自动将气泡样式切换为'custom'
+                // 点击预览时，自动将气泡样式切换为'custom'
                 settingsToSave.bubbleStyle = 'custom'; 
                 await DBHelper.put('apiConfig', settingsToSave);
 
                 const scopedCss = this._scopeCSS(css, '#custom-bubble-preview');
                 previewStyle.textContent = scopedCss;
 
-                // 新增：应用全局气泡样式更改
+                // 应用全局气泡样式更改
                 await this.applyBubbleSettings();
 
-                // 新增：同步更新设置页面的UI，让“自定义”选项高亮
+                // 同步更新设置页面的UI，让“自定义”选项高亮
                 $$('.bubble-style-option').forEach(opt => {
                     opt.classList.toggle('selected', opt.dataset.styleKey === 'custom');
                 });
                 
-                // 新增：由于'custom'是B类样式，隐藏A类颜色设置
+                // 由于'custom'是B类样式，隐藏A类颜色设置
                 $('#bubble-color-card').style.display = 'none';
 
                 UIManager.showToast("已更新预览");
