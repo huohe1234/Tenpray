@@ -640,6 +640,7 @@
         padding: 8px 12px;
         border-radius: 16px;
         word-break: break-word;
+        white-space: pre-wrap; /* 新增：让换行符生效 */
         font-family: var(--font-bubble); /* 应用气泡字体 */
         font-size: var(--font-bubble-size, 0.95rem); /* 使用CSS变量 */
         line-height: 1.4;
@@ -10906,12 +10907,18 @@ for (const member of selectedMembers) {
                     if (currentPage > 0) {
                         currentPage--;
                         updateNav();
+                        // 返回第一页时，重新禁用“已阅读”按钮
+                        closeBtn.disabled = true;
                     }
                 };
                 nextBtn.onclick = () => {
                     if (currentPage < pages.length - 1) {
                         currentPage++;
                         updateNav();
+                        // 当翻到最后一页时，启用“已阅读”按钮
+                        if (currentPage === pages.length - 1) {
+                            closeBtn.disabled = false;
+                        }
                     }
                 };
                 
@@ -10922,19 +10929,25 @@ for (const member of selectedMembers) {
                     await DBHelper.put('apiConfig', config);
                 };
 
+                // 如果不是从教程页打开，则需要进行倒计时和按钮禁用
                 if (!isFromTutorial) {
+                    nextBtn.disabled = true;
                     closeBtn.disabled = true;
                     let countdown = 3;
-                    closeBtn.textContent = `已阅读 (${countdown}s)`;
+                    nextBtn.textContent = `下一页 (${countdown}s)`;
                     const interval = setInterval(() => {
                         countdown--;
-                        closeBtn.textContent = `已阅读 (${countdown}s)`;
-                        if (countdown <= 0) {
+                        if (countdown > 0) {
+                            nextBtn.textContent = `下一页 (${countdown}s)`;
+                        } else {
                             clearInterval(interval);
-                            closeBtn.disabled = false;
-                            closeBtn.textContent = '已阅读';
+                            nextBtn.disabled = false;
+                            nextBtn.textContent = '下一页';
                         }
                     }, 1000);
+                } else {
+                    // 如果是从教程打开，则直接禁用“已阅读”按钮，直到用户翻页
+                    closeBtn.disabled = true;
                 }
             },
 
