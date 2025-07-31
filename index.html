@@ -984,7 +984,7 @@
 
         .voice-duration {
             font-size: 0.8rem;
-            color: #000000; /* 改为黑色 */
+            color: currentColor;
             margin-right: 10px;
             font-weight: bold;
         }
@@ -997,7 +997,7 @@
         }
         .voice-wave-bar {
             width: 3px;
-            background-color: #000000; /* 改为黑色 */
+            background-color: currentColor;
             margin: 0 2px;
             border-radius: 2px;
             animation: voiceWave 1.5s infinite ease-in-out;
@@ -1034,16 +1034,11 @@
         .bubble.voice-message-bubble {
             display: flex;
             align-items: center;
-            padding: 12px 16px !important; /* 使用 !important 强制覆盖主题样式 */
-            background-color: white !important; /* 使用 !important 强制覆盖主题样式 */
-            border-radius: 18px !important; /* 使用 !important 强制覆盖主题样式 */
-            border: 1px solid var(--theme-color-1) !important; /* 使用 !important 强制覆盖主题样式 */
             cursor: pointer;
             position: relative;
             transition: all 0.3s ease;
             z-index: 1;
             min-width: 80px;
-            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05) !important; /* 使用 !important 强制覆盖主题样式 */
         }
         .bubble.image-with-desc-bubble .description-text { display: none; padding: 0 4px; font-size: 0.9rem; line-height: 1.5; color: var(--text-color-dark); }
         .bubble.vision-image-bubble {
@@ -1055,12 +1050,6 @@
             display: block; /* 总是显示附言 */
             padding-top: 5px;
         }
-        .bubble.voice-message-bubble:hover {
-            background-color: #f9f9f9 !important;
-        }
-        .message-row.sent .voice-duration { color: var(--player-bubble-text-color); }
-        .message-row.sent .voice-wave-bar { background-color: var(--player-bubble-text-color); }
-        .message-row.received .voice-wave-bar { background-color: var(--friend-bubble-text-color); }
         .bubble-and-tag-wrapper { position: relative; display: flex; flex-direction: column; align-items: flex-start; }
         .message-row.sent .bubble-and-tag-wrapper { align-items: flex-end; }
         .voice-transcript { position: absolute; top: calc(100% + 5px); left: 0; width: max-content; max-width: 250px; background: #e6f7ff; border: 1px dashed #91d5ff; color: #03a9f4; border-radius: 10px; padding: 8px 12px; font-size: 0.85rem; z-index: 5; display: none; word-wrap: break-word; }
@@ -2794,7 +2783,6 @@
         }
         .post-main-content {
             flex-grow: 1;
-            overflow: hidden;
         }
         .post-author-name {
             font-size: 1.1rem;
@@ -6229,7 +6217,7 @@
                         break;
                     case 'text':
                     default:
-                        bubbleContent = msg.content;
+                        bubbleContent = marked.parse(msg.content, { breaks: true });
                         break;
                 }
             }
@@ -8300,7 +8288,7 @@ ${promptLines.join('\n')}
                 if (isGroup) {
                     chatEntity = await DBHelper.get('groups', chatId);
                     const members = chatEntity.members.map(id => allContacts.find(c => c.id === id)).filter(Boolean);
-                    taskPrompt = `你现在正在一个名为“${chatEntity.name}”的群聊中，需要同时扮演以下几位角色：${members.map(m => m.name).join('、')}。你的任务是根据每个角色的性格设定，与群里的“${myProfile.name}”（也就是玩家）进行互动。`;
+                    taskPrompt = `你现在正在一个名为“${chatEntity.name}”的群聊中，需要同时扮演以下几位角色：${members.map(m => m.name).join('、')}。你的任务是根据每个角色的性格设定，与群里的“${myProfile.name}”（也就是玩家）进行互动。**禁止让群聊外的角色进行发言，禁止让被移出群聊的角色发言**`;
                     characterInfoPrompt = `群聊成员资料如下：\n` + members.map(m => `角色名: ${m.name}\n性别: ${m.gender}\n喜好: ${m.likes || '无'}\n厌恶: ${m.dislikes || '无'}\n习惯: ${m.habits || '无'}\n拍一拍动作(${m.name}自己设定的): ${m.patAction || '拍了拍'}\n拍一拍内容(${m.name}自己设定的): ${m.patContent || ''}\n背景: ${m.background || '无'}`).join('\n---\n');
                 } else {
                     chatEntity = await DBHelper.get('contacts', chatId);
@@ -9049,14 +9037,15 @@ async handleAutoSummaryRequest(chatId) {
             const storeName = isGroup ? 'groups' : 'contacts';
             const entity = await DBHelper.get(storeName, chatId);
             
-const newSummaryPart = summaryResponse.trim().slice(0, 350);
-const separator = `\n\n--- ${new Date().toLocaleString()} ---\n`;
-
-if (entity.autoSummary) {
-    entity.autoSummary += separator + newSummaryPart;
-} else {
-    entity.autoSummary = newSummaryPart;
-}
+                const newSummaryPart = summaryResponse.trim().slice(0, 350);
+                const separator = `\n\n--- ${new Date().toLocaleString()} ---\n`;
+                
+                if (entity.autoSummary) {
+                    entity.autoSummary += separator + newSummaryPart;
+                } else {
+                    entity.autoSummary = newSummaryPart;
+                }
+                UIManager.showToast(`“${entity.name}”的总结已更新！`); // 新增的提示
             
             await DBHelper.put(storeName, entity);
             console.log("新总结已保存:", entity.autoSummary);
@@ -9228,6 +9217,17 @@ if (entity.autoSummary) {
                 const contactUpdates = {};
 
                 const matches = text.matchAll(allMessageRegex);
+                // --- 新增：为群聊检查准备数据 ---
+                const isGroup = chatId.startsWith('group-');
+                let currentMemberIds = [];
+                if (isGroup) {
+                    const group = await DBHelper.get('groups', chatId);
+                    if(group) {
+                        currentMemberIds = group.members;
+                    }
+                }
+                // --- 新增结束 ---
+                
                 for (const match of matches) {
                     const [
                         fullMatch, momentContent, narratorContent, systemContent, privateContent,
@@ -9379,6 +9379,18 @@ if (entity.autoSummary) {
                     } else if (systemContent !== undefined) {
                         const content = systemContent.trim();
                         const nameChangeParts = content.match(/(.+?)\s*修改群名为\s*(.*)$/);
+
+                        // --- 新增：检查修改群名的人是否还在群里 ---
+                        if (isGroup) {
+                            const modifierName = nameChangeParts[1].trim();
+                            const modifierContact = contacts.find(c => c.name === modifierName);
+                            if (!modifierContact || !currentMemberIds.includes(modifierContact.id)) {
+                                console.warn(`已忽略：群聊外的成员 "${modifierName}" 尝试修改群名。`);
+                                continue; // 跳过这个操作
+                            }
+                        }
+                        // --- 新增结束 ---
+                        
                         if (nameChangeParts && nameChangeParts.length === 3) {
                             const rawNewName = nameChangeParts[2].trim();
                             const parsedNewName = rawNewName.replace(/^["“]|["”]$/g, '');
@@ -9563,6 +9575,14 @@ if (entity.autoSummary) {
                         const parts = innerContent.split('|').map(p => p.trim());
                         const [senderName] = parts;
                         const result = createBaseMessage(senderName);
+                        // --- 新增：检查发言人是否为当前群聊成员 ---
+                        if (isGroup) {
+                            const senderContact = contacts.find(c => c.name === senderName);
+                            if (!senderContact || !currentMemberIds.includes(senderContact.id)) {
+                                console.warn(`已忽略：群聊外的成员 "${senderName}" 的消息。`);
+                                continue; // 跳过这条消息
+                            }
+                        }
                         if (!result) continue;
                         const { baseMessage, sender } = result;
 
@@ -10521,10 +10541,15 @@ for (const member of selectedMembers) {
             },
 
             async handlePrivateMessageFromMoment(privateContent, moment) {
-                if (!moment) return;
+                if (!moment || !moment.id) return; 
+
+                // --- 新增：从数据库重新获取最新的动态信息，确保评论区是最新的 ---
+                const freshMoment = await DBHelper.get('moments', moment.id);
+                if (!freshMoment) return; // 如果动态被删除了，就中止
+                // --- 新增结束 ---
 
                 const allContacts = await DBHelper.getAll('contacts');
-                const myProfile = await EventManager.getPlayerProfileForContext(moment.circleId);
+                const myProfile = await EventManager.getPlayerProfileForContext(freshMoment.circleId);
                 
                 const standardMatch = privateContent.match(/\[([^\[\]]+?)\]/);
                 const retractedMatch = privateContent.match(/{([^{}]+?)}/);
@@ -10540,19 +10565,19 @@ for (const member of selectedMembers) {
                 if (!sender) return;
 
                 // 1. 创建朋友圈上下文的系统消息
-                const momentAuthor = (await EventManager.getMomentAuthor(moment.authorId, moment.circleId))?.name || '未知作者';
+                const momentAuthor = (await EventManager.getMomentAuthor(freshMoment.authorId, freshMoment.circleId))?.name || '未知作者';
                 let commentsText = '无';
-                if (moment.comments && moment.comments.length > 0) {
-                    commentsText = '\n' + moment.comments.map(c => {
+                if (freshMoment.comments && freshMoment.comments.length > 0) {
+                    commentsText = '\n' + freshMoment.comments.map(c => {
                         const cAuthor = c.authorId === myProfile.id ? myProfile : allContacts.find(u => u.id === c.authorId) || { name: c.authorId };
                         return `${cAuthor.name}${c.replyTo ? ` 回复 ${c.replyTo}` : ''}: ${c.content}`;
                     }).join('\n');
                 }
                 const contextContent = `<朋友圈动态>
 动态发帖人：${momentAuthor}
-动态内容：${moment.content}
-动态时间：${Utils.formatTimestampSmartly(moment.timestamp)}
-点赞情况：${(moment.likes && moment.likes.length > 0) ? moment.likes.join(', ') : '无'}
+动态内容：${freshMoment.content}
+动态时间：${Utils.formatTimestampSmartly(freshMoment.timestamp)}
+点赞情况：${(freshMoment.likes && freshMoment.likes.length > 0) ? freshMoment.likes.join(', ') : '无'}
 评论区：${commentsText}
 </朋友圈动态>`;
 
