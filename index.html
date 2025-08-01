@@ -1029,7 +1029,8 @@
         }
         .bubble-emoji img { max-width: 100%; display: block; border-radius: 12px; }
         .bubble.quote-message-bubble { display: flex; flex-direction: column; gap: 8px; }
-        .bubble.image-with-desc-bubble { max-width: 120px; max-height: 120px; padding: 3px; display: flex; flex-direction: column; gap: 8px; }
+        .bubble.image-with-desc-bubble { max-width: 160px; /* 稍微增大最大宽度以容纳长图 */ max-height: none; /* 移除固定的最大高度限制 */ padding: 5px; /* 增加一点内边距 */ display: flex; flex-direction: column; gap: 8px; }
+        .bubble.image-with-desc-bubble img { max-width: 100%; height: auto; /* 关键：让高度自适应宽度 */ border-radius: 8px; display: block; background-color: var(--theme-color-1); }
         .bubble.image-with-desc-bubble img { max-width: 100%; border-radius: 8px; display: block; background-color: var(--theme-color-1); }
         .bubble.image-with-desc-bubble .description-text { display: none; padding: 0 4px; font-size: 0.9rem; line-height: 1.5; color: var(--text-color-dark); }
         .bubble.voice-message-bubble {
@@ -2937,6 +2938,7 @@
             cursor: pointer;
             transition: transform 0.2s ease, box-shadow 0.2s ease;
             max-width: 250px;
+            min-width: 220px;
         }
         .bubble.forwarded-moment-bubble:hover {
             transform: translateY(-3px) scale(1.02);
@@ -2955,6 +2957,7 @@
             padding: 0 !important;
             margin: 0 !important;
             filter: none !important;
+            white-space: normal !important; /* 新增：为特殊气泡重置换行行为 */
         }
         
         /* --- 核心专门禁用自定义CSS在特殊气泡上的伪元素 --- */
@@ -7943,13 +7946,23 @@ async showAutoSummaryModal(entityId, isGroup) {
 
         
         const AIHandler = {
-            groupChatRules: `\n---
-群聊专属规则：
-1.  **多角色发言**：你可以让多个角色发言，每个角色的发言都是独立的单元，你可以根据人设安排部分群友不发言(例如有的角色是早睡设定,时间太晚就不会回复)，但至少需要构造一名群友的发言。
-2.  **私聊消息**: 如果想对**玩家**说一些不想让其他人知道的话，请使用 <私聊></私聊> 标签包裹。标签内的消息格式依然遵循所有基础规则（如 <私聊>[方鹤安|你在群里说的那句话是什么意思]</私聊>）。<私聊>格式只能私聊玩家，私聊其他角色的内容禁止使用<私聊>标签。
-3.  **修改群名**: 你可以根据剧情发展，主动修改群名。格式为：<系统>角色名 修改群名为"新群名"</系统>。例如：<系统>商时序 修改群名为"F4"</系统>。注意：此行为必须符合你的角色设定，不能随意或无理由地修改。
-4.**群友回复顺序不固定，可以交叉回复，例如群友A、群友B、群友B、群友A、群友C这样的交叉顺序。不一定要一个人全部说完了才轮到下一个人。群友之间也可以有互动对话，例如使用@提及其他群友。**
----`,
+            getGroupChatRules(settings) {
+                let ruleTexts = [
+                    `**多角色发言**：你可以让多个角色发言，每个角色的发言都是独立的单元，你可以根据人设安排部分群友不发言(例如有的角色是早睡设定,时间太晚就不会回复)，但至少需要构造一名群友的发言。`
+                ];
+
+                if (settings.memoryInterconnection) {
+                    ruleTexts.push(`**私聊消息**: 如果想对**玩家**说一些不想让其他人知道的话，请使用 <私聊></私聊> 标签包裹。标签内的消息格式依然遵循所有基础规则（如 <私聊>[方鹤安|你在群里说的那句话是什么意思]</私聊>）。<私聊>格式只能私聊玩家，私聊其他角色的内容禁止使用<私聊>标签。`);
+                }
+
+                ruleTexts.push(
+                    `**修改群名**: 你可以根据剧情发展，主动修改群名。格式为：<系统>角色名 修改群名为"新群名"</系统>。例如：<系统>商时序 修改群名为"F4"</系统>。注意：此行为必须符合你的角色设定，不能随意或无理由地修改。`,
+                    `**群友回复顺序不固定，可以交叉回复，例如群友A、群友B、群友B、群友A、群友C这样的交叉顺序。不一定要一个人全部说完了才轮到下一个人。群友之间也可以有互动对话，例如使用@提及其他群友。**`
+                );
+
+                const formattedRules = ruleTexts.map((text, index) => `${index + 1}.  ${text}`).join('\n');
+                return `\n---\n群聊专属规则：\n${formattedRules}\n---`;
+            },
             formatPromptTpl: `\n---
 回复规则（非常重要！请严格遵守！）：
 1.  你的所有回复都必须严格遵循以下格式，使用**角色名**，而不是其他昵称/称呼，每一句话都是一个独立的单元。
@@ -8457,7 +8470,7 @@ ${promptLines.join('\n')}
                 }
                 
                 let finalPrompt = promptParts.filter(Boolean).join('\n\n');
-                if (isGroup) finalPrompt += AIHandler.groupChatRules;
+                if (isGroup) finalPrompt += this.getGroupChatRules(chatSettings);
                 // --- 修复结束 ---
                 
                 console.log(`--- PROMPT SENT TO AI (Full: ${shouldSendFullPrompt}) ---\n`, finalPrompt);
@@ -8909,16 +8922,40 @@ ${promptLines.join('\n')}
                 const messagesToDelete = [];
                 for (let i = playerMessageIndex + 1; i < allMessages.length; i++) {
                     if (allMessages[i].type === 'received') {
-                        messagesToDelete.push(allMessages[i].messageId);
+                        // 修复点1：收集完整的消息对象，而不仅仅是ID
+                        messagesToDelete.push(allMessages[i]);
+                    }
+                }
+                
+                // 修复点2：在删除消息前，检查并清除关联的 lastInnerVoiceId/lastEssayId
+                for (const msgToDelete of messagesToDelete) {
+                    if ((msgToDelete.segmentType === 'inner_voice' || msgToDelete.segmentType === 'essay') && msgToDelete.senderId) {
+                        const contact = await DBHelper.get('contacts', msgToDelete.senderId);
+                        if (contact) {
+                            let contactNeedsUpdate = false;
+                            if (msgToDelete.segmentType === 'inner_voice' && contact.lastInnerVoiceId === msgToDelete.messageId) {
+                                delete contact.lastInnerVoiceId;
+                                contactNeedsUpdate = true;
+                            }
+                            if (msgToDelete.segmentType === 'essay' && contact.lastEssayId === msgToDelete.messageId) {
+                                delete contact.lastEssayId;
+                                contactNeedsUpdate = true;
+                            }
+                            if (contactNeedsUpdate) {
+                                await DBHelper.put('contacts', contact);
+                            }
+                        }
                     }
                 }
 
-                for (const id of messagesToDelete) {
-                    await DBHelper.delete('messages', id);
+                // 修复点3：现在基于完整的消息对象进行删除
+                for (const msg of messagesToDelete) {
+                    await DBHelper.delete('messages', msg.messageId);
                 }
                 
                 if (messagesToDelete.length > 0) {
-                     const remainingMessages = allMessages.filter(m => !messagesToDelete.includes(m.messageId));
+                     const messagesToDeleteIds = messagesToDelete.map(m => m.messageId);
+                     const remainingMessages = allMessages.filter(m => !messagesToDeleteIds.includes(m.messageId));
                      if (remainingMessages.length > 0) {
                         const lastMessage = remainingMessages[remainingMessages.length - 1];
                         await UIManager.updateChatMetadata(chatId, lastMessage);
@@ -8927,8 +8964,8 @@ ${promptLines.join('\n')}
                      }
                 }
 
-                for (const id of messagesToDelete) {
-                    const elementToDelete = $(`#${id}`);
+                for (const msg of messagesToDelete) {
+                    const elementToDelete = $(`#${msg.messageId}`);
                     if (elementToDelete) {
                         elementToDelete.remove();
                     }
@@ -9381,19 +9418,20 @@ async handleAutoSummaryRequest(chatId) {
                         const content = systemContent.trim();
                         const nameChangeParts = content.match(/(.+?)\s*修改群名为\s*(.*)$/);
 
-                        // --- 新增：检查修改群名的人是否还在群里 ---
-                        if (isGroup) {
-                            const modifierName = nameChangeParts[1].trim();
-                            const modifierContact = contacts.find(c => c.name === modifierName);
-                            if (!modifierContact || !currentMemberIds.includes(modifierContact.id)) {
-                                console.warn(`已忽略：群聊外的成员 "${modifierName}" 尝试修改群名。`);
-                                continue; // 跳过这个操作
-                            }
-                        }
-                        // --- 新增结束 ---
-                        
                         if (nameChangeParts && nameChangeParts.length === 3) {
+                            const modifierName = nameChangeParts[1].trim();
                             const rawNewName = nameChangeParts[2].trim();
+                            
+                            // --- 检查修改群名的人是否还在群里 ---
+                            if (isGroup) {
+                                const modifierContact = contacts.find(c => c.name === modifierName);
+                                if (!modifierContact || !currentMemberIds.includes(modifierContact.id)) {
+                                    console.warn(`已忽略：群聊外的成员 "${modifierName}" 尝试修改群名。`);
+                                    continue; // 跳过这个操作
+                                }
+                            }
+                            // --- 检查结束 ---
+
                             const parsedNewName = rawNewName.replace(/^["“]|["”]$/g, '');
                             newGroupNameFromAI = parsedNewName;
 
@@ -9402,9 +9440,9 @@ async handleAutoSummaryRequest(chatId) {
                                 chatId: chatId,
                                 timestamp: baseTimestamp + timestampOffset++,
                                 type: 'received',
-                                content: `${nameChangeParts[1].trim()} 修改群名为 ${parsedNewName}`, 
-                                segmentType: 'system', 
-                                forAi: true 
+                                content: `${modifierName} 修改群名为 “${parsedNewName}”`,
+                                segmentType: 'system',
+                                forAi: true
                             };
                             messagesToSave.push(systemMessage);
                             displayableMessages.push(systemMessage);
@@ -9649,7 +9687,19 @@ async handleAutoSummaryRequest(chatId) {
 
 
 
-                await DBHelper.batchPut('messages', messagesToSave);
+                // --- 修复开始：在保存前过滤掉没有 messageId 的无效消息对象 ---
+                const validMessagesToSave = messagesToSave.filter(msg => {
+                    if (msg.messageId) {
+                        return true;
+                    } else {
+                        // 如果发现无效消息，在控制台打印警告，方便调试
+                        console.warn("过滤掉一个无效的消息对象 (缺少 messageId):", msg);
+                        return false;
+                    }
+                });
+                
+                await DBHelper.batchPut('messages', validMessagesToSave);
+                // --- 修复结束 ---
 
                 if (newGroupNameFromAI && chatId.startsWith('group-')) {
                     const group = await DBHelper.get('groups', chatId);
@@ -9662,22 +9712,30 @@ async handleAutoSummaryRequest(chatId) {
                     }
                 }
 
-                if (displayableMessages.length > 0) {
+                // --- 修复开始：确保后续操作也只使用有效消息 ---
+                // 1. 从 displayableMessages 中也移除无效消息，保证界面与数据一致
+                const validDisplayableMessages = displayableMessages.filter(displayMsg =>
+                    validMessagesToSave.some(savedMsg => savedMsg.messageId === displayMsg.messageId)
+                );
+
+                // 2. 使用过滤后的有效消息数组进行后续操作
+                if (validDisplayableMessages.length > 0) {
                     chatMetadata.lastAiReplyTimestamp = Date.now();
                     await DBHelper.put('chatMetadata', chatMetadata);
                 }
 
-                if (displayableMessages.length > 0) {
-                    const lastDisplayableMsg = displayableMessages[displayableMessages.length - 1];
+                if (validDisplayableMessages.length > 0) {
+                    const lastDisplayableMsg = validDisplayableMessages[validDisplayableMessages.length - 1];
                     const isUnread = chatId !== appState.currentChatId;
-                    await UIManager.updateChatMetadata(chatId, lastDisplayableMsg, isUnread ? displayableMessages.length : 0);
+                    await UIManager.updateChatMetadata(chatId, lastDisplayableMsg, isUnread ? validDisplayableMessages.length : 0);
                 }
+                // --- 修复结束 ---
 
                 // 获取循环开始前的最后一条消息时间
                 const lastMessageBeforeLoop = (await DBHelper.getMessages(chatId, 1, baseTimestamp)).pop();
                 let lastTimestamp = lastMessageBeforeLoop ? lastMessageBeforeLoop.timestamp : 0;
                 
-                for (const msg of displayableMessages) {
+                for (const msg of validDisplayableMessages) {
                     await new Promise(resolve => setTimeout(resolve, Math.random() * 400 + 200));
 
                     if (chatId === appState.currentChatId) {
@@ -10402,8 +10460,10 @@ for (const member of selectedMembers) {
                 const momentsListUl = $('#moments-list');
                 const momentBlocks = text.match(/<朋友圈>[\s\S]*?<\/朋友圈>/g) || [];
                 const allContacts = await DBHelper.getAll('contacts');
-                const myProfile = await DBHelper.get('profile', 'myProfile');
                 const circle = await DBHelper.get('circles', appState.currentCircleId);
+                
+                // 修复：获取当前圈子上下文的正确玩家人设
+                const myProfile = await EventManager.getPlayerProfileForContext(appState.currentCircleId);
 
                 if (momentBlocks.length > 0 && momentsListUl.innerHTML.includes('还没有动态')) {
                     momentsListUl.innerHTML = ''; 
@@ -10418,10 +10478,11 @@ for (const member of selectedMembers) {
                     const content = contentParts.join('：');
 
                     const author = allContacts.find(c => c.name === authorName.trim());
-
                     
                     const likeMatch = block.match(/（已点赞：(.*?)）/);
-                    const likerNames = likeMatch ? likeMatch[1].split(/,|，/).map(n => n.trim()) : [];
+                    let likerNames = likeMatch ? likeMatch[1].split(/,|，/).map(n => n.trim()) : [];
+                    // 修复：过滤掉AI代替玩家生成的点赞
+                    likerNames = likerNames.filter(name => name !== myProfile.name);
 
                     const newMoment = {
                         id: Utils.generateId('moment'),
@@ -10440,13 +10501,13 @@ for (const member of selectedMembers) {
                         const [cAuthorName, ...cContentParts] = inner.split('：');
                         const trimmedAuthorName = cAuthorName.trim();
                         
-                        let authorId;
+                        // 修复：如果评论作者是玩家，则跳过
                         if (trimmedAuthorName === myProfile.name) {
-                            authorId = myProfile.id; 
-                        } else {
-                            const cAuthor = allContacts.find(c => c.name === trimmedAuthorName);
-                            authorId = cAuthor ? cAuthor.id : trimmedAuthorName; 
+                            continue;
                         }
+                        
+                        const cAuthor = allContacts.find(c => c.name === trimmedAuthorName);
+                        const authorId = cAuthor ? cAuthor.id : trimmedAuthorName; 
                         
                         newMoment.comments.push({
                             authorId: authorId,
@@ -12736,7 +12797,7 @@ if (entity && entity.autoSummaryEnabled && chatMetadata.totalPlayerTurns > 0 && 
                             <button class="details-btn" id="save-profile-preset-btn" style="flex: 1;">保存</button>
                             <button class="details-btn" id="delete-profile-preset-btn" style="flex: 1;">删除</button>
                         </div>
-                        <p style="text-align: center; font-size: 12px; color: #aaa; user-select: none; margin-top: 30px;">此聊天室由33制作，xhs:@回风</p>
+                        <p style="text-align: center; font-size: 12px; color: #aaa; user-select: none; margin-top: 30px;">此聊天室(v2.0.2)由33制作，xhs:@回风</p>
                     `,
                     actions: [
                         { text: '取消', class: 'btn-secondary', handler: () => UIManager.hideSidebar() },
@@ -14885,7 +14946,9 @@ if (entity && entity.autoSummaryEnabled && chatMetadata.totalPlayerTurns > 0 && 
                         <h3>教程与示例</h3>
                         <p style="font-size:0.9rem; color:var(--text-color-medium); margin-bottom:16px;">您可以复制以下示例代码作为起点进行修改或发送给AI进行修改。请注意，为了安全，仅支持基础的CSS选择器和属性。</p>
                         <p style="font-size:0.9rem; color:var(--text-color-medium); margin-bottom:10px;"><strong>注意：</strong>请确保你使用的气泡代码是<strong>自己编写/自己使用AI生成/其他制作老师同意使用的</strong>。请勿未经授权/允许二用他人的任何设定或产出，<span style="color: red; font-weight: bold;">请尊重所有人的任何产出</span>，否则后续问题需自行负责。</p>
-                        <pre id="css-tutorial-code-block" class="css-tutorial-code"><button class="copy-btn">复制</button><code>/* --- 好友的气泡 --- */
+                        <pre id="css-tutorial-code-block" class="css-tutorial-code"><button class="copy-btn">复制</button><code>
+
+/* --- 好友的气泡 --- */
 .bubble.received {
   background-color: #FFFFFF;
   color: #333333;
@@ -15264,7 +15327,8 @@ if (entity && entity.autoSummaryEnabled && chatMetadata.totalPlayerTurns > 0 && 
                         <div style="font-size: 0.9rem; line-height: 1.6;">
                             <p>请选择字体文件进行上传。支持的格式为 <code>.ttf</code>, <code>.otf</code>, <code>.woff</code>, <code>.woff2</code>。</p>
                             <p><strong>强烈推荐使用 <code>.woff2</code> 格式</strong>，因为它的文件体积更小，加载速度更快。</p>
-                            <p>请尽量选择体积较小的字体文件，过大的字体会导致刷新页面时加载变慢。</p>
+                            <p>请尽量选择体积较小的字体文件/网络资源上传，过大的字体会导致刷新页面时加载变慢、甚至闪退。</p>
+                            <p>如果真的想要上传本地字体，上传前请做好导出备份</p>
                             <p style="color: var(--text-color-medium); margin-top: 15px;">加载字体需要一些时间，选择使用自定义字体后刷新页面使字体生效。</p>
                         </div>
                     `,
@@ -15996,16 +16060,16 @@ if (entity && entity.autoSummaryEnabled && chatMetadata.totalPlayerTurns > 0 && 
 
                 const conversationDetails = recentConversations.map(meta => {
                     let details;
-                    if (meta.chatId.startsWith('contact-')) {
-                        details = contacts.find(c => c.id === meta.chatId);
-                    } else {
+                    if (meta.chatId.startsWith('group-')) {
                         details = groups.find(g => g.id === meta.chatId);
+                    } else {
+                        details = contacts.find(c => c.id === meta.chatId);
                     }
                     return details ? { ...details, chatId: meta.chatId } : null;
                 }).filter(Boolean);
 
                 const chatListHtml = conversationDetails.map(item => `
-                    <label class="member-select-item">
+                    <label class="member-select-item" data-name="${(item.remark || item.name).toLowerCase()}">
                         <input type="radio" name="forward-target" value="${item.chatId}">
                         <img src="${item.avatar}" class="contact-item-avatar" style="width:40px;height:40px;margin-right:10px; border-radius: 8px;">
                         <span>${item.remark || item.name}</span>
@@ -16014,7 +16078,10 @@ if (entity && entity.autoSummaryEnabled && chatMetadata.totalPlayerTurns > 0 && 
 
                 UIManager.showModal({
                     title: "转发给",
-                    body: `<div class="member-select-list" style="max-height: 40vh;">${chatListHtml}</div>`,
+                    body: `
+                        <input type="text" id="forward-target-search" class="forward-target-search-bar" placeholder="搜索联系人或群聊...">
+                        <div class="member-select-list" style="max-height: 40vh;">${chatListHtml}</div>
+                    `,
                     actions: [
                         { text: '取消', class: 'btn-secondary', handler: () => UIManager.hideModal() },
                         { text: '发送', class: 'btn-primary', handler: async () => {
@@ -16028,8 +16095,6 @@ if (entity && entity.autoSummaryEnabled && chatMetadata.totalPlayerTurns > 0 && 
                             const moment = await DBHelper.get('moments', momentId);
                             const momentAuthor = await this.getMomentAuthor(moment.authorId, moment.circleId);
 
-                            // --- 核心修复开始 ---
-                            // 1. 复用朋友圈页面那段被验证过的、获取正确玩家人设的逻辑
                             const circle = await DBHelper.get('circles', moment.circleId);
                             const baseProfile = await DBHelper.get('profile', 'myProfile');
                             let correctCircleProfile = { ...baseProfile };
@@ -16041,20 +16106,17 @@ if (entity && entity.autoSummaryEnabled && chatMetadata.totalPlayerTurns > 0 && 
                                 }
                             }
 
-                            // 2. 准备给AI的提示词内容，传入这个正确的人设
                             const aiContent = await this.buildForwardedMomentAIContent(moment, momentAuthor, correctCircleProfile);
 
-                            // 3. 准备给用户看的预览卡片，明确判断作者并使用正确的人设名
                             const finalAuthorNameForCard = (moment.authorId === 'myProfile')
-                                ? correctCircleProfile.name  // 如果是玩家的动态，使用刚刚获取的正确人设名
-                                : momentAuthor.name;      // 如果是AI的动态，使用AI的名字
+                                ? correctCircleProfile.name
+                                : momentAuthor.name;
 
                             const cardData = {
                                 momentId: moment.id,
-                                authorName: finalAuthorNameForCard, // 使用修正后的名字
+                                authorName: finalAuthorNameForCard,
                                 preview: moment.content,
                             };
-                            // --- 核心修复结束 ---
 
                             const message = {
                                 messageId: Utils.generateId('msg'),
@@ -16070,15 +16132,21 @@ if (entity && entity.autoSummaryEnabled && chatMetadata.totalPlayerTurns > 0 && 
                             appState.currentChatId = targetChatId; 
                             await this.handlePlayerSendMessage(message);
                             
-                            // 恢复原始状态
                             appState.currentChatId = originalChatId;
                             appState.currentPage = originalPage;
 
                             UIManager.hideModal();
                             UIManager.showToast(`已转发给 ${conversationDetails.find(c => c.chatId === targetChatId).name}`);
-                            await UIManager.renderMessagesListPage(); // 刷新消息列表
+                            await UIManager.renderMessagesListPage();
                         }}
                     ]
+                });
+                
+                $('#forward-target-search').addEventListener('input', (e) => {
+                    const searchTerm = e.target.value.toLowerCase();
+                    $$('.member-select-item').forEach(item => {
+                        item.style.display = item.dataset.name.includes(searchTerm) ? 'flex' : 'none';
+                    });
                 });
             },
 
