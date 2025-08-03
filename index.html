@@ -14195,71 +14195,35 @@ if (entity && entity.autoSummaryEnabled && chatMetadata.totalPlayerTurns > 0 && 
                 }
 
                 if (historyOption !== 'none') {
-                    const allContacts = await DBHelper.getAll('contacts');
-                    const myProfile = await this.getPlayerProfileForContext(chatId);
-                    
-                    
                     const allMessages = await DBHelper.getMessages(chatId, Number.MAX_SAFE_INTEGER);
-                    const allTurns = AIHandler.buildTurnsFromHistory(allMessages, allContacts, myProfile);
+                    let messagesToExport = [];
 
-                    let turnsToExport = [];
                     if (historyOption === 'all') {
-                        turnsToExport = allTurns;
+                        messagesToExport = allMessages;
                     } else {
-                        const turnCount = parseInt(historyOption, 10);
-                        turnsToExport = allTurns.slice(-turnCount);
-                    }
-                    
-                    
-                    const exportedMessageIds = new Set();
-                    
-                    
-                    
-                    const messagesToExport = [];
-                    let lastTurnRole = null;
-                    let currentTurnMessages = [];
-
-                    for(const msg of allMessages) {
-                        const role = msg.type === 'sent' ? 'player' : 'ai';
-                        if (role !== lastTurnRole && currentTurnMessages.length > 0) {
-                            if(turnsToExport.some(turn => turn.time === Utils.formatTimestampForPrompt(currentTurnMessages[0].timestamp))) {
-                                messagesToExport.push(...currentTurnMessages);
-                            }
-                            currentTurnMessages = [];
+                        const messageCount = parseInt(historyOption, 10);
+                        if (!isNaN(messageCount) && messageCount > 0) {
+                            messagesToExport = allMessages.slice(-messageCount);
                         }
-                        currentTurnMessages.push(msg);
-                        lastTurnRole = role;
-                    }
-                    if(currentTurnMessages.length > 0 && turnsToExport.some(turn => turn.time === Utils.formatTimestampForPrompt(currentTurnMessages[0].timestamp))) {
-                       messagesToExport.push(...currentTurnMessages);
                     }
 
-                    
-                    let messagesForExport;
-                    if(historyOption === 'all') {
-                        messagesForExport = allMessages;
-                    } else {
+                    if (messagesToExport.length > 0) {
+                        const allContacts = await DBHelper.getAll('contacts');
+                        const myProfile = await this.getPlayerProfileForContext(chatId);
                         
-                        const approxMsgCount = parseInt(historyOption, 10) * 2.5; 
-                        messagesForExport = allMessages.slice(-approxMsgCount);
-                    }
-                    
-                    const chatHistory = { history: messagesForExport };
-
-                    if (chatHistory.history.length > 0) {
+                        const chatHistory = { history: messagesToExport };
                         const participants = {};
 
                         for (const msg of chatHistory.history) {
-                            
                             if (msg.senderId && msg.senderId !== myProfile.id && !participants[msg.senderId]) {
                                 const senderInfo = allContacts.find(c => c.id === msg.senderId);
                                 if (senderInfo) {
                                     participants[msg.senderId] = senderInfo;
                                 }
                             }
-                            delete msg.senderInfo;
+                            delete msg.senderInfo; // Clean up before export
                         }
-                        
+
                         exportData.chatHistory = chatHistory;
                         exportData.participants = Object.values(participants);
                     }
@@ -14366,12 +14330,20 @@ if (entity && entity.autoSummaryEnabled && chatMetadata.totalPlayerTurns > 0 && 
                             }
                             .export-history-options label {
                                 display: block;
-                                margin-bottom: 10px;
+                                margin-bottom: 12px;
                                 cursor: pointer;
                             }
                             #history-count-placeholder .fa-spinner {
                                 font-size: 0.9em;
                                 color: var(--text-color-light);
+                            }
+                            #custom-history-count {
+                                width: 70px;
+                                text-align: center;
+                                margin: 0 8px;
+                                padding: 4px 8px;
+                                border-radius: 6px;
+                                border: 1px solid var(--border-color);
                             }
                         </style>
                         <div class="form-group">
@@ -14389,9 +14361,13 @@ if (entity && entity.autoSummaryEnabled && chatMetadata.totalPlayerTurns > 0 && 
                             </label>
                         </div>
                         <div id="export-history-options-container" class="export-history-options">
-                            <label><input type="radio" name="history-export-option" value="all" checked> 导出全部记录 (可能卡顿)</label>
-                            <label><input type="radio" name="history-export-option" value="100"> 导出最近100轮</label>
-                            <label><input type="radio" name="history-export-option" value="50"> 导出最近50轮</label>
+                            <label><input type="radio" name="history-export-option" value="100"> 导出最近100条</label>
+                            <label><input type="radio" name="history-export-option" value="300"> 导出最近300条</label>
+                            <label style="display: flex; align-items: center;">
+                                <input type="radio" name="history-export-option" value="custom"> 导出最近
+                                <input type="number" id="custom-history-count" min="1" step="1"> 条
+                            </label>
+                            <label><input type="radio" name="history-export-option" value="all" checked> 导出全部聊天记录 (可能卡顿)</label>
                         </div>
                     `,
                     actions: [
@@ -14405,7 +14381,12 @@ if (entity && entity.autoSummaryEnabled && chatMetadata.totalPlayerTurns > 0 && 
                             if (includeHistory) {
                                 const selectedOption = $('input[name="history-export-option"]:checked');
                                 if (selectedOption) {
-                                    historyOption = selectedOption.value;
+                                    if (selectedOption.value === 'custom') {
+                                        const customCount = $('#custom-history-count').value;
+                                        historyOption = customCount ? parseInt(customCount, 10).toString() : '0';
+                                    } else {
+                                        historyOption = selectedOption.value;
+                                    }
                                 }
                             }
                             
@@ -14424,19 +14405,9 @@ if (entity && entity.autoSummaryEnabled && chatMetadata.totalPlayerTurns > 0 && 
                 
                 (async () => {
                     const messageCount = await DBHelper.getChatMessagesCount(chatId);
-                    const allMessagesForTurns = await DBHelper.getMessages(chatId, Number.MAX_SAFE_INTEGER);
-                    let turnCount = 0;
-                    if(allMessagesForTurns.length > 0) {
-                        turnCount = 1;
-                        for (let i = 1; i < allMessagesForTurns.length; i++) {
-                            if (allMessagesForTurns[i].type !== allMessagesForTurns[i-1].type) {
-                                turnCount++;
-                            }
-                        }
-                    }
                     const countPlaceholder = $('#history-count-placeholder');
                     if(countPlaceholder) {
-                        countPlaceholder.textContent = `(共 ${turnCount} 轮 / ${messageCount} 条)`;
+                        countPlaceholder.textContent = `(${messageCount} 条)`;
                     }
                 })();
             },
@@ -20416,6 +20387,13 @@ async showGiftDetailsModal(messageId) {
 
                 const scopedCss = this._scopeCSS(css, '#custom-bubble-preview');
                 previewStyle.textContent = scopedCss;
+
+                // 模拟点击“自定义”气泡样式选项，以自动切换到自定义气泡模式
+                const customStyleOption = $(`[data-style-key="custom"]`);
+                if (customStyleOption) {
+                    // 这个点击会触发气泡样式选择的现有逻辑，包括更新DB和应用CSS
+                    customStyleOption.click(); 
+                }
 
                 UIManager.showToast("预览已更新");
             },
