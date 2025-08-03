@@ -5476,6 +5476,17 @@
         const UIManager = {
             notificationQueue: [],
             isDisplayingNotification: false,
+       syncAiButtonState() {
+            const aiRequestBtn = $('#ai-request-btn');
+            if (!aiRequestBtn) return;
+
+            if (AIHandler.isAwaitingResponse) {
+                aiRequestBtn.innerHTML = '<i class="fas fa-stop-circle"></i>';
+                aiRequestBtn.disabled = false;
+            } else {
+                aiRequestBtn.innerHTML = '<i class="fas fa-feather-alt"></i>';
+            }
+        },
        async navigateTo(pageId, fromPage = null) {
             if (!pages[pageId]) return;
 
@@ -5888,7 +5899,9 @@
             this.navigateTo('chat');
             await EventManager.applyChatSpecificStyles();
             await UIManager.applyChatBackground(chatId);
+            await UIManager.applyChatBackground(chatId);
             
+            this.syncAiButtonState(); // Sync the button state upon entering chat
             
             if (!isGroup && target.allowActiveReply === false) {
                 console.log(`已为角色 ${target.name} 关闭主动回复功能。`);
