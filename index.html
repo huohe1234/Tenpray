@@ -4314,7 +4314,7 @@
     <div id="splash-screen">
         <div class="splash-logo">33聊天室</div>
         <div class="splash-loader"></div>
-        <p style="position: absolute; bottom: 20px; font-size: 12px; color: #aaa; user-select: none;">此聊天室(v2.0.3)由33制作，xhs:@回风</p>
+        <p style="position: absolute; bottom: 20px; font-size: 12px; color: #aaa; user-select: none;">此聊天室(v2.0.4)由33制作，xhs:@回风</p>
     </div>
     <div id="app-container">
         <!-- 顶部浮窗通知容器 -->
@@ -7557,7 +7557,7 @@ async showAutoSummaryModal(entityId, isGroup) {
                 </label>
             </div>
             <p style="font-size: 0.8rem; color: var(--text-color-medium); margin-top: -10px; margin-bottom: 20px;">
-                开启后，每隔30个玩家回合，AI会自动总结一次聊天内容。
+                开启后，每隔N条消息(包含你和AI 默认值200)，AI会自动总结一次聊天内容。你可以在“聊天设置”中修改此间隔。
             </p>
             <div class="form-group">
                 <label for="summary-prompt-input">总结提示词 (可修改)</label>
@@ -12013,11 +12013,14 @@ await DBHelper.put('chatMetadata', chatMetadata);
 UIManager.addMessageToDOM(message, profile, false, true);
 
 
+const chatSettings = await DBHelper.get('apiConfig', 'chatSettings') || {};
+const summaryInterval = chatSettings.summaryMessageInterval || 200;
+
 const isGroup = appState.currentChatId.startsWith('group-');
 const entity = await DBHelper.get(isGroup ? 'groups' : 'contacts', appState.currentChatId);
-if (entity && entity.autoSummaryEnabled && chatMetadata.totalPlayerTurns > 0 && chatMetadata.totalPlayerTurns % 30 === 0) {
-    console.log(`达到第 ${chatMetadata.totalPlayerTurns} 轮，触发自动总结。`);
-    
+
+if (entity && entity.autoSummaryEnabled && summaryInterval > 0 && appState.currentChat.totalMessages > 0 && appState.currentChat.totalMessages % summaryInterval === 0) {
+    console.log(`达到第 ${appState.currentChat.totalMessages} 条消息，触发自动总结。`);
     setTimeout(() => AIHandler.handleAutoSummaryRequest(appState.currentChatId), 0);
 }
             
@@ -16387,6 +16390,7 @@ if (entity && entity.autoSummaryEnabled && chatMetadata.totalPlayerTurns > 0 && 
                     bottomBarOffset: false, enterToSend: false, promptTurnFrequency: 1,
                     activeReplyInterval: 0, useBuiltinEmojis: true, useCustomEmojisInPrompt: true,
                     enablePatAPat: true,
+                    summaryMessageInterval: 200,
                 };
                 chatSettings = { ...defaults, ...chatSettings };
 
@@ -16425,6 +16429,7 @@ if (entity && entity.autoSummaryEnabled && chatMetadata.totalPlayerTurns > 0 && 
                         ${createNumberInput('聊天记录字数上限', '设定每次请求AI时附带的聊天记录字数，影响记忆和Token消耗。', 'history-char-limit-input', chatSettings.historyCharLimit, '字')}
                         ${createNumberInput('提示词发送频率', '每N个玩家回合发送一次完整Prompt，以节省Token。', 'prompt-freq-input', chatSettings.promptTurnFrequency, '回合')}
                         ${createNumberInput('主动回复间隔', '当距离AI上次回复超过N小时后，进入聊天会自动触发AI主动回复。输入0可关闭。', 'active-reply-interval-input', chatSettings.activeReplyInterval, '小时')}
+                        ${createNumberInput('自动总结间隔', '每隔N条消息（包含你和AI），自动总结一次聊天内容。输入0可关闭。', 'summary-interval-input', chatSettings.summaryMessageInterval, '条')}
                     </div>`;
             },
             
@@ -16443,6 +16448,7 @@ if (entity && entity.autoSummaryEnabled && chatMetadata.totalPlayerTurns > 0 && 
                     useCustomEmojisInPrompt: $('#use-custom-emojis-in-prompt-switch').checked,
                     promptTurnFrequency: parseInt($('#prompt-freq-input').value, 10),
                     activeReplyInterval: parseInt($('#active-reply-interval-input').value, 10),
+                    summaryMessageInterval: parseInt($('#summary-interval-input').value, 10),
                 };
                 await DBHelper.put('apiConfig', newSettings);
                 this.applyChatSettings(newSettings);
