@@ -1165,7 +1165,6 @@
             flex-direction: column; /* 改为纵向布局 */
             padding: 10px 15px;
             border-top: 1px solid var(--border-color);
-            background-color: white;
             flex-shrink: 0;
             position: relative; /* 为表情面板定位 */
         }
@@ -1338,7 +1337,7 @@
             border-color: #ffc107;
         }
         #ai-request-btn {
-            background: none; border: none; font-size: 1.8rem; color: var(--accent-color); cursor: pointer; padding: 5px 10px 5px 0; transition: transform 0.2s;
+            background: none; border: none; font-size: 1.8rem; cursor: pointer; padding: 5px 10px 5px 0; transition: transform 0.2s;
         }
         #ai-request-btn:hover {
              transform: scale(1.1);
@@ -1358,7 +1357,6 @@
         }
         #send-btn {
             background: linear-gradient(135deg, var(--accent-color) 0%, var(--theme-color-2) 100%);
-            color: white;
             border: none;
             width: 45px;
             height: 45px;
@@ -1369,12 +1367,19 @@
             transition: background-color 0.3s, transform 0.2s, box-shadow 0.3s;
             flex-shrink: 0; /* 防止被挤压 */
             box-shadow: 0 4px 10px rgba(167, 199, 231, 0.4);
+            display: flex;
+            justify-content: center;
+            align-items: center;
         }
         #send-btn:hover {
             background-color: var(--accent-color-deep);
             transform: scale(1.05);
         }
-
+        #send-btn i {
+            position: relative;
+            top: 10px; /* 向下微调图标位置 */
+        }
+        
         /* --- 8. 模态框/弹窗 --- */
         #modal-overlay {
             position: fixed;
@@ -2359,6 +2364,44 @@
                 inset -5px -5px 9px rgba(255, 255, 255, 0.9), 
                 inset 5px 5px 9px rgba(174, 174, 192, 0.4);
             transform: none; /* Override hover transform */
+        }
+
+        /* --- 聊天页面顶部/底部 UI 颜色 --- */
+        #page-chat .page-header,
+        .chat-input-area {
+            background-color: var(--chat-ui-bg-color, white);
+        }
+
+        /* --- 聊天页面功能按钮颜色 --- */
+        .chat-input-area .feature-btn {
+            color: var(--chat-feature-btn-color, var(--text-color-medium));
+        }
+        .chat-input-area .feature-btn:hover {
+            color: var(--chat-feature-btn-active-color, var(--accent-color));
+        }
+
+        /* --- 聊天页面特殊按钮图标 (小羽毛和发送) --- */
+        #ai-request-btn i,
+        #send-btn i {
+            display: inline-block; /* 确保 i 标签可以被背景图替换 */
+            width: 100%;
+            height: 100%;
+            font-size: inherit; /* 继承父级字体大小 */
+            line-height: inherit; /* 继承父级行高 */
+        }
+        #ai-request-btn i {
+            color: var(--chat-feature-btn-active-color, var(--accent-color));
+            }
+        #send-btn i {color:white}
+        #ai-request-btn img,
+        #send-btn img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain; /* 确保图片完整显示 */
+        }
+        #send-btn:has(img) {
+            background: none;
+            box-shadow: none;
         }
 
         /* --- 10.4. 洞察弹窗样式 (新增) --- */
@@ -5843,6 +5886,7 @@
         
             await this.refreshChatView();
             this.navigateTo('chat');
+            await EventManager.applyChatSpecificStyles();
             await UIManager.applyChatBackground(chatId);
             
             
@@ -14872,6 +14916,60 @@ if (entity && entity.autoSummaryEnabled && chatMetadata.totalPlayerTurns > 0 && 
                 }
             },
 
+            async applyChatInterfaceStyleSettings() {
+                const settings = await DBHelper.get('apiConfig', 'themeSettings') || {};
+                const root = document.documentElement;
+                root.style.setProperty('--chat-ui-bg-color', settings.chatUiColor || '#FFFFFF');
+                root.style.setProperty('--chat-feature-btn-color', settings.chatFeatureBtnColor || getComputedStyle(root).getPropertyValue('--text-color-medium').trim());
+                root.style.setProperty('--chat-feature-btn-active-color', settings.chatFeatureBtnActiveColor || getComputedStyle(root).getPropertyValue('--accent-color').trim());
+            },
+
+            async applyChatSpecificStyles() {
+                const settings = await DBHelper.get('apiConfig', 'themeSettings') || {};
+
+                const setButtonIcon = (buttonId, iconUrl, defaultIconHtml, style) => {
+                    const button = $(buttonId);
+                    if (!button) return;
+
+                    if (iconUrl) {
+                        const existingImg = button.querySelector('img');
+                        if (existingImg && existingImg.src === iconUrl) return;
+
+                        const img = new Image();
+                        img.onload = () => {
+                            button.innerHTML = `<img src="${iconUrl}" style="${style}">`;
+                        };
+                        img.onerror = () => {
+                            button.innerHTML = defaultIconHtml;
+                            console.warn(`无法加载自定义图标: ${iconUrl}`);
+                        };
+                        img.src = iconUrl;
+                    } else {
+                        button.innerHTML = defaultIconHtml;
+                    }
+                };
+
+                setButtonIcon(
+                    '#chat-insight-btn', 
+                    settings.insightIconUrl, 
+                    '<i class="fas fa-clover"></i>',
+                    'width: 1.8rem; height: 1.8rem; object-fit: contain; border-radius: 4px; position: relative; top: 2px;' /* 增大尺寸并下移 */
+                );
+
+                setButtonIcon(
+                    '#ai-request-btn', 
+                    settings.aiRequestBtnUrl, 
+                    '<i class="fas fa-feather-alt"></i>',
+                    'width: 2.2rem; height: 2.2rem; object-fit: contain;' /* 增大尺寸 */
+                );
+                
+                setButtonIcon(
+                    '#send-btn', 
+                    settings.sendBtnUrl, 
+                    '<i class="fas fa-paper-plane"></i>',
+                    'width: 1.8rem; height: 1.8rem; object-fit: contain;' /* 增大尺寸 */
+                );
+            },
 
         async renderThemeSettingsPage() {
             const contentArea = $('#theme-settings-content');
@@ -14882,6 +14980,13 @@ if (entity && entity.autoSummaryEnabled && chatMetadata.totalPlayerTurns > 0 && 
             const pageColor = settings.pageColor || 'rgba(255, 255, 255, 0.5)';
             const uiButtonColor = settings.uiButtonColor || getComputedStyle(document.documentElement).getPropertyValue('--text-color-light').trim();
             const uiButtonActiveColor = settings.uiButtonActiveColor || getComputedStyle(document.documentElement).getPropertyValue('--accent-color').trim();
+            
+            const chatUiColor = settings.chatUiColor || '#FFFFFF';
+            const chatFeatureBtnColor = settings.chatFeatureBtnColor || getComputedStyle(document.documentElement).getPropertyValue('--text-color-medium').trim();
+            const chatFeatureBtnActiveColor = settings.chatFeatureBtnActiveColor || getComputedStyle(document.documentElement).getPropertyValue('--accent-color').trim();
+            const insightIconUrl = settings.insightIconUrl || '';
+            const aiRequestBtnUrl = settings.aiRequestBtnUrl || '';
+            const sendBtnUrl = settings.sendBtnUrl || '';
 
             contentArea.innerHTML = `
                 <style>
@@ -14893,6 +14998,13 @@ if (entity && entity.autoSummaryEnabled && chatMetadata.totalPlayerTurns > 0 && 
                     <div style="display: flex; justify-content: space-around; padding-top: 10px;">
                         <label style="cursor:pointer;"><input type="radio" name="modal-theme" value="default" ${appState.theme !== 'neumorphic' ? 'checked' : ''}> 默认</label>
                         <label style="cursor:pointer;"><input type="radio" name="modal-theme" value="neumorphic" ${appState.theme === 'neumorphic' ? 'checked' : ''}> 拟态</label>
+                    </div>
+                </div>
+                <div class="theme-setting-card">
+                    <h3>通用设置</h3>
+                    <div class="theme-setting-group">
+                       <button id="font-settings-btn" class="theme-page-btn">字体设置</button>
+                       <button id="background-settings-btn" class="theme-page-btn">背景与封面</button>
                     </div>
                 </div>
                 <div class="theme-setting-card">
@@ -14926,10 +15038,42 @@ if (entity && entity.autoSummaryEnabled && chatMetadata.totalPlayerTurns > 0 && 
                     </div>
                 </div>
                 <div class="theme-setting-card">
-                    <h3>通用设置</h3>
+                    <h3>聊天界面风格</h3>
                     <div class="theme-setting-group">
-                       <button id="font-settings-btn" class="theme-page-btn">字体设置</button>
-                       <button id="background-settings-btn" class="theme-page-btn">背景与封面</button>
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <span>界面UI颜色</span>
+                            <div class="color-picker-container">
+                                <input type="color" id="chat-ui-color-picker" value="${chatUiColor}">
+                                <input type="text" class="color-hex-input" id="chat-ui-color-hex" value="${chatUiColor}" maxlength="7" size="7">
+                            </div>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <span>功能按钮默认颜色</span>
+                            <div class="color-picker-container">
+                                <input type="color" id="chat-feature-btn-color-picker" value="${chatFeatureBtnColor}">
+                                <input type="text" class="color-hex-input" id="chat-feature-btn-color-hex" value="${chatFeatureBtnColor}" maxlength="7" size="7">
+                            </div>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <span>功能按钮激活颜色</span>
+                            <div class="color-picker-container">
+                                <input type="color" id="chat-feature-btn-active-color-picker" value="${chatFeatureBtnActiveColor}">
+                                <input type="text" class="color-hex-input" id="chat-feature-btn-active-color-hex" value="${chatFeatureBtnActiveColor}" maxlength="7" size="7">
+                            </div>
+                        </div>
+                        <hr style="border: none; border-top: 1px dashed var(--border-color); margin: 5px 0;">
+                        <div class="form-group" style="margin-bottom: 0;">
+                            <label for="insight-icon-url-input">角色洞察图标URL (选填)</label>
+                            <input type="text" id="insight-icon-url-input" value="${insightIconUrl}" placeholder="输入图片链接...">
+                        </div>
+                        <div class="form-group" style="margin-bottom: 0;">
+                            <label for="ai-request-btn-url-input">小羽毛按钮URL (选填)</label>
+                            <input type="text" id="ai-request-btn-url-input" value="${aiRequestBtnUrl}" placeholder="输入图片链接...">
+                        </div>
+                        <div class="form-group" style="margin-bottom: 0;">
+                            <label for="send-btn-url-input">发送按钮URL (选填)</label>
+                            <input type="text" id="send-btn-url-input" value="${sendBtnUrl}" placeholder="输入图片链接...">
+                        </div>
                     </div>
                 </div>
             `;
@@ -14938,14 +15082,10 @@ if (entity && entity.autoSummaryEnabled && chatMetadata.totalPlayerTurns > 0 && 
 
             $('#reset-page-style-btn').onclick = async () => {
                 const settingsToSave = await DBHelper.get('apiConfig', 'themeSettings') || { id: 'themeSettings' };
-                
                 delete settingsToSave.pageColor;
-                delete settingsToSave.uiTexture; 
                 delete settingsToSave.uiButtonColor;
                 delete settingsToSave.uiButtonActiveColor;
-                
                 await DBHelper.put('apiConfig', settingsToSave);
-                
                 await this.applyPageStyleSettings();
                 await this.renderThemeSettingsPage();
                 UIManager.showToast("页面风格已恢复默认");
@@ -14960,13 +15100,36 @@ if (entity && entity.autoSummaryEnabled && chatMetadata.totalPlayerTurns > 0 && 
                 await this.applyPageStyleSettings();
             };
 
+            const saveChatInterfaceSettings = async () => {
+                const settingsToSave = await DBHelper.get('apiConfig', 'themeSettings') || { id: 'themeSettings' };
+                settingsToSave.chatUiColor = $('#chat-ui-color-picker').value;
+                settingsToSave.chatFeatureBtnColor = $('#chat-feature-btn-color-picker').value;
+                settingsToSave.chatFeatureBtnActiveColor = $('#chat-feature-btn-active-color-picker').value;
+                settingsToSave.insightIconUrl = $('#insight-icon-url-input').value.trim();
+                settingsToSave.aiRequestBtnUrl = $('#ai-request-btn-url-input').value.trim();
+                settingsToSave.sendBtnUrl = $('#send-btn-url-input').value.trim();
+                await DBHelper.put('apiConfig', settingsToSave);
+                await this.applyChatInterfaceStyleSettings();
+                await this.applyChatSpecificStyles();
+            };
+
             $('#page-color-picker').oninput = savePageStyleSettings;
             $('#ui-button-color-picker').oninput = savePageStyleSettings;
             $('#ui-button-active-color-picker').oninput = savePageStyleSettings;
+            
+            $('#chat-ui-color-picker').oninput = saveChatInterfaceSettings;
+            $('#chat-feature-btn-color-picker').oninput = saveChatInterfaceSettings;
+            $('#chat-feature-btn-active-color-picker').oninput = saveChatInterfaceSettings;
+            $('#insight-icon-url-input').onchange = saveChatInterfaceSettings;
+            $('#ai-request-btn-url-input').onchange = saveChatInterfaceSettings;
+            $('#send-btn-url-input').onchange = saveChatInterfaceSettings;
 
             EventManager._syncColorInputs('page-color-picker', 'page-color-hex');
             EventManager._syncColorInputs('ui-button-color-picker', 'ui-button-color-hex');
             EventManager._syncColorInputs('ui-button-active-color-picker', 'ui-button-active-color-hex');
+            EventManager._syncColorInputs('chat-ui-color-picker', 'chat-ui-color-hex');
+            EventManager._syncColorInputs('chat-feature-btn-color-picker', 'chat-feature-btn-color-hex');
+            EventManager._syncColorInputs('chat-feature-btn-active-color-picker', 'chat-feature-btn-active-color-hex');
             
             $$('input[name="modal-theme"]').forEach(radio => {
                 radio.onchange = async (e) => {
@@ -20788,14 +20951,15 @@ async showGiftDetailsModal(messageId) {
                 await EventManager.applyBubbleFontSize(); 
 
                 EventManager.loadAndApplyFontsInBackground(); 
-
+                await EventManager.applyChatSpecificStyles();
                 await EventManager.applyPageStyleSettings();
+                await EventManager.applyChatInterfaceStyleSettings();
                 
                 await EventManager.initEmojiPanel(); 
                 await UIManager.navigateTo('messages');
 
             } catch (error) {
-                console.error("应用初始化失败:", error);
+                console.error("应用开场白吗初始化失败:", error);
                 document.body.innerHTML = `<div style="text-align:center; padding: 50px; color: red;">应用初始化失败，请检查浏览器是否支持IndexedDB或清除网站数据后重试。错误: ${error}</div>`;
             }
         }
