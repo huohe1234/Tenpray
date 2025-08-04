@@ -13271,7 +13271,7 @@ if (entity && entity.autoSummaryEnabled && summaryInterval > 0 && appState.curre
 
                 const items = presets.map((preset) => ({
                     value: preset.presetId, 
-                    text: preset.name
+                    text: preset.presetName || preset.name // 优先使用显示名，兼容旧数据
                 }));
 
                 UIManager.showBottomSheet({
@@ -13281,7 +13281,7 @@ if (entity && entity.autoSummaryEnabled && summaryInterval > 0 && appState.curre
                         const selectedPreset = presets.find(p => p.presetId === presetId);
                         if (selectedPreset) {
                             $('#profile-avatar-preview').src = selectedPreset.avatar;
-                            $('#profile-name-input').value = selectedPreset.playerName || selectedPreset.name;
+                            $('#profile-name-input').value = selectedPreset.name;
                             $('#profile-gender-select').value = selectedPreset.gender;
                             $('#profile-pat-action-input').value = selectedPreset.patAction || '';
                             $('#profile-pat-content-input').value = selectedPreset.patContent || '';
@@ -13304,7 +13304,7 @@ if (entity && entity.autoSummaryEnabled && summaryInterval > 0 && appState.curre
                 presets.forEach((preset) => {
                     items.push({
                         value: preset.presetId, 
-                        text: `覆盖预设: ${preset.name}`
+                        text: `覆盖预设: ${preset.presetName || preset.name}` // 优先使用显示名
                     });
                 });
 
@@ -13340,13 +13340,13 @@ if (entity && entity.autoSummaryEnabled && summaryInterval > 0 && appState.curre
 
                 const doSave = async (presetName) => {
                         const newPreset = {
-                            ...currentData, // 包含 avatar, gender, background 等
+                            ...currentData, // currentData中包含了正确的玩家姓名 name
                             presetId: isNew ? Utils.generateId('persona') : presetIdToOverwrite,
-                            name: presetName, // 这是预设的显示名称
-                            playerName: currentData.name, // 这是该预设对应的玩家姓名
+                            presetName: presetName, // 这是预设的显示名称
                             patAction: $('#profile-pat-action-input').value.trim(),
                             patContent: $('#profile-pat-content-input').value.trim()
                         };
+                        delete newPreset.playerName; // 清理可能存在的旧字段
 
                     
                     profile.presets = (profile.presets || []).filter(p => p);
@@ -13378,7 +13378,7 @@ if (entity && entity.autoSummaryEnabled && summaryInterval > 0 && appState.curre
                         <p>${existingPreset ? `这将覆盖预设 "${existingPreset.name}"。` : '为这个新预设起个名字吧。'}</p>
                         <div class="form-group">
                             <label for="preset-name-input">预设名称</label>
-                            <input type="text" id="preset-name-input" value="${existingPreset ? existingPreset.name : currentData.name}">
+                            <input type="text" id="preset-name-input" value="${existingPreset ? (existingPreset.presetName || existingPreset.name) : currentData.name}">
                         </div>
                     `,
                     actions: [
@@ -13407,7 +13407,7 @@ if (entity && entity.autoSummaryEnabled && summaryInterval > 0 && appState.curre
                     <label class="member-select-item">
                         <input type="checkbox" name="delete-preset" value="${preset.presetId}">
                         <img src="${preset.avatar}" class="contact-item-avatar" style="width:30px;height:30px;margin-right:10px;">
-                        <span>${preset.name}</span>
+                        <span>${preset.presetName || preset.name}</span>
                     </label>
                 `).join('');
 
@@ -13475,7 +13475,7 @@ if (entity && entity.autoSummaryEnabled && summaryInterval > 0 && appState.curre
                     <label class="member-select-item">
                         <input type="checkbox" name="export-preset" value="${preset.presetId}">
                         <img src="${preset.avatar}" class="contact-item-avatar" style="width:30px;height:30px;margin-right:10px;">
-                        <span>${preset.name}</span>
+                        <span>${preset.presetName || preset.name}</span>
                     </label>
                 `).join('');
 
@@ -13498,7 +13498,7 @@ if (entity && entity.autoSummaryEnabled && summaryInterval > 0 && appState.curre
 
                             let filename;
                             if (presetsToExport.length === 1) {
-                                filename = `${presetsToExport[0].name}.json`;
+                                filename = `${presetsToExport[0].presetName || presetsToExport[0].name}.json`;
                             } else {
                                 filename = `${presetsToExport[0].name} 等${presetsToExport.length}个玩家预设.json`;
                             }
@@ -13564,20 +13564,27 @@ if (entity && entity.autoSummaryEnabled && summaryInterval > 0 && appState.curre
                                     { text: '继续导入', class: 'btn-primary', handler: async () => {
                                         const profileToUpdate = await DBHelper.get('profile', 'myProfile');
                                         profileToUpdate.presets = profileToUpdate.presets || [];
-                                        const existingNames = profileToUpdate.presets.map(p => p.name);
+                                        const existingNames = profileToUpdate.presets.map(p => p.presetName || p.name);
                                         let skippedCount = 0;
                                         let importedCount = 0;
 
                                         for (const preset of importedPresets) {
-                                            if (existingNames.includes(preset.name)) {
+                                            // 检查新格式的显示名(presetName)或旧格式的名称(name)是否存在
+                                            const presetDisplayName = preset.presetName || preset.name;
+                                            if (existingNames.includes(presetDisplayName)) {
                                                 skippedCount++;
                                                 continue;
+                                            }
+                                            
+                                            // 兼容旧格式的导入数据
+                                            if (!preset.presetName) {
+                                                preset.presetName = preset.name; // 将旧的name作为显示名
                                             }
                                             
                                             
                                             preset.presetId = Utils.generateId('persona'); 
                                             profileToUpdate.presets.push(preset);
-                                            existingNames.push(preset.name);
+                                            existingNames.push(preset.presetName);
                                             importedCount++;
                                         }
 
@@ -19038,7 +19045,7 @@ handleImmediateSummary(entityId, isGroup) {
                 if (circle.boundPersonaPresetId) {
                     const boundPreset = presets.find(p => p.presetId === circle.boundPersonaPresetId);
                     if (boundPreset) {
-                        boundPersonaName = boundPreset.name;
+                        boundPersonaName = boundPreset.presetName || boundPreset.name;
                     }
                 }
 
@@ -19175,7 +19182,7 @@ handleImmediateSummary(entityId, isGroup) {
                 if (selectedPersonaId) { 
                     const boundPreset = presets.find(p => p.presetId === selectedPersonaId);
                     if (boundPreset) {
-                        personaName = boundPreset.name;
+                        personaName = boundPreset.presetName || boundPreset.name;
                     }
                 }
 
@@ -19642,7 +19649,7 @@ handleImmediateSummary(entityId, isGroup) {
                         <label class="member-select-item">
                             <input type="radio" name="persona-preset" value="${preset.presetId}" ${boundId === preset.presetId ? 'checked' : ''}>
                             <img src="${preset.avatar}" class="contact-item-avatar" style="width:30px;height:30px;margin-right:10px;">
-                            <span>${preset.name}</span>
+                            <span>${preset.presetName || preset.name}</span>
                         </label>
                     `;
                 }).join('');
