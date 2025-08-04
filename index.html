@@ -11751,8 +11751,34 @@ for (const member of selectedMembers) {
                 });
                 $('#emoji-prev-btn').addEventListener('click', () => { appState.emojiCurrentPage--; this.renderEmojiPage(); });
                 $('#emoji-next-btn').addEventListener('click', () => { appState.emojiCurrentPage++; this.renderEmojiPage(); });
-                $('#favorite-emoji-prev-btn').addEventListener('click', () => { appState.favoriteEmojiCurrentPage--; this.renderFavoriteEmojiPage(); });
-                $('#favorite-emoji-next-btn').addEventListener('click', () => { appState.favoriteEmojiCurrentPage++; this.renderFavoriteEmojiPage(); });
+                $('#favorite-emoji-prev-btn').addEventListener('click', () => {
+                    const slotsOnFirstPage = appState.emojisPerPage - 3;
+                    const slotsOnOtherPages = appState.emojisPerPage;
+                    let pageCount = 1;
+                    if (appState.favoriteEmojis.length > slotsOnFirstPage) {
+                        pageCount = 1 + Math.ceil((appState.favoriteEmojis.length - slotsOnFirstPage) / slotsOnOtherPages);
+                    }
+                    
+                    appState.favoriteEmojiCurrentPage--;
+                    if (appState.favoriteEmojiCurrentPage < 0) {
+                        appState.favoriteEmojiCurrentPage = pageCount - 1;
+                    }
+                    this.renderFavoriteEmojiPage();
+                });
+                $('#favorite-emoji-next-btn').addEventListener('click', () => {
+                    const slotsOnFirstPage = appState.emojisPerPage - 3;
+                    const slotsOnOtherPages = appState.emojisPerPage;
+                    let pageCount = 1;
+                    if (appState.favoriteEmojis.length > slotsOnFirstPage) {
+                        pageCount = 1 + Math.ceil((appState.favoriteEmojis.length - slotsOnFirstPage) / slotsOnOtherPages);
+                    }
+
+                    appState.favoriteEmojiCurrentPage++;
+                    if (appState.favoriteEmojiCurrentPage >= pageCount) {
+                        appState.favoriteEmojiCurrentPage = 0;
+                    }
+                    this.renderFavoriteEmojiPage();
+                });
                 
                 chatArea.addEventListener('mousedown', (e) => this.handleInteractionStart(e, 'mouse'));
                 chatArea.addEventListener('touchstart', (e) => this.handleInteractionStart(e, 'touch'));
