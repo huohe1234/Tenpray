@@ -5476,7 +5476,7 @@
         const UIManager = {
             notificationQueue: [],
             isDisplayingNotification: false,
-       syncAiButtonState() {
+       async syncAiButtonState() {
             const aiRequestBtn = $('#ai-request-btn');
             if (!aiRequestBtn) return;
 
@@ -5484,7 +5484,19 @@
                 aiRequestBtn.innerHTML = '<i class="fas fa-stop-circle"></i>';
                 aiRequestBtn.disabled = false;
             } else {
-                aiRequestBtn.innerHTML = '<i class="fas fa-feather-alt"></i>';
+                const settings = await DBHelper.get('apiConfig', 'themeSettings') || {};
+                const defaultIconHtml = '<i class="fas fa-feather-alt"></i>';
+                const iconUrl = settings.aiRequestBtnUrl;
+                const style = 'width: 2.2rem; height: 2.2rem; object-fit: contain;';
+
+                if (iconUrl) {
+                    const img = new Image();
+                    img.onload = () => { aiRequestBtn.innerHTML = `<img src="${iconUrl}" style="${style}">`; };
+                    img.onerror = () => { aiRequestBtn.innerHTML = defaultIconHtml; };
+                    img.src = iconUrl;
+                } else {
+                    aiRequestBtn.innerHTML = defaultIconHtml;
+                }
             }
         },
        async navigateTo(pageId, fromPage = null) {
@@ -8758,7 +8770,7 @@ ${promptLines.join('\n')}
                         const typingBubble = $(`#${typingBubbleId}`);
                         if (typingBubble) typingBubble.remove();
                     }
-                    aiRequestBtn.innerHTML = '<i class="fas fa-feather-alt"></i>';
+                    UIManager.syncAiButtonState();
                 }
             },
             cancelAiRequest() {
@@ -8829,7 +8841,7 @@ ${promptLines.join('\n')}
                         const typingBubble = $(`#${typingBubbleId}`);
                         if (typingBubble) typingBubble.remove();
                     }
-                    aiRequestBtn.innerHTML = '<i class="fas fa-feather-alt"></i>';
+                    UIManager.syncAiButtonState();
                 }
             },
             
@@ -9106,7 +9118,7 @@ ${promptLines.join('\n')}
                     const typingBubble = $(`#${typingBubbleId}`);
                     if (typingBubble) typingBubble.remove();
                     if (!isGroup) chatTypingIndicator.style.display = 'none';
-                    aiRequestBtn.innerHTML = '<i class="fas fa-feather-alt"></i>';
+                    UIManager.syncAiButtonState();
                 }
             },
 
@@ -9558,69 +9570,76 @@ async handleAutoSummaryRequest(chatId) {
                             displayableMessages.push(systemMessage);
                         }
                     } else if (privateContent !== undefined) {
-                        const content = privateContent.trim();
+                        const innerContent = privateContent.trim();
                         (async () => {
-                            let senderName, sender;
+                            const innerMatches = innerContent.matchAll(allMessageRegex);
+                            for (const innerMatch of innerMatches) {
+                                const [
+                                    innerFullMatch, iMoment, iNarrator, iSystem, iPrivate, iGift,
+                                    iPat, iModifyPat, iCard, iInnerVoice, iEssay,
+                                    iRetracted, iStandard, iEmoji
+                                ] = innerMatch;
 
-                            const senderMatch = content.match(/^[\[<{]([^|]+?)\|/);
-                            if (!senderMatch) return; 
-                            senderName = senderMatch[1].trim();
-                            sender = contacts.find(c => c.name === senderName);
-                            if (!sender) return; 
+                                let senderName, sender;
+                                const contentToParse = iRetracted || iStandard || iEmoji || '';
+                                const senderMatch = contentToParse.match(/^([^|]+?)\|/);
 
-                            const privateMessage = {
-                                messageId: Utils.generateId('msg'),
-                                chatId: sender.id,
-                                senderId: sender.id,
-                                timestamp: Date.now(),
-                                type: 'received',
-                                isUnread: true,
-                                isPrivateInGroup: true,
-                            };
+                                if (!senderMatch) continue;
+                                senderName = senderMatch[1].trim();
+                                sender = contacts.find(c => c.name === senderName);
+                                if (!sender) continue;
 
-                            if (content.startsWith('{') && content.endsWith('}')) {
-                                const parts = content.slice(1, -1).split('|');
-                                privateMessage.segmentType = 'text';
-                                privateMessage.content = parts.slice(1).join('|').trim();
-                                privateMessage.isRetracted = true;
-                            } else if (content.startsWith('<') && content.endsWith('>')) {
-                                const parts = content.slice(1, -1).split('|');
-                                privateMessage.segmentType = 'emoji-image';
-                                privateMessage.content = parts[1].trim();
-                            } else if (content.startsWith('[') && content.endsWith(']')) {
-                                const parts = content.slice(1, -1).split('|').map(p => p.trim());
-                                const typeKeyword = parts[1];
+                                const privateMessage = {
+                                    messageId: Utils.generateId('msg'),
+                                    chatId: sender.id,
+                                    senderId: sender.id,
+                                    timestamp: Date.now() + timestampOffset++,
+                                    type: 'received',
+                                    isUnread: true,
+                                    isPrivateInGroup: true,
+                                };
 
-                                switch (typeKeyword) {
-                                    case '语音':
-                                        privateMessage.segmentType = 'voice';
-                                        privateMessage.content = `[语音] ${parts[3]}`;
-                                        privateMessage.cardData = { duration: parts[2], content: parts[3] };
-                                        break;
-                                    case '引用':
-                                        privateMessage.segmentType = 'quote';
-                                        privateMessage.content = `[引用] ${parts[4]}`;
-                                        privateMessage.cardData = { quotedName: parts[2], quotedContent: parts[3], newContent: parts[4] };
-                                        break;
-                                    default:
-                                        privateMessage.segmentType = 'text';
-                                        privateMessage.content = parts.slice(1).join('|').trim();
-                                        break;
+                                if (iRetracted) {
+                                    const parts = iRetracted.split('|');
+                                    privateMessage.segmentType = 'text';
+                                    privateMessage.content = parts.slice(1).join('|').trim();
+                                    privateMessage.isRetracted = true;
+                                } else if (iEmoji) {
+                                    const parts = iEmoji.split('|');
+                                    privateMessage.segmentType = 'emoji-image';
+                                    privateMessage.content = parts[1].trim();
+                                } else if (iStandard) {
+                                    const parts = iStandard.split('|').map(p => p.trim());
+                                    const typeKeyword = parts[1];
+                                    switch (typeKeyword) {
+                                        case '语音':
+                                            privateMessage.segmentType = 'voice';
+                                            privateMessage.content = `[语音] ${parts[3]}`;
+                                            privateMessage.cardData = { duration: parts[2], content: parts[3] };
+                                            break;
+                                        case '引用':
+                                            privateMessage.segmentType = 'quote';
+                                            privateMessage.content = `[引用] ${parts[4]}`;
+                                            privateMessage.cardData = { quotedName: parts[2], quotedContent: parts[3], newContent: parts[4] };
+                                            break;
+                                        default:
+                                            privateMessage.segmentType = 'text';
+                                            privateMessage.content = parts.slice(1).join('|').trim();
+                                            break;
+                                    }
+                                } else {
+                                    continue;
                                 }
-                            } else {
-                                return; 
-                            }
-                            
-                            if (privateMessage.segmentType) {
-                                await DBHelper.put('messages', privateMessage);
-                                await UIManager.updateChatMetadata(sender.id, privateMessage, 1);
-                                
-                                const senderForDisplay = await DBHelper.get('contacts', privateMessage.senderId);
-                                privateMessage.senderInfo = senderForDisplay;
-                                UIManager.showTopNotification(privateMessage);
-                                
-                                if (appState.currentPage === 'messages') {
-                                    await UIManager.renderMessagesListPage();
+
+                                if (privateMessage.segmentType) {
+                                    await DBHelper.put('messages', privateMessage);
+                                    await UIManager.updateChatMetadata(sender.id, privateMessage, 1);
+                                    const senderForDisplay = await DBHelper.get('contacts', privateMessage.senderId);
+                                    privateMessage.senderInfo = senderForDisplay;
+                                    UIManager.showTopNotification(privateMessage);
+                                    if (appState.currentPage === 'messages') {
+                                        await UIManager.renderMessagesListPage();
+                                    }
                                 }
                             }
                         })();
@@ -12138,51 +12157,54 @@ if (entity && entity.autoSummaryEnabled && summaryInterval > 0 && appState.curre
             renderFavoriteEmojiPage() {
                 favoriteEmojiGrid.innerHTML = '';
                 const favNav = $('#favorite-emoji-card .emoji-nav');
-
-                
-                const extractBtn = document.createElement('div');
-                extractBtn.className = 'emoji-item-add';
-                extractBtn.innerHTML = '<i class="fas fa-paw"></i>';
-                extractBtn.title = '提取自定义表情包ID';
-                extractBtn.onclick = () => EventManager.showEmojiIdExtractionModal();
-                favoriteEmojiGrid.appendChild(extractBtn);
-
-                const addEmojiBtn = document.createElement('div');
-                addEmojiBtn.className = 'emoji-item-add';
-                addEmojiBtn.innerHTML = '<i class="fas fa-plus"></i>';
-                addEmojiBtn.title = '添加自定义表情';
-                addEmojiBtn.onclick = () => this.showAddCustomEmojiModal();
-                favoriteEmojiGrid.appendChild(addEmojiBtn);
-
-                const deleteEmojiBtn = document.createElement('div');
-                deleteEmojiBtn.className = 'emoji-item-add';
-                deleteEmojiBtn.innerHTML = '<i class="fas fa-minus"></i>';
-                deleteEmojiBtn.title = '删除自定义表情';
-                deleteEmojiBtn.onclick = () => this.showDeleteCustomEmojiModal();
-                favoriteEmojiGrid.appendChild(deleteEmojiBtn);
-
-                
                 const favoriteEmojis = appState.favoriteEmojis;
-                
-                const emojiSlotsPerPage = appState.emojisPerPage - 3;
+                const pageIndex = appState.favoriteEmojiCurrentPage;
 
-                
-                if (favoriteEmojis.length === 0 || emojiSlotsPerPage <= 0 || favoriteEmojis.length <= emojiSlotsPerPage) {
-                    favNav.style.display = 'none';
-                } else {
-                    favNav.style.display = 'flex';
+                const slotsOnFirstPage = appState.emojisPerPage - 3;
+                const slotsOnOtherPages = appState.emojisPerPage;
+
+                if (pageIndex === 0) {
+                    const extractBtn = document.createElement('div');
+                    extractBtn.className = 'emoji-item-add';
+                    extractBtn.innerHTML = '<i class="fas fa-paw"></i>';
+                    extractBtn.title = '提取自定义表情包ID';
+                    extractBtn.onclick = () => EventManager.showEmojiIdExtractionModal();
+                    favoriteEmojiGrid.appendChild(extractBtn);
+
+                    const addEmojiBtn = document.createElement('div');
+                    addEmojiBtn.className = 'emoji-item-add';
+                    addEmojiBtn.innerHTML = '<i class="fas fa-plus"></i>';
+                    addEmojiBtn.title = '添加自定义表情';
+                    addEmojiBtn.onclick = () => this.showAddCustomEmojiModal();
+                    favoriteEmojiGrid.appendChild(addEmojiBtn);
+
+                    const deleteEmojiBtn = document.createElement('div');
+                    deleteEmojiBtn.className = 'emoji-item-add';
+                    deleteEmojiBtn.innerHTML = '<i class="fas fa-minus"></i>';
+                    deleteEmojiBtn.title = '删除自定义表情';
+                    deleteEmojiBtn.onclick = () => this.showDeleteCustomEmojiModal();
+                    favoriteEmojiGrid.appendChild(deleteEmojiBtn);
                 }
-                
-                if (favoriteEmojis.length === 0) return; 
 
-                const pageCount = Math.ceil(favoriteEmojis.length / emojiSlotsPerPage);
+                let pageCount = 1;
+                if (favoriteEmojis.length > slotsOnFirstPage) {
+                    pageCount = 1 + Math.ceil((favoriteEmojis.length - slotsOnFirstPage) / slotsOnOtherPages);
+                }
+
+                favNav.style.display = pageCount > 1 ? 'flex' : 'none';
+                if (favoriteEmojis.length === 0) return;
 
                 if (appState.favoriteEmojiCurrentPage < 0) appState.favoriteEmojiCurrentPage = 0;
                 if (appState.favoriteEmojiCurrentPage >= pageCount) appState.favoriteEmojiCurrentPage = pageCount - 1;
-                
-                const pageIndex = appState.favoriteEmojiCurrentPage;
-                const start = pageIndex * emojiSlotsPerPage;
-                const end = start + emojiSlotsPerPage;
+
+                let start, end;
+                if (pageIndex === 0) {
+                    start = 0;
+                    end = slotsOnFirstPage;
+                } else {
+                    start = slotsOnFirstPage + (pageIndex - 1) * slotsOnOtherPages;
+                    end = start + slotsOnOtherPages;
+                }
                 const pageEmojis = favoriteEmojis.slice(start, end);
 
                 pageEmojis.forEach(id => {
