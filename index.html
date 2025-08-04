@@ -5588,6 +5588,12 @@
                         case 'pat_a_pat': chatInfo.lastMessageContent = '[拍一拍]'; break;
                         case 'emoji-image':
                             const emojiDesc = appState.playerEmojiMap[lastMessage.content] || appState.aiEmojiMap[lastMessage.content];
+                        case 'narrator':
+                            const tempDiv = document.createElement('div');
+                            tempDiv.innerHTML = lastMessage.content;
+                            // 提取纯文本并截断，防止过长的HTML文本撑爆列表
+                            chatInfo.lastMessageContent = '[旁白] ' + tempDiv.textContent.trim().replace(/\s+/g, ' ').substring(0, 50);
+                            break;
                             chatInfo.lastMessageContent = emojiDesc ? `[表情] ${emojiDesc}` : '[未知表情]';
                             break;
                         case 'forward_custom': chatInfo.lastMessageContent = `[转发] ${lastMessage.cardData.title}`; break;
@@ -6452,15 +6458,50 @@
         async createNarratorNoticeElement(msg) {
             const notice = document.createElement('div');
             notice.id = msg.messageId;
-            notice.dataset.messageId = msg.messageId; 
+            notice.dataset.messageId = msg.messageId;
 
             const isGroup = appState.currentChatId.startsWith('group-');
             const entity = await DBHelper.get(isGroup ? 'groups' : 'contacts', appState.currentChatId);
-            const narratorStyle = entity?.narratorStyle || 'grey'; 
+            const narratorStyle = entity?.narratorStyle || 'grey';
 
             notice.className = `narrator-notice narrator-style-${narratorStyle}`;
-            
-            notice.innerHTML = `<div class="message-selector"><input type="checkbox" class="message-select-checkbox"></div><span>${msg.content}</span>`;
+
+            // 检查内容是否为完整的HTML文档
+            const isHtmlContent = msg.content.trim().toLowerCase().startsWith('<!doctype html');
+
+            if (isHtmlContent) {
+                // 如果是HTML，我们使用iframe来隔离样式
+                notice.style.padding = '0'; // 移除旁白自身的内边距，让iframe填满
+                notice.style.border = 'none'; // 移除边框
+                notice.style.background = 'transparent'; // 背景设为透明
+                notice.style.boxShadow = 'none'; // 移除阴影
+
+                const iframe = document.createElement('iframe');
+                iframe.srcdoc = msg.content;
+                iframe.style.width = '100%';
+                iframe.style.border = 'none';
+                iframe.style.borderRadius = '10px'; // 给iframe自己加圆角
+                iframe.scrolling = 'no';
+                
+                // 关键一步：加载后自动调整iframe高度以适应内容
+                iframe.onload = function() {
+                    try {
+                        const body = iframe.contentWindow.document.body;
+                        const html = iframe.contentWindow.document.documentElement;
+                        const height = Math.max(body.scrollHeight, body.offsetHeight, html.clientHeight, html.scrollHeight, html.offsetHeight);
+                        iframe.style.height = height + 'px';
+                    } catch (e) {
+                        console.error("无法调整iframe高度:", e);
+                    }
+                };
+
+                notice.innerHTML = `<div class="message-selector"><input type="checkbox" class="message-select-checkbox"></div>`;
+                notice.appendChild(iframe); // 将iframe添加到容器中
+            } else {
+                // 如果是普通文本，保持原样
+                notice.innerHTML = `<div class="message-selector"><input type="checkbox" class="message-select-checkbox"></div><span>${msg.content}</span>`;
+            }
+
             return notice;
         },
         
@@ -8996,6 +9037,175 @@ ${promptLines.join('\n')}
                 console.log(`--- ACTIVE REPLY PROMPT SENT TO AI ---\n`, finalPrompt);
                 return finalPrompt;
             },
+
+            async parseAndDisplayMixedAIResponse(text, chatId) {
+                // 这个新函数专门用于处理编辑后的、可能混合了普通和主动回复格式的文本
+                const contacts = await DBHelper.getAll('contacts');
+                const baseTimestamp = Date.now();
+                let timestampOffset = 0;
+                const displayableMessages = [];
+                const messagesToSave = [];
+                const contactUpdates = {};
+
+                const createBaseMessage = (senderName, isAutoReply = false, displayTimestamp = null) => {
+                    const sender = contacts.find(c => c.name === senderName);
+                    if (!sender) {
+                        console.warn(`未在通讯录中找到名为 "${senderName}" 的角色，跳过此消息。`);
+                        return null;
+                    }
+                    return {
+                        messageId: Utils.generateId('msg'),
+                        chatId: chatId,
+                        senderId: sender.id,
+                        timestamp: baseTimestamp + timestampOffset++,
+                        type: 'received',
+                        isUnread: chatId !== appState.currentChatId,
+                        isAutoReply: isAutoReply,
+                        displayTimestamp: displayTimestamp,
+                    };
+                };
+
+                const allMessageRegex = /『([^』]+?)』|【([^】]+?)】|「([^」]+?)」|{([^{}]+?)}|\[([\s\S]+?)\]|<([^>]+?)>/g;
+
+                text.replace(allMessageRegex, (match, cardContent, innerVoiceContent, essayContent, retractedContent, standardContent, emojiContent) => {
+                    if (innerVoiceContent || essayContent) {
+                        const content = innerVoiceContent || essayContent;
+                        const parts = content.split('|').map(p => p.trim());
+                        if (parts.length < 3) return;
+
+                        const type = parts[0];
+                        const senderName = parts[1];
+                        const msgContent = parts.slice(2).join('|');
+                        const sender = contacts.find(c => c.name === senderName);
+                        if (!sender) return;
+
+                        let message;
+                        if (type === '心声') {
+                            message = { messageId: Utils.generateId('msg'), chatId: chatId, senderId: sender.id, content: msgContent, timestamp: baseTimestamp + timestampOffset++, type: 'received', isUnread: false, segmentType: 'inner_voice' };
+                            if (!contactUpdates[sender.id]) contactUpdates[sender.id] = {};
+                            contactUpdates[sender.id].lastInnerVoiceId = message.messageId;
+                        } else if (type === '随笔') {
+                            message = { messageId: Utils.generateId('msg'), chatId: chatId, senderId: sender.id, content: msgContent, timestamp: baseTimestamp + timestampOffset++, type: 'received', isUnread: false, segmentType: 'essay' };
+                            if (!contactUpdates[sender.id]) contactUpdates[sender.id] = {};
+                            contactUpdates[sender.id].lastEssayId = message.messageId;
+                            UIManager.showEssayNotification(sender.remark || sender.name, sender.id);
+                        }
+                        if (message) messagesToSave.push(message);
+                        return;
+                    }
+
+                    let innerContent, bracketType;
+                    if (cardContent) { bracketType = '『'; innerContent = cardContent; }
+                    else if (retractedContent) { bracketType = '{'; innerContent = retractedContent; }
+                    else if (standardContent) { bracketType = '['; innerContent = standardContent; }
+                    else if (emojiContent) { bracketType = '<'; innerContent = emojiContent; }
+                    else { return; }
+
+                    const parts = innerContent.split('|').map(p => p.trim());
+                    if (parts.length < 2) return;
+                    
+                    const senderName = parts[0];
+                    const lastPart = parts[parts.length - 1];
+                    const timeRegex = /^(\d{1,2}\/\d{1,2}\s+)?\d{1,2}:\d{2}$/;
+                    let isAutoReply = timeRegex.test(lastPart);
+                    let displayTimestamp = isAutoReply ? lastPart : null;
+
+                    const baseMessage = createBaseMessage(senderName, isAutoReply, displayTimestamp);
+                    if (!baseMessage) return;
+
+                    baseMessage.isRetracted = bracketType === '{';
+                    baseMessage.toBeRetracted = bracketType === '{';
+
+                    const contentParts = isAutoReply ? parts.slice(1, -1) : parts.slice(1);
+
+                    if (bracketType === '『') {
+                        if(contentParts.length < 4) return;
+                        baseMessage.segmentType = 'card';
+                        baseMessage.content = `[卡片] ${contentParts[1]}`;
+                        baseMessage.cardData = { shareType: contentParts[0], title: contentParts[1], summary: contentParts[2], details: contentParts[3], isExpanded: false };
+                    } else if (bracketType === '<') {
+                        baseMessage.segmentType = 'emoji-image';
+                        baseMessage.content = contentParts[0];
+                    } else { // '[' or '{'
+                        if (contentParts.length === 1) {
+                            baseMessage.segmentType = 'text';
+                            baseMessage.content = contentParts[0];
+                        } else {
+                            const typeKeyword = contentParts[0];
+                            switch (typeKeyword) {
+                                case '语音':
+                                    baseMessage.segmentType = 'voice';
+                                    baseMessage.content = `[语音] ${contentParts[2]}`;
+                                    baseMessage.cardData = { duration: contentParts[1], content: contentParts[2] };
+                                    break;
+                                case '引用':
+                                    baseMessage.segmentType = 'quote';
+                                    baseMessage.content = `[引用] ${contentParts[3]}`;
+                                    baseMessage.cardData = { quotedName: contentParts[1], quotedContent: contentParts[2], newContent: contentParts[3] };
+                                    break;
+                                default:
+                                    baseMessage.segmentType = 'text';
+                                    baseMessage.content = contentParts.join('|');
+                                    break;
+                            }
+                        }
+                    }
+
+                    if (baseMessage.segmentType) {
+                        messagesToSave.push(baseMessage);
+                        displayableMessages.push(baseMessage);
+                    }
+                });
+
+                await DBHelper.batchPut('messages', messagesToSave);
+
+                for (const [contactId, updates] of Object.entries(contactUpdates)) {
+                    const contactToUpdate = await DBHelper.get('contacts', contactId);
+                    if (contactToUpdate) {
+                        Object.assign(contactToUpdate, updates);
+                        await DBHelper.put('contacts', contactToUpdate);
+                    }
+                }
+
+                if (displayableMessages.length > 0) {
+                    const lastDisplayableMsg = displayableMessages[displayableMessages.length - 1];
+                    const isUnread = chatId !== appState.currentChatId;
+                    await UIManager.updateChatMetadata(chatId, lastDisplayableMsg, isUnread ? displayableMessages.length : 0);
+                }
+                
+                let lastTimestamp = 0;
+                for (const msg of displayableMessages) {
+                    await new Promise(resolve => setTimeout(resolve, Math.random() * 400 + 200));
+
+                    const senderForDisplay = contacts.find(c => c.id === msg.senderId) || { name: '未知用户' };
+
+                    if (chatId === appState.currentChatId) {
+                        if (lastTimestamp > 0 && msg.timestamp - lastTimestamp > 5 * 60 * 1000) {
+                            chatArea.appendChild(UIManager.createTimeDividerElement(msg.timestamp));
+                        }
+                        await UIManager.addMessageToDOM(msg, senderForDisplay, false, true);
+                        if (msg.toBeRetracted) {
+                            setTimeout(async () => {
+                                const msgToRetract = await DBHelper.get('messages', msg.messageId);
+                                if (msgToRetract) {
+                                    msgToRetract.isRetracted = true;
+                                    await DBHelper.put('messages', msgToRetract);
+                                    const bubbleEl = $(`#${msg.messageId}`);
+                                    if (bubbleEl) {
+                                        bubbleEl.replaceWith(UIManager.createRetractionNotice(msgToRetract, senderForDisplay));
+                                    }
+                                }
+                            }, Math.random() * 1000 + 1000);
+                        }
+                        chatArea.scrollTop = chatArea.scrollHeight;
+                        lastTimestamp = msg.timestamp;
+                    } else {
+                        msg.senderInfo = senderForDisplay;
+                        UIManager.showTopNotification(msg);
+                    }
+                }
+            },
+
             async handleRegenerateRequest(messageId) {
                 const confirmation = await new Promise(resolve => {
                     UIManager.showModal({
@@ -9100,7 +9310,22 @@ ${promptLines.join('\n')}
                 }
 
                 try {
-                    const aiRawResponse = await this.getApiResponse(newPrompt, null, this.abortController.signal); 
+                    const messagesForImageCheck = await DBHelper.getMessages(chatId, 15);
+                    const imagesForApi = [];
+                    
+                    for (let i = messagesForImageCheck.length - 1; i >= 0; i--) {
+                        const msg = messagesForImageCheck[i];
+                        if (msg.type === 'sent' && msg.messageId !== messageId) { 
+                            if (msg.segmentType === 'image_vision') {
+                                imagesForApi.push({ base64: msg.cardData.base64 });
+                            }
+                        } else if (msg.messageId === messageId) {
+                            
+                            break; 
+                        }
+                    }
+
+                    const aiRawResponse = await this.getApiResponse(newPrompt, imagesForApi.reverse(), this.abortController.signal);
                     
                     const metadata = await DBHelper.get('chatMetadata', chatId) || { chatId: chatId };
                     metadata.lastRawAiResponse = aiRawResponse;
@@ -12004,6 +12229,12 @@ for (const member of selectedMembers) {
                     case 'text':
                         quotedContentText = quotedMsg.content;
                         break;
+                    case 'card':
+                        quotedContentText = `[卡片消息] ${quotedMsg.cardData.title}`;
+                        break;
+                    case 'image_vision':
+                        quotedContentText = '[图片]';
+                        break;
                     case 'quote':
                         quotedContentText = quotedMsg.cardData.newContent;
                         break;
@@ -12011,7 +12242,9 @@ for (const member of selectedMembers) {
                         quotedContentText = '[语音]';
                         break;
                     case 'emoji-image':
-                        quotedContentText = '[表情包]';
+                        const emojiId = quotedMsg.content;
+                        const emojiDesc = appState.playerEmojiMap[emojiId] || '未知表情';
+                        quotedContentText = `[表情] ${emojiDesc}`;
                         break;
                     case 'image_simulated':
                         quotedContentText = '[图片]';
@@ -12826,6 +13059,12 @@ if (entity && entity.autoSummaryEnabled && summaryInterval > 0 && appState.curre
                     case 'text':
                         quotedContentText = messageData.content;
                         break;
+                    case 'card':
+                        quotedContentText = `[卡片消息] ${messageData.cardData.title}`;
+                        break;
+                    case 'image_vision':
+                        quotedContentText = '[图片]';
+                        break;
                     case 'quote':
                         quotedContentText = messageData.cardData.newContent;
                         break;
@@ -12833,7 +13072,9 @@ if (entity && entity.autoSummaryEnabled && summaryInterval > 0 && appState.curre
                         quotedContentText = '[语音]';
                         break;
                     case 'emoji-image':
-                        quotedContentText = '[表情包]';
+                        const emojiId = messageData.content;
+                        const emojiDesc = appState.playerEmojiMap[emojiId] || '未知表情';
+                        quotedContentText = `[表情] ${emojiDesc}`;
                         break;
                     case 'image_simulated':
                         quotedContentText = '[图片]';
@@ -20594,14 +20835,8 @@ async showGiftDetailsModal(messageId) {
 
                             
                             
-                            const isActiveReplyFormat = /\|\s*(\d{1,2}\/\d{1,2}\s+)?\d{1,2}:\d{2}\s*[\]>』]$/.test(editedText.trim());
-                            if (isActiveReplyFormat) {
-                                console.log("检测到主动回复格式，使用 active parser");
-                                await AIHandler.parseAndDisplayActiveAIResponse(editedText, chatId);
-                            } else {
-                                console.log("使用标准回复格式 parser");
-                                await AIHandler.parseAndDisplayAIResponse(editedText, chatId);
-                            }
+                            console.log("使用混合模式解析器处理编辑后的回复...");
+                            await AIHandler.parseAndDisplayMixedAIResponse(editedText, chatId);
                             
                             UIManager.showToast("回复已成功修改！");
                         }}
