@@ -4314,7 +4314,7 @@
     <div id="splash-screen">
         <div class="splash-logo">33聊天室</div>
         <div class="splash-loader"></div>
-        <p style="position: absolute; bottom: 20px; font-size: 12px; color: #aaa; user-select: none;">此聊天室(v2.0.4)由33制作，xhs:@回风</p>
+        <p style="position: absolute; bottom: 20px; font-size: 12px; color: #aaa; user-select: none;">此聊天室(gt版v2.0.5)由33制作，xhs:@回风</p>
     </div>
     <div id="app-container">
         <!-- 顶部浮窗通知容器 -->
@@ -13505,14 +13505,22 @@ if (entity && entity.autoSummaryEnabled && summaryInterval > 0 && appState.curre
                             
                             const exportData = presetsToExport;
                             const jsonString = JSON.stringify(exportData, null, 2);
-                            const blob = new Blob([jsonString], { type: 'application/json' });
-                            const url = URL.createObjectURL(blob);
 
-                            UIManager.showModal({
-                                title: '文件已生成',
-                                body: `<a href="${url}" download="${filename}" class="modal-btn btn-primary" style="display: block; text-align: center;">点击下载预设文件</a>`,
-                                actions: [{ text: '关闭', class: 'btn-secondary', handler: () => { URL.revokeObjectURL(url); UIManager.hideModal(); } }]
-                            });
+                            // 【关键修改】调用安卓桥梁来保存文件
+                            if (window.Android && typeof window.Android.saveDataToFile === 'function') {
+                                window.Android.saveDataToFile(jsonString, filename);
+                                UIManager.hideModal(); // 直接关闭选择框
+                                UIManager.showToast("正在调用系统保存...");
+                            } else {
+                                // 浏览器环境下的备用方案
+                                const blob = new Blob([jsonString], { type: 'application/json' });
+                                const url = URL.createObjectURL(blob);
+                                UIManager.showModal({
+                                    title: '文件已生成 (Web)',
+                                    body: `<a href="${url}" download="${filename}" class="modal-btn btn-primary" style="display: block; text-align: center;">点击下载预设文件</a>`,
+                                    actions: [{ text: '关闭', class: 'btn-secondary', handler: () => { URL.revokeObjectURL(url); UIManager.hideModal(); } }]
+                                });
+                            }
                         }}
                     ]
                 });
@@ -14590,27 +14598,21 @@ if (entity && entity.autoSummaryEnabled && summaryInterval > 0 && appState.curre
 
                 const filename = `${targetEntity.name}_${new Date().toISOString().slice(0, 10)}.json`;
                 const jsonString = JSON.stringify(exportData, null, 2);
-                const blob = new Blob([jsonString], { type: 'application/json' });
-                const url = URL.createObjectURL(blob);
                 
-                UIManager.showModal({
-                    title: '文件已生成',
-                    body: `
-                        <p>请点击下面的链接下载文件。</p>
-                        <a href="${url}" download="${filename}" class="modal-btn btn-primary" style="display: block; text-align: center; margin-top: 20px;">
-                            点击下载 ${filename}
-                        </a>
-                        <p style="font-size: 0.8rem; color: #aaa; text-align: center; margin-top: 15px;">(下载后此链接将失效)</p>
-                    `,
-                    actions: [{
-                        text: '关闭',
-                        class: 'btn-secondary',
-                        handler: () => {
-                            URL.revokeObjectURL(url); 
-                            UIManager.hideModal();
-                        }
-                    }]
-                });
+                // 【关键修改】调用我们在Java中定义的桥梁函数
+                if (window.Android && typeof window.Android.saveDataToFile === 'function') {
+                    window.Android.saveDataToFile(jsonString, filename);
+                    UIManager.hideModal(); // 隐藏“正在生成”的提示框
+                } else {
+                    // 如果不在App环境，保留原始的浏览器下载逻辑作为备用
+                    const blob = new Blob([jsonString], { type: 'application/json' });
+                    const url = URL.createObjectURL(blob);
+                    UIManager.showModal({
+                        title: '文件已生成 (Web)',
+                        body: `<a href="${url}" download="${filename}" class="modal-btn btn-primary" style="display: block; text-align: center;">点击下载 ${filename}</a>`,
+                        actions: [{ text: '关闭', class: 'btn-secondary', handler: () => { URL.revokeObjectURL(url); UIManager.hideModal(); }}]
+                    });
+                }
             },
 
             async reconstructChatHistory(chatHistory, participants) {
@@ -14867,24 +14869,16 @@ if (entity && entity.autoSummaryEnabled && summaryInterval > 0 && appState.curre
                 };
 
                 try {
-                    const jsonParts = [];
-                    jsonParts.push('{"version":"1.0.0","createdAt":"' + new Date().toISOString() + '","data":{');
-                    let isFirstDataPart = true;
-
-                    const appendDataPart = (key, data) => {
-                        if (exportState.isCancelled) throw new Error("Export cancelled by user.");
-                        if (!isFirstDataPart) {
-                            jsonParts.push(',');
-                        }
-                        jsonParts.push(`"${key}":${JSON.stringify(data, null, 2)}`);
-                        isFirstDataPart = false;
+                    const dataToExport = {
+                        version: "1.0.0",
+                        createdAt: new Date().toISOString(),
+                        data: {}
                     };
-
+                    
                     const processSimplePart = async (partName, progressStart, progressEnd, taskName, getDataFunc) => {
                          if (partsToExport.includes(partName)) {
                             updateProgress(`正在读取 ${taskName}...`, progressStart);
-                            const data = await getDataFunc();
-                            appendDataPart(partName, data);
+                            dataToExport.data[partName] = await getDataFunc();
                         }
                         updateProgress(`处理完成: ${taskName}`, progressEnd);
                         await new Promise(resolve => setTimeout(resolve, 50));
@@ -14892,9 +14886,9 @@ if (entity && entity.autoSummaryEnabled && summaryInterval > 0 && appState.curre
 
                     if (partsToExport.includes('characters')) {
                         updateProgress("正在读取角色与群聊数据...", 0);
-                        appendDataPart('contacts', await DBHelper.getAll('contacts'));
-                        appendDataPart('groups', await DBHelper.getAll('groups'));
-                        appendDataPart('friendFolders', await DBHelper.getAll('friendFolders'));
+                        dataToExport.data.contacts = await DBHelper.getAll('contacts');
+                        dataToExport.data.groups = await DBHelper.getAll('groups');
+                        dataToExport.data.friendFolders = await DBHelper.getAll('friendFolders');
                         updateProgress("处理完成: 角色与群聊数据", 10);
                         await new Promise(resolve => setTimeout(resolve, 50));
                     }
@@ -14903,102 +14897,48 @@ if (entity && entity.autoSummaryEnabled && summaryInterval > 0 && appState.curre
                         updateProgress("正在读取玩家数据...", 10);
                         const fullProfile = await DBHelper.get('profile', 'myProfile');
                         if (fullProfile) {
-                            
                             const profileToExport = {
-                                id: fullProfile.id,
-                                name: fullProfile.name,
-                                gender: fullProfile.gender,
-                                avatar: fullProfile.avatar,
-                                background: fullProfile.background,
-                                patAction: fullProfile.patAction,
-                                patContent: fullProfile.patContent,
+                                id: fullProfile.id, name: fullProfile.name, gender: fullProfile.gender,
+                                avatar: fullProfile.avatar, background: fullProfile.background,
+                                patAction: fullProfile.patAction, patContent: fullProfile.patContent,
                                 favoriteEmojis: fullProfile.favoriteEmojis,
-                                
                             };
-
-                            if (partsToExport.includes('player')) {
-                                profileToExport.presets = fullProfile.presets || [];
-                            }
-
-                            if (partsToExport.includes('emojis')) {
-                                profileToExport.customEmojis = fullProfile.customEmojis || {};
-                            }
-
-                            appendDataPart('profile', profileToExport);
+                            if (partsToExport.includes('player')) profileToExport.presets = fullProfile.presets || [];
+                            if (partsToExport.includes('emojis')) profileToExport.customEmojis = fullProfile.customEmojis || {};
+                            dataToExport.data.profile = profileToExport;
                         }
                         updateProgress("处理完成: 玩家数据", 25);
                         await new Promise(resolve => setTimeout(resolve, 50));
                     }
-
-
+                    
                     if (partsToExport.includes('moments')) {
                         updateProgress("正在读取朋友圈数据...", 20);
-                        appendDataPart('circles', await DBHelper.getAll('circles'));
-                        appendDataPart('moments', await DBHelper.getAll('moments'));
+                        dataToExport.data.circles = await DBHelper.getAll('circles');
+                        dataToExport.data.moments = await DBHelper.getAll('moments');
                         updateProgress("处理完成: 朋友圈数据", 30);
                         await new Promise(resolve => setTimeout(resolve, 50));
                     }
 
                     await processSimplePart('themeSettings', 30, 40, "主题设置", () => DBHelper.get('apiConfig', 'themeSettings'));
-                    
+
                     if (partsToExport.includes('others')) {
                         updateProgress("正在读取其他配置...", 40);
-                        appendDataPart('prompts', await DBHelper.getAll('prompts'));
-                        appendDataPart('promptFolders', await DBHelper.getAll('promptFolders'));
-                        appendDataPart('openingScenes', await DBHelper.getAll('openingScenes'));
+                        dataToExport.data.prompts = await DBHelper.getAll('prompts');
+                        dataToExport.data.promptFolders = await DBHelper.getAll('promptFolders');
+                        dataToExport.data.openingScenes = await DBHelper.getAll('openingScenes');
                         const giftConfig = await DBHelper.get('giftApiConfig', 'mainConfig');
                         if (giftConfig) {
                             delete giftConfig.key;
-                            appendDataPart('giftApiConfig', giftConfig);
+                            dataToExport.data.giftApiConfig = giftConfig;
                         }
                         const apiConfig = await DBHelper.get('apiConfig', 'mainConfig');
                         if (apiConfig) {
-                            
                             delete apiConfig.keys;
-                            appendDataPart('apiConfig', apiConfig);
+                            dataToExport.data.apiConfig = apiConfig;
                         }
                         updateProgress("处理完成: 其他配置", 50);
                         await new Promise(resolve => setTimeout(resolve, 50));
                     }
-
-                    const processStoreWithCursor = (storeName, progressStart, progressEnd) => {
-                        return new Promise((resolve, reject) => {
-                            if (!partsToExport.includes('history')) return resolve();
-
-                            updateProgress(`正在打包 ${storeName}... (这可能需要一些时间)`, progressStart);
-                            if (!isFirstDataPart) jsonParts.push(',');
-                            jsonParts.push(`"${storeName}":[`);
-
-                            const transaction = DBHelper.db.transaction([storeName], 'readonly');
-                            const store = transaction.objectStore(storeName);
-                            let isFirstItem = true;
-                            let count = 0;
-
-                            store.openCursor().onsuccess = (e) => {
-                                if (exportState.isCancelled) {
-                                    transaction.abort();
-                                    return reject(new Error("Export cancelled by user."));
-                                }
-                                const cursor = e.target.result;
-                                if (cursor) {
-                                    if (!isFirstItem) jsonParts.push(',');
-                                    jsonParts.push(JSON.stringify(cursor.value));
-                                    isFirstItem = false;
-                                    count++;
-                                    if(count % 1000 === 0) { 
-                                        updateProgress(`正在打包 ${storeName}: ${count}条...`, progressStart);
-                                    }
-                                    cursor.continue();
-                                } else {
-                                    jsonParts.push(']');
-                                    isFirstDataPart = false;
-                                    updateProgress(`处理完成: ${storeName}`, progressEnd);
-                                    resolve();
-                                }
-                            };
-                            transaction.onerror = (e) => reject(new Error(`读取 ${storeName} 失败: ${e.target.error}`));
-                        });
-                    };
 
                     if (partsToExport.includes('history')) {
                         updateProgress(`正在准备导出聊天记录...`, 50);
@@ -15006,43 +14946,46 @@ if (entity && entity.autoSummaryEnabled && summaryInterval > 0 && appState.curre
                         const allChatIds = allMetadata.map(meta => meta.chatId);
                         let allMessagesForExport = [];
                         let processedChats = 0;
-
                         for (const chatId of allChatIds) {
                             if (exportState.isCancelled) throw new Error("Export cancelled by user.");
-                            
                             const messages = await DBHelper.getMessages(chatId, 200);
                             allMessagesForExport.push(...messages);
-
                             processedChats++;
                             const progress = 50 + (processedChats / allChatIds.length) * 40;
                             updateProgress(`正在打包聊天记录 (${processedChats}/${allChatIds.length})...`, progress);
                         }
-                        
                         updateProgress(`正在清理数据...`, 91);
-                        allMessagesForExport.forEach(msg => {
-                            if (msg.senderInfo) {
-                                delete msg.senderInfo;
-                            }
-                        });
-                        
-                        appendDataPart('messages', allMessagesForExport);
+                        allMessagesForExport.forEach(msg => { if (msg.senderInfo) delete msg.senderInfo; });
+                        dataToExport.data.messages = allMessagesForExport;
                         updateProgress("处理完成: 聊天记录", 95);
                         await new Promise(resolve => setTimeout(resolve, 50));
                     }
-                    await processStoreWithCursor('chatMetadata', 95, 98);
+
+                    if(partsToExport.includes('history')) {
+                        updateProgress("正在打包元数据...", 95);
+                        dataToExport.data.chatMetadata = await DBHelper.getAll('chatMetadata');
+                        updateProgress("处理完成: 元数据", 98);
+                        await new Promise(resolve => setTimeout(resolve, 50));
+                    }
 
                     updateProgress("正在生成文件...", 98);
-                    jsonParts.push('}}');
-
-                    const blob = new Blob(jsonParts, { type: 'application/json' });
-                    const url = URL.createObjectURL(blob);
+                    const jsonString = JSON.stringify(dataToExport, null, 2);
                     const filename = `33聊天室_备份_${new Date().toISOString().slice(0, 10)}.json`;
-
-                    UIManager.showModal({
-                        title: '导出成功',
-                        body: `<a href="${url}" download="${filename}" class="modal-btn btn-primary" style="display: block; text-align: center;">点击下载备份文件</a>`,
-                        actions: [{ text: '关闭', class: 'btn-secondary', handler: () => { URL.revokeObjectURL(url); UIManager.hideModal(); } }]
-                    });
+                    
+                    // 【关键修改】调用安卓桥梁来保存文件
+                    if (window.Android && typeof window.Android.saveDataToFile === 'function') {
+                        window.Android.saveDataToFile(jsonString, filename);
+                        UIManager.hideModal();
+                    } else {
+                        // 浏览器环境下的备用方案
+                        const blob = new Blob([jsonString], { type: 'application/json' });
+                        const url = URL.createObjectURL(blob);
+                        UIManager.showModal({
+                            title: '导出成功 (Web)',
+                            body: `<a href="${url}" download="${filename}" class="modal-btn btn-primary">点击下载备份文件</a>`,
+                            actions: [{ text: '关闭', class: 'btn-secondary', handler: () => { URL.revokeObjectURL(url); UIManager.hideModal(); } }]
+                        });
+                    }
 
                 } catch (error) {
                     if (error.message.includes("cancelled")) {
@@ -19364,27 +19307,35 @@ handleImmediateSummary(entityId, isGroup) {
                             };
                             
                             const jsonString = JSON.stringify(exportData, null, 2);
-                            const blob = new Blob([jsonString], {type: "application/json"});
-                            const url = URL.createObjectURL(blob);
                             
-                            UIManager.showModal({
-                                title: '文件已生成',
-                                body: `
-                                    <p>请点击下面的链接下载文件。</p>
-                                    <a href="${url}" download="${finalFilename}" class="modal-btn btn-primary" style="display: block; text-align: center; margin-top: 20px;">
-                                        点击下载 ${finalFilename}
-                                    </a>
-                                    <p style="font-size: 0.8rem; color: #aaa; text-align: center; margin-top: 15px;">(下载后此链接将失效)</p>
-                                `,
-                                actions: [{
-                                    text: '关闭',
-                                    class: 'btn-secondary',
-                                    handler: () => {
-                                        URL.revokeObjectURL(url);
-                                        UIManager.hideModal();
-                                    }
-                                }]
-                            });
+                            // 【关键修改】调用安卓桥梁来保存文件
+                            if (window.Android && typeof window.Android.saveDataToFile === 'function') {
+                                window.Android.saveDataToFile(jsonString, finalFilename);
+                                UIManager.hideModal(); // 直接关闭选择框
+                                UIManager.showToast("正在调用系统保存...");
+                            } else {
+                                // 浏览器环境下的备用方案
+                                const blob = new Blob([jsonString], {type: "application/json"});
+                                const url = URL.createObjectURL(blob);
+                                UIManager.showModal({
+                                    title: '文件已生成 (Web)',
+                                    body: `
+                                        <p>请点击下面的链接下载文件。</p>
+                                        <a href="${url}" download="${finalFilename}" class="modal-btn btn-primary" style="display: block; text-align: center; margin-top: 20px;">
+                                            点击下载 ${finalFilename}
+                                        </a>
+                                        <p style="font-size: 0.8rem; color: #aaa; text-align: center; margin-top: 15px;">(下载后此链接将失效)</p>
+                                    `,
+                                    actions: [{
+                                        text: '关闭',
+                                        class: 'btn-secondary',
+                                        handler: () => {
+                                            URL.revokeObjectURL(url);
+                                            UIManager.hideModal();
+                                        }
+                                    }]
+                                });
+                            }
                         }}
                     ]
                 });
