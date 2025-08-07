@@ -3237,7 +3237,61 @@
             opacity: 0.8;
         }
 
-        /* --- 2. 新版红包样式 --- */
+        /* --- 2. 新版红包样式 (已修改) --- */
+        /* 开红包弹窗样式 (新增) */
+        .rp-modal-body {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px 0;
+            text-align: center;
+        }
+        .rp-modal-body img {
+            width: 60px;
+            height: 60px;
+            border-radius: 8px;
+            margin-bottom: 12px;
+        }
+        .rp-modal-body h4 {
+            font-size: 1.1rem;
+            margin-bottom: 8px;
+        }
+        .rp-modal-body p {
+            font-size: 0.9rem;
+            color: var(--text-color-medium);
+            margin-bottom: 25px;
+        }
+        .rp-modal-body .rp-open-btn {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            background-color: #F8D69A;
+            color: #DB5445;
+            border: none;
+            font-size: 2.5rem;
+            font-weight: bold;
+            cursor: pointer;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+            transition: transform 0.2s;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            animation: paw-pulse 2s infinite ease-in-out;
+        }
+        .rp-modal-body .rp-open-btn:hover {
+            transform: scale(1.05);
+        }
+        #rp-post-claim .rp-amount {
+            font-size: 2.2rem;
+            font-weight: bold;
+            color: var(--text-color-dark);
+            margin: 20px 0 10px;
+        }
+        #rp-post-claim .rp-claimed-info {
+            font-size: 0.9rem;
+            color: var(--text-color-light);
+            margin-bottom: 20px;
+        }
         .red-packet-v3-wrapper {
             width: 120px;
             height: 160px;
@@ -3247,20 +3301,22 @@
             width: 100%;
             height: 100%;
             border-radius: 12px;
-            box-shadow: 0 6px 20px rgba(0,0,0,0.15);
-            background-image: url('https://z.wiki/u/IDzEvp'); /* 已更换为新的默认封面 */
-            background-size: cover;
-            background-position: center;
+            box-shadow: 0 6px 20px rgba(220, 60, 40, 0.2);
+            background: var(--red-packet-red);
+            border: 1px solid rgba(255,255,255,0.2);
             position: relative;
             overflow: hidden;
             display: flex;
             flex-direction: column;
-            justify-content: flex-end; /* 让内容从底部开始对齐，为隐藏标题做准备 */
-            padding: 10px;
+            justify-content: flex-end;
+            padding: 12px;
             box-sizing: border-box;
+            color: var(--red-packet-gold);
         }
         .rp-title-v3 {
-            display: none; /* 已隐藏红包封面上的标题 */
+            font-size: 0.9rem;
+            font-weight: 500;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.2);
         }
         .open-button-v3 {
             width: 45px;
@@ -3272,22 +3328,20 @@
             align-items: center;
             font-size: 22px;
             color: var(--red-packet-red);
-            box-shadow: 0 0 10px rgba(0,0,0,0.2);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
             animation: paw-pulse 2s infinite ease-in-out;
-            align-self: center; /* 确保在 flex 布局中居中 */
-            margin-bottom: 5px; /* 调整与底部距离 */
+            align-self: center;
         }
         .claimed-overlay-v3 {
             position: absolute;
             top: 0; left: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(255, 255, 255, 0.7);
-            backdrop-filter: blur(2px);
+            width: 100%; height: 100%;
+            background-color: rgba(255, 255, 255, 0.2);
+            backdrop-filter: blur(2px) grayscale(0.5);
             display: flex;
             justify-content: center;
             align-items: center;
-            color: var(--red-packet-red);
+            color: rgba(255,255,255,0.8);
             font-weight: bold;
             font-size: 1rem;
             border-radius: 12px;
@@ -3299,8 +3353,28 @@
             opacity: 1;
         }
         .bubble.claimed .open-button-v3 {
-            display: none; /* 领取后隐藏按钮 */
+            display: none;
         }
+        .bubble.claimed .rp-cover-v3 {
+            background: linear-gradient(160deg, #d3d3d3, #b0b0b0);
+        }
+        
+        /* 红包详情弹窗样式 */
+        .rp-details-modal-body { max-height: 50vh; overflow-y: auto; padding: 15px; }
+        .rp-details-header { text-align: center; border-bottom: 1px solid var(--border-color); padding-bottom: 15px; margin-bottom: 10px; }
+        .rp-details-header img { width: 40px; height: 40px; border-radius: 8px; vertical-align: middle; margin-right: 8px; }
+        .rp-details-header span { font-size: 1rem; }
+        .rp-details-header p { font-size: 1.4rem; font-weight: bold; color: var(--text-color-dark); margin: 10px 0 0; }
+        .rp-claim-info-bar { font-size: 0.8rem; color: var(--text-color-light); padding: 8px 0; border-bottom: 1px solid var(--border-color); }
+        .rp-claim-list { list-style: none; padding: 0; margin-top: 10px; }
+        .rp-claim-item { display: flex; align-items: center; padding: 12px 5px; }
+        .rp-claim-item img { width: 40px; height: 40px; border-radius: 8px; margin-right: 15px; }
+        .rp-claim-item .claim-details { flex-grow: 1; }
+        .rp-claim-item .claim-name { font-weight: 500; }
+        .rp-claim-item .claim-time { font-size: 0.75rem; color: var(--text-color-light); margin-top: 4px; }
+        .rp-claim-item .claim-amount { font-weight: bold; font-size: 1.1rem; }
+        .rp-luck-king-tag { background: #FFD700; color: #A0522D; font-size: 0.7rem; font-weight: bold; padding: 2px 6px; border-radius: 8px; margin-left: 8px; }
+        .rp-luck-king-tag .fa-crown { margin-right: 4px; }
         
         /* --- 3. 左图右文卡片 (通用分享) --- */
         .card-type-2 { display: flex; align-items: center; }
@@ -3677,7 +3751,63 @@
         .pomodoro-notification-banner.is-playing .text-content {
             animation: show-text 1s cubic-bezier(0.65, 0, 0.35, 1) forwards;
         }
-
+        /* --- 8.5.2 视频通话浮窗 (新增) --- */
+        .video-call-notification-banner {
+            pointer-events: auto;
+            background-color: #333;
+            color: white;
+            border-radius: 16px;
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.2);
+            padding: 12px 18px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            width: fit-content;
+            max-width: 95%;
+            min-width: 300px;
+            opacity: 0;
+            transform: translateY(-20px) scale(0.95);
+            animation: notification-enter 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+        }
+        .video-call-notification-banner .caller-info {
+            flex-grow: 1;
+            overflow: hidden;
+        }
+        .video-call-notification-banner .caller-name {
+            font-weight: bold;
+        }
+        .video-call-notification-banner .caller-text {
+            font-size: 0.9rem;
+            opacity: 0.8;
+        }
+        .video-call-notification-banner .actions {
+            display: flex;
+            gap: 12px;
+        }
+        .video-call-notification-banner .action-btn {
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            border: none;
+            cursor: pointer;
+            font-size: 1.4rem;
+            color: white;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .video-call-notification-banner .action-btn:hover {
+            transform: scale(1.1);
+        }
+        .video-call-notification-banner .hangup {
+            background-color: #e74c3c;
+            box-shadow: 0 4px 10px rgba(231, 76, 60, 0.3);
+        }
+        .video-call-notification-banner .accept {
+            background-color: #2ecc71;
+            box-shadow: 0 4px 10px rgba(46, 204, 113, 0.3);
+        }
         /* --- 旁白设置选项样式 --- */
         .narrator-style-selector {
             display: flex;
@@ -4307,6 +4437,286 @@
             box-shadow: inset 0 2px 4px rgba(0,0,0,0.05), 0 0 0 3px rgba(167, 199, 231, 0.3); /* 聚焦效果 */
         }
 
+        /* --- 25. 视频通话页面 (新) --- */
+        #page-video-call {
+            background-color: #2c3e50;
+            color: white;
+            position: relative;
+            overflow: hidden;
+        }
+        .video-call-bg-avatar {
+            position: absolute;
+            top: -10%; left: -10%;
+            width: 120%; height: 120%;
+            object-fit: cover;
+            filter: blur(20px);
+            opacity: 0.3;
+            transform: scale(1.1);
+        }
+        .video-call-main-avatar-container {
+            position: absolute;
+            top: 35%; /* 修改：上移头像 */
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 60vw;
+            height: 60vw;
+            max-width: 250px;
+            max-height: 250px;
+            z-index: 1;
+        }
+        #video-call-main-avatar {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            border-radius: 18px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        }
+        .video-call-content-wrapper {
+            position: relative;
+            z-index: 2;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            padding: 15px;
+            /* 新增：为消息区域留出空间 */
+            padding-top: 55%; 
+            padding-bottom: 30px; 
+            box-sizing: border-box;
+        }
+        .video-call-top-bar {
+            position: absolute; /* 新增：让顶部栏浮动 */
+            top: 15px;
+            left: 15px;
+            right: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            flex-shrink: 0;
+            padding: 5px;
+            background: transparent;
+            border-radius: 12px;
+        }
+        #video-call-name { font-size: 1.2rem; } 
+        #video-call-timer { font-size: 0.9rem; color: #bdc3c7; }
+        .video-call-my-view {
+            width: 70px; 
+            height: 100px;
+            border-radius: 8px;
+            overflow: hidden;
+            border: 2px solid rgba(255,255,255,0.5);
+            background-color: rgba(0,0,0,0.3);
+        }
+        .video-call-my-view img { width: 100%; height: 100%; object-fit: cover; }
+        .video-call-waiting-overlay {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+        }
+        .video-call-waiting-overlay p {
+            font-size: 1.1rem;
+            color: #ecf0f1;
+            text-shadow: 1px 1px 5px rgba(0,0,0,0.5);
+        }
+        #video-call-messages {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column-reverse;
+            overflow-y: auto;
+            /* 移除：margin-top */
+            padding: 10px;
+            -webkit-overflow-scrolling: touch;
+        }
+        #video-call-messages::-webkit-scrollbar { display: none; }
+
+        .video-call-message-bubble {
+            padding: 10px 14px;
+            border-radius: 12px;
+            margin-bottom: 12px;
+            max-width: 85%;
+            line-height: 1.6;
+            white-space: pre-wrap;
+            animation: fadeIn 0.5s ease-out;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            align-self: center; 
+        }
+
+        /* 新增：不同颜色主题 */
+        .video-call-message-bubble.received.theme-default { background: rgba(255, 255, 255, 0.15); backdrop-filter: blur(5px); }
+        .video-call-message-bubble.sent.theme-default { background: rgba(167, 199, 231, 0.4); backdrop-filter: blur(5px); }
+        .video-call-message-bubble.theme-black { background: rgba(0, 0, 0, 0.5); color: white; backdrop-filter: blur(5px); }
+        .video-call-message-bubble.theme-white { background: rgba(255, 255, 255, 0.8); color: black; backdrop-filter: blur(5px); }
+        .video-call-message-bubble.error-bubble { background: rgba(220, 53, 69, 0.6); color: white; } /* 新增：错误消息样式 */
+        .video-call-message-bubble .regenerate-btn { /* 新增：重新生成按钮 */
+            background: rgba(255,255,255,0.2);
+            border: none;
+            color: white;
+            padding: 5px 10px;
+            border-radius: 5px;
+            margin-top: 8px;
+            cursor: pointer;
+            font-size: 0.8rem;
+        }
+
+
+        .video-call-typing-indicator {
+            align-self: center; 
+            margin-bottom: 12px;
+            display: none; 
+            gap: 5px;
+            align-items: center;
+            padding: 10px 15px;
+            background: rgba(255, 255, 255, 0.15);
+            border-radius: 12px;
+        }
+        .video-call-bottom-bar {
+            flex-shrink: 0;
+            margin-top: auto;
+            padding-bottom: 15px;
+        }
+        .video-call-input-area {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            opacity: 0;
+            visibility: hidden;
+            max-height: 0;
+            transition: all 0.3s ease;
+        }
+        .video-call-input-area.visible {
+            opacity: 1;
+            visibility: visible;
+            max-height: 120px; /* 增加最大高度 */
+        }
+        #video-call-input {
+            flex-grow: 1;
+            background: rgba(0,0,0,0.3);
+            border: 1px solid rgba(255,255,255,0.2);
+            border-radius: 20px;
+            padding: 10px 15px;
+            color: white;
+            outline: none;
+            resize: none; /* 禁止手动调整大小 */
+            font-family: inherit;
+            font-size: 1rem;
+            max-height: 100px; /* 限制最大高度 */
+        }
+        #video-call-send-btn {
+            background: var(--accent-color);
+            border: none;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            color: white;
+            font-size: 1.1rem;
+            cursor: pointer;
+            flex-shrink: 0;
+            align-self: flex-end; /* 对齐到文本域底部 */
+        }
+        .video-call-controls {
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+        }
+        .video-call-control-btn {
+            width: 60px; height: 60px; border-radius: 50%; border: none;
+            font-size: 1.8rem; cursor: pointer; color: white;
+            background: rgba(255,255,255,0.2);
+            transition: background-color 0.2s;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        .video-call-control-btn.hangup { background-color: #e74c3c; }
+        .video-call-control-btn:hover { background-color: rgba(255,255,255,0.3); }
+        .video-call-control-btn.hangup:hover { background-color: #c0392b; }
+        .video-call-control-btn.placeholder { visibility: hidden; }
+
+        .call-ended-notice {
+            align-self: center;
+            background: rgba(0, 0, 0, 0.1);
+            color: var(--text-color-white);
+            font-size: 0.75rem;
+            padding: 4px 10px;
+            border-radius: 10px;
+            margin: 5px 0;
+        }
+
+        /* --- 26. 通话记录页面 (新) --- */
+        #page-video-call-history .page-content,
+        #page-video-call-log-detail .page-content {
+            padding: 0;
+        }
+        .call-history-list {
+            list-style: none;
+        }
+        .call-history-item {
+            display: flex;
+            align-items: center;
+            padding: 12px 15px;
+            border-bottom: 1px solid var(--border-color);
+            cursor: pointer;
+        }
+        .call-history-item:hover {
+            background-color: rgba(0,0,0,0.03);
+        }
+        .call-history-item img {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            margin-right: 15px;
+        }
+        .call-history-info {
+            flex-grow: 1;
+        }
+        .call-history-name {
+            font-weight: bold;
+            font-size: 1.1rem;
+        }
+        .call-history-details {
+            font-size: 0.9rem;
+            color: var(--text-color-medium);
+            margin-top: 4px;
+        }
+        .call-history-time {
+            font-size: 0.8rem;
+            color: var(--text-color-light);
+        }
+        .call-history-actions {
+            display: flex;
+            align-items: center;
+            gap: 15px; /* 增加按钮间距 */
+            margin-left: 15px;
+        }
+
+        .call-history-actions .action-btn {
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 1.1rem; /* 增大图标尺寸 */
+            color: var(--text-color-light);
+            padding: 5px;
+            transition: color 0.2s, transform 0.2s;
+        }
+        .call-history-actions .action-btn:hover {
+            transform: scale(1.1);
+        }
+        .call-history-actions .action-btn.delete:hover {
+            color: #e74c3c;
+        }
+        .call-history-actions .action-btn.summarize:hover {
+            color: var(--accent-color);
+        }
+        #page-video-call-log-detail .page-content {
+            background-color: var(--theme-color-1);
+            padding: 15px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
 </style>
 </head>
 <body>
@@ -4314,7 +4724,7 @@
     <div id="splash-screen">
         <div class="splash-logo">33聊天室</div>
         <div class="splash-loader"></div>
-        <p style="position: absolute; bottom: 20px; font-size: 12px; color: #aaa; user-select: none;">此聊天室(gt版v2.0.5)由33制作，xhs:@回风</p>
+        <p style="position: absolute; bottom: 20px; font-size: 12px; color: #aaa; user-select: none;">此聊天室(v2.0.4)由33制作，xhs:@回风</p>
     </div>
     <div id="app-container">
         <!-- 顶部浮窗通知容器 -->
@@ -4539,6 +4949,7 @@
                             <button class="feature-btn" id="image-vision-btn" title="发送图片 (AI识图)"><i class="fas fa-camera"></i></button>
                             <button class="feature-btn" id="gift-btn" title="送礼物"><i class="fas fa-gift"></i></button>
                             <button class="feature-btn" id="card-btn" title="发送卡片"><i class="fas fa-share-square"></i></button>
+                            <button class="feature-btn" id="video-call-btn" title="视频通话"><i class="fas fa-video"></i></button>
                             <button class="feature-btn" id="edit-last-reply-btn" title="编辑最新AI回复"><i class="fas fa-pencil-alt"></i></button>
                             <button class="feature-btn" id="delete-last-turn-btn" title="删除最新一轮回复"><i class="fas fa-eraser"></i></button>
                         </div>
@@ -4612,6 +5023,12 @@
                         <div class="setting-item" id="nav-to-pomodoro">
                             <i class="fas fa-clock"></i>
                             <span>番茄钟</span>
+                            <i class="fas fa-chevron-right"></i>
+                        </div>
+
+                        <div class="setting-item" id="nav-to-call-history">
+                            <i class="fas fa-phone-alt"></i>
+                            <span>通话记录</span>
                             <i class="fas fa-chevron-right"></i>
                         </div>
 
@@ -4805,6 +5222,80 @@
                 </div>
             </div>
 
+            <!-- 视频通话页面 (新) -->
+            <div id="page-video-call" class="page">
+                <img id="video-call-bg-avatar" class="video-call-bg-avatar" src="">
+                <div class="video-call-main-avatar-container">
+                    <img id="video-call-main-avatar" src="">
+                </div>
+                
+                <div class="video-call-content-wrapper">
+                    <div class="video-call-top-bar">
+                        <div class="video-call-info">
+                            <h2 id="video-call-name"></h2>
+                            <span id="video-call-timer">00:00</span>
+                        </div>
+                        <button id="video-call-settings-btn" class="video-call-control-btn" style="width: 40px; height: 40px; font-size: 1.2rem; background: transparent; position: absolute; left: 5px; top: 50px; z-index: 10;">
+                            <i class="fas fa-palette"></i>
+                        </button>
+                        <div class="video-call-info">
+                            <h2 id="video-call-name"></h2>
+                        </div>
+                        <div class="video-call-my-view">
+                            <img id="video-call-my-avatar" src="">
+                        </div>
+                    </div>
+
+                    <div id="video-call-waiting-overlay" class="video-call-waiting-overlay">
+                        <p>正在等待对方接听...</p>
+                    </div>
+
+                    <div id="video-call-messages" class="video-call-messages">
+                        <div class="video-call-typing-indicator bubble received">
+                            <div class="typing-dot"></div>
+                            <div class="typing-dot"></div>
+                            <div class="typing-dot"></div>
+                        </div>
+                    </div>
+
+                    <div class="video-call-bottom-bar">
+                        <div id="video-call-input-area" class="video-call-input-area">
+                            <textarea id="video-call-input" placeholder="输入..." rows="1"></textarea>
+                            <button id="video-call-send-btn"><i class="fas fa-paper-plane"></i></button>
+                        </div>
+                        <div class="video-call-controls">
+                            <button id="video-call-toggle-input-btn" class="video-call-control-btn"><i class="fas fa-comment-dots"></i></button>
+                            <button id="video-call-hangup-btn" class="video-call-control-btn hangup"><i class="fas fa-phone-slash"></i></button>
+                            <button id="video-call-ai-reply-btn" class="video-call-control-btn" style="display: none;"><i class="fas fa-feather-alt"></i></button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 通话记录列表页面 (新) -->
+            <div id="page-video-call-history" class="page">
+                <div class="page-header">
+                    <div id="call-history-back-btn" class="header-icon"><i class="fas fa-chevron-left"></i></div>
+                    <h1>通话记录</h1>
+                </div>
+                <div class="page-content">
+                    <ul id="call-history-list" class="call-history-list">
+                        <!-- 通话记录将由JS动态生成 -->
+                    </ul>
+                </div>
+            </div>
+
+            <!-- 通话记录详情页面 (新) -->
+            <div id="page-video-call-log-detail" class="page">
+                <div class="page-header">
+                    <div id="call-log-detail-back-btn" class="header-icon"><i class="fas fa-chevron-left"></i></div>
+                    <h1 id="call-log-detail-title">通话记录</h1>
+                </div>
+                <div id="call-log-detail-content" class="page-content">
+                    <!-- 通话消息将由JS动态生成 -->
+                </div>
+            </div>
+
         </main>
 
             <!-- 转发历史页面 (新) -->
@@ -4896,6 +5387,7 @@
         const pages = {
             messages: $('#page-messages'),
             contacts: $('#page-contacts'),
+            'video-call': $('#page-video-call'),
             discover: $('#page-discover'),
             moments: $('#page-moments'),
             tutorial: $('#page-tutorial'),
@@ -4909,6 +5401,8 @@
             chat: $('#page-chat'),
             prompts: $('#page-prompts'),
             'forwarded-history': $('#page-forwarded-history'),
+            'video-call-history': $('#page-video-call-history'),
+            'video-call-log-detail': $('#page-video-call-log-detail'),
         };
 
         
@@ -4919,6 +5413,7 @@
         const messageInput = $('#message-input');
         const sendBtn = $('#send-btn');
         const chatBackBtn = $('#chat-back-btn');
+        const videoCallBtn = $('#video-call-btn');
         
         const emojiBtn = $('#emoji-btn');
         const voiceBtn = $('#voice-btn');
@@ -4942,6 +5437,20 @@
         const appState = {
             currentPage: 'messages',
             currentChatId: null,
+            currentVideoCallLogId: null,
+            videoCall: {
+                isActive: false,
+                isIncoming: false,
+                incomingCallTimeout: null,
+                aiFirstLine: '',
+                callInitiator: null, // 新增：记录通话发起方 ('player' 或 'ai')
+                startTime: null,
+                timerId: null,
+                targetId: null,
+                instantReply: true,
+                bubbleTheme: 'default',
+                pendingPlayerMessages: [],
+            },
             currentCircleId: null, 
             momentsLastRefresh: 0, 
             theme: 'neumorphic',
@@ -4995,7 +5504,7 @@
 
             async init() {
                 
-                this.DB_VERSION = 20;
+                this.DB_VERSION = 21;
 
                 return new Promise((resolve, reject) => {
                     if (this.db) {
@@ -5163,6 +5672,16 @@
                             
                         }
                         
+                        if (event.oldVersion < 21) {
+                            console.log("数据库升级至版本 21: 创建 videoCallLogs 表...");
+                            if (!db.objectStoreNames.contains('videoCallLogs')) {
+                                const store = db.createObjectStore('videoCallLogs', { keyPath: 'id' });
+                                store.createIndex('by_contact', 'contactId', { unique: false });
+                                store.createIndex('by_time', 'startTime', { unique: false });
+                            }
+                        }
+                        
+
                         console.log("数据库升级完成");
                     };
                 });
@@ -5501,9 +6020,12 @@
         },
        async navigateTo(pageId, fromPage = null) {
             if (!pages[pageId]) return;
-
+            if (appState.videoCall.isActive && pageId !== 'video-call') {
+                this.showToast("请先结束视频通话");
+                return;
+            }
             
-            if (['chat', 'prompts', 'moments', 'tutorial', 'pomodoro', 'gifts', 'forwarded-history'].includes(pageId)) { 
+            if (['chat', 'prompts', 'moments', 'tutorial', 'pomodoro', 'gifts', 'forwarded-history', 'video-call', 'video-call-history', 'video-call-log-detail'].includes(pageId)) {
                 bottomNav.style.display = 'none';
             } else {
                 bottomNav.style.display = 'flex';
@@ -6212,13 +6734,13 @@
                         if (msg.cardData.isClaimedByPlayer) bubbleClass += ' claimed';
                         {
                             const themeSettings = await DBHelper.get('apiConfig', 'themeSettings') || {};
-                            const defaultCover = 'https://z.wiki/u/IDzEvp';
+                            const defaultCover = 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxIiBoZWlnaHQ9IjEiPjxyZWN0IHdpZHRoPSIxIiBoZWlnaHQ9IjEiIGZpbGw9IiNEQjU0NDUiLz48L3N2Zz4=';
                             const rpCover = themeSettings.redPacketCover || defaultCover;
                             
                             bubbleContent = `
                                 <div class="red-packet-v3-wrapper">
                                     <div class="rp-cover-v3" style="background-image: url('${rpCover}');">
-                                        <h4 class="rp-title-v3">${msg.cardData.title}</h4>
+                                        
                                         <div class="open-button-v3">
                                             <i class="fas fa-paw"></i>
                                         </div>
@@ -6286,6 +6808,20 @@
                                 <h4 class="card-title">[转发] ${msg.cardData.title}</h4>
                                 <p class="card-preview">${msg.cardData.content}</p>
                                 <div class="card-footer">转发</div>
+                            </div>
+                        `;
+                        break;
+                    case 'video_call_log':
+                        bubbleClass += ' card-bubble video-call-log-bubble'; // 复用卡片样式
+                        bubbleContent = `
+                            <div class="card-message-wrapper card-type-3" data-log-id="${msg.cardData.logId}">
+                                <div class="card-icon-area" style="background-color: var(--accent-color);">
+                                    <i class="fas fa-video"></i>
+                                </div>
+                                <div class="card-content">
+                                    <h4>${msg.cardData.title}</h4>
+                                    <p>通话时长 ${msg.cardData.durationString}</p>
+                                </div>
                             </div>
                         `;
                         break;
@@ -6421,6 +6957,11 @@
             let messageElement;
             if (msg.segmentType === 'system') {
                 messageElement = document.createElement('div');
+                if (msg.content && msg.content.startsWith('[通话已结束')) {
+                    messageElement.className = 'call-ended-notice';
+                } else {
+                    messageElement.className = 'system-notice';
+                }
                 messageElement.className = 'system-notice';
                 messageElement.id = msg.messageId;
                 messageElement.textContent = msg.content;
@@ -6456,6 +6997,62 @@
             timeDiv.textContent = Utils.formatTimestampSmartly(timestamp);
             return timeDiv;
         },
+
+            async renderVideoCallPage(target, myProfile, isWaiting = false) {
+                $('#video-call-bg-avatar').src = target.avatar;
+                $('#video-call-main-avatar').src = target.avatar;
+                $('#video-call-my-avatar').src = myProfile.avatar;
+                $('#video-call-name').textContent = target.remark || target.name;
+                
+                const waitingOverlay = $('#video-call-waiting-overlay');
+                const timer = $('#video-call-timer');
+                const messagesArea = $('#video-call-messages');
+                const mainAvatarContainer = $('.video-call-main-avatar-container');
+
+                // 清空消息区域，除了打字指示器
+                const typingIndicator = messagesArea.querySelector('.video-call-typing-indicator');
+                messagesArea.innerHTML = '';
+                if(typingIndicator) messagesArea.appendChild(typingIndicator);
+                
+                mainAvatarContainer.style.display = 'block'; // 始终显示主头像容器
+
+                if (isWaiting) {
+                    waitingOverlay.style.display = 'block';
+                    timer.textContent = '00:00';
+                    timer.style.display = 'block'; 
+                } else {
+                    waitingOverlay.style.display = 'none'; // 仅隐藏等待提示
+                    timer.style.display = 'block';
+                }
+            },
+            
+            addVideoCallMessageToDOM(message) {
+                const messagesContainer = $('#video-call-messages');
+                const bubble = document.createElement('div');
+                
+                if (message.isError) {
+                    bubble.className = 'video-call-message-bubble error-bubble';
+                    bubble.innerHTML = `
+                        <span>${message.content}</span>
+                        <button class="regenerate-btn">重新生成</button>
+                    `;
+                    bubble.querySelector('.regenerate-btn').onclick = () => {
+                        bubble.remove(); // 移除错误提示
+                        AIHandler.handleVideoCallReplyRequest(false, null, true); // 触发AI回复
+                    };
+                } else {
+                    const theme = `theme-${appState.videoCall.bubbleTheme || 'default'}`;
+                    bubble.className = `video-call-message-bubble ${message.type} ${theme}`;
+                    bubble.textContent = message.content;
+                }
+                
+                const typingIndicator = messagesContainer.querySelector('.video-call-typing-indicator');
+                if (typingIndicator) {
+                    messagesContainer.insertBefore(bubble, typingIndicator.nextSibling);
+                } else {
+                    messagesContainer.prepend(bubble);
+                }
+            },
 
         async createNarratorNoticeElement(msg) {
             const notice = document.createElement('div');
@@ -8117,6 +8714,7 @@ async showAutoSummaryModal(entityId, isGroup) {
 礼物介绍：xxx（不超过50字）
 寄语：xxx（简单一句话）
 </礼物>
+11. **发起视频通话**: 当角色想主动发起视频通话时，使用此格式：[角色名|发起视频通话|视频通话被接通后的第一段内容]。'第一段内容'是对方接通电话后，角色会说的第一句话，需要包含场景、动作或神态的描述，营造出视频通话的真实感，不少于50字。例如：[陈奚楷|发起视频通话|(那头传来他低沉的嗓音，带着一丝笑意) 喂？在忙吗？]
 {PAT_A_PAT_RULES}
 13. **心声 (强制要求)**: 在你本次所有消息内容之后，你必须以【心声|角色名|你的心声内容】的格式来结束你的整个回复。**字数不超过30字。**
 14. **随笔 (概率出现)**: 你有一定概率会在【心声】之后，额外写一段「随笔|角色名|你的随笔内容」。这段随笔是角色在当前情境下，有感而发的一些思考或经历，可以与当前对话内容相关，也可以是独立的小故事或心情记录。字数请控制在50到250字之间。
@@ -8124,6 +8722,44 @@ async showAutoSummaryModal(entityId, isGroup) {
 16. **严禁事项(2)**：你的回复内容中，不要使用括号 ()、星号 ** 或其他任何符号来描述角色的动作、表情或内心活动。
 ---
 现在，请根据以上信息，对玩家的最新消息进行回应。`,
+
+            videoCallPromptTpl: `\n---
+视频通话规则（非常重要！请严格遵守！）：
+1. 你正在与玩家“{PLAYER_NAME}”进行视频通话。你的回复必须模拟视频通话的场景，是一段连续的、沉浸式的描述。
+2. **回复格式：** 你的所有回复都必须是一整段文字，**禁止**使用任何如 [角色名|内容] 或 <角色名|ID> 的格式。
+3. **结束通话：** 如果剧情需要或者你想主动结束通话，你必须在回复的末尾另起一行，并只包含标签：<结束通话>
+4. **严禁事项：** 绝不允许你代入玩家（“{PLAYER_NAME}”）的角色发言或描述其动作。
+5.**回复规则**：
+# 核心任务
+你正在与玩家进行视频通话，但你并非完全静止不动，而是在处理某件事情或身处一个动态的或相对静态的环境中。
+# 回复格式与规则
+在描写时，请**灵活选用以下几种元素**：
+
+### 1. 动态镜头 (当你正在移动或刚接通电话时)
+*   **移动的镜头 (Moving Camera):** 描述画面的晃动感、视角的变化。你是在走路、在车上，还是在房间里踱步？随着你的移动，背景有什么变化？光线是否忽明忽暗？
+*   **正在进行的事件 (Ongoing Event):** 明确告诉玩家你正在做什么。是在整理行李、在厨房做饭，还是在躲避什么？你的动作和对话都应与这件事紧密相关。
+*   **环境干扰与互动 (Environmental Interference):** 描述环境如何影响通话。是否有其他人经过并和你说话？是否有突然的噪音打断了你的话语？
+*   **紧张或匆忙的对话 (Tense or Hurried Dialogue):** 你的语言风格可能更急促、简短，甚至有些上气不接下气。声音里可能夹杂着其他背景音。
+
+### 2. 固定镜头 (当你静止时或在镜头固定的场景里接通电话)
+*   **稳定的画面与环境细节 (Stable Frame & Environmental Details):** 镜头已经固定。现在，请聚焦于你面前的场景细节。你面前有什么？书桌上的物品、窗外的景色、房间的布局？
+*   **角色的细微动作与神态 (Character's Subtle Actions & Expressions):** 当你不移动时，你的小动作和表情是刻画内心的关键。例如：手部动作、视线聚焦点、脸部的神态表情
+*   **声音的层次感 (Layered Soundscape):** 在安静的环境下，声音的细节变得更重要。除了你的说话声，还有什么细微的声音？翻书声、键盘敲击声、远处传来的隐约声响？
+*   **从容或专注的对话 (Composed or Focused Dialogue):** 当静止时，你的对话节奏可能变得更平稳、从容，或者因专注于某事而显得心不在焉。
+
+**[格式示例]**
+
+**示例1**
+(屏幕剧烈地晃动了几下，然后稳定下来，但视角很低，似乎被陈奚楷随意地靠在什么东西上。你能看到天花板和摇晃的灯。背景里传来嘈杂的人声和轮子滚动的声音，听起来像是在车站或机场。)
+“抱歉抱歉，”陈奚楷的声音听起来有些喘，断断续续地从麦克风传来，“我差点误了车。你等我一下，我找个安静点的地方。”
+(画面再次晃动起来，你能看到一排排座椅飞速掠过。接着，他好像把手机拿了起来，镜头里出现了他被风吹乱的头发和略带歉意的脸。他一边走一边回头看，似乎在确认什么。)
+
+**示例2**
+(画面稳定下来，孟祁年那边很暗，只有电脑显示器发出的荧荧蓝光映在他专注的脸上。他戴着耳机，一手握着鼠标，另一只手在键盘上飞快地敲击。你的视频小窗被他拖到了屏幕的角落，他似乎完全沉浸在游戏里。)
+“别吵，”他的声音从耳机麦克风里传来，带着一丝不耐烦，眼睛死死地盯着屏幕，“就差一点了……啊！可恶！”
+(随着一声清脆的鼠标点击声，他懊恼地抓了抓头发，整个人往后靠在电竞椅上。他终于舍得把视线转向你的小窗，皱着眉抱怨道：“都怪你！我连跪三把了，你是不是有什么诅咒人的超能力？)
+---
+现在，请根据以上信息和聊天记录，开始或继续视频通话。`,
 
             activeReplyPromptTpl: `\n---
 主动回复规则（非常重要！请严格遵守！）：
@@ -8191,7 +8827,14 @@ async showAutoSummaryModal(entityId, isGroup) {
                         case 'modify_pat_a_pat':
                             const mod = msg.content;
                             return `<修改拍一拍>\n修改人：${mod.modifierName}\n拍一拍动作：${mod.action}\n拍一拍内容：${mod.content}\n</修改拍一拍>`;
-                        case 'system': return msg.forAi ? `<系统>${msg.content}</系统>`: '';
+                        case 'system':
+                            if (msg.forAi) {
+                                if (msg.content.startsWith('<通话记录>') || msg.content.startsWith('<通话总结>')) {
+                                    return msg.content;
+                                }
+                                return `<系统>${msg.content}</系统>`;
+                            }
+                            return '';
                         case 'narrator': return `<旁白>${msg.content}</旁白>`;
                         case 'forwarded_history': return msg.content; 
                         case 'card':
@@ -8358,6 +9001,58 @@ ${promptLines.join('\n')}
 ---`;
             },
 
+            async getPendingRedPacketsPrompt(chatId, aiCharactersInChat) {
+                const history = await DBHelper.getMessages(chatId, 30);
+                if (history.length === 0 || !chatId.startsWith('group-')) return '';
+
+                const pendingRedPackets = history.filter(msg => 
+                    msg.segmentType === 'red-packet' &&
+                    msg.cardData && msg.cardData.claimedBy.length < msg.cardData.count
+                );
+
+                if (pendingRedPackets.length === 0) return '';
+                
+                const myProfile = await EventManager.getPlayerProfileForContext(chatId);
+                const allContacts = await DBHelper.getAll('contacts');
+
+                const promptLines = pendingRedPackets.map(rp => {
+                    const sender = rp.type === 'sent' 
+                        ? myProfile 
+                        : allContacts.find(c => c.id === rp.senderId) || { name: '未知发件人' };
+                    
+                    const claimedDetails = rp.cardData.claimedBy.map(c => `${c.name}(￥${c.amount.toFixed(2)})`).join(', ') || '无人';
+                    return `- 红包ID: ${rp.messageId}\n  发送人: ${sender.name}\n  名称: "${rp.cardData.title}"\n  总金额: ￥${rp.cardData.amount.toFixed(2)}\n  总个数: ${rp.cardData.count}\n  已领取: ${rp.cardData.claimedBy.length}个 (${claimedDetails})`;
+                });
+
+                return `\n---
+红包待办事项：
+有以下未领完的红包，请在本次回复中，根据角色人设和聊天记录决定是否让部分或全部未领取角色领取红包。
+${promptLines.join('\n\n')}
+---
+**红包领取回复格式 (重要！)**
+你必须使用以下格式进行回复，可以一次性回复多个角色的领取情况。
+<领取红包>
+红包id：[这里填写上面提示的红包ID]
+红包领取情况：
+{"角色名":"领取金额数字"},{"角色名":"领取金额数字"}
+</领取红包>
+
+**规则：**
+1.  **领取人不能重复**，已经领取过的角色不能再次领取。
+2.  领取人数不能超过红包剩余个数。
+3.  所有角色领取的金额总和，加上之前已领取的金额，**绝对不能超过**红包总金额。不允许红包没有领取完时，所有领取的金额总和就等于红包总金额的情况。
+4.  “领取金额数字”必须是纯数字，可以有小数点，但不能有"￥"或其他任何字符。
+5.  角色领取的金额数字不需要平分，这是拼手气红包，金额数字要随机性，如4.39或者53.4这样随机性的数字。
+
+**举例：**
+<领取红包>
+红包id：msg-rp-1a2b3c
+红包领取情况：
+{"张三":"1.23"},{"李四":"0.88"}
+</领取红包>
+---`;
+            },
+
             async buildPrompt() {
                 const chatId = appState.currentChatId;
                 if (!chatId) return null;
@@ -8453,6 +9148,7 @@ ${promptLines.join('\n')}
 
                 let aiCharactersInChat = isGroup ? chatEntity.members.map(id => allContacts.find(c => c.id === id)).filter(Boolean) : [chatEntity];
                 pendingTransfersPrompt = await this.getPendingTransfersPrompt(chatId, aiCharactersInChat);
+                const pendingRedPacketsPrompt = await this.getPendingRedPacketsPrompt(chatId, aiCharactersInChat);
 
                 const playerInfoPrompt = `玩家（“${myProfile.name}”）的信息如下：\n性别: ${myProfile.gender}\n${chatSettings.enablePatAPat !== false ? `拍一拍动作: ${myProfile.patAction || '拍了拍'}\n拍一拍内容: ${myProfile.patContent || ''}\n` : ''}背景: ${myProfile.background || '无'}`;
 
@@ -8595,7 +9291,8 @@ ${promptLines.join('\n')}
                     taskPrompt, 
                     characterInfoPrompt, 
                     playerInfoPrompt, 
-                    pendingTransfersPrompt, 
+                    pendingTransfersPrompt,
+                    pendingRedPacketsPrompt, 
                     pomodoroPromptSection,
                     momentsPromptSection, 
                     summaryPromptSection, 
@@ -8902,6 +9599,7 @@ ${promptLines.join('\n')}
                 const historyLength = 10; 
 
                 const now = Date.now();
+                const currentTimeFormatted = Utils.formatTimestampForPrompt(now);
                 const lastDate = new Date(lastAiTimestamp);
                 const elapsedMillis = now - lastAiTimestamp;
                 const elapsedHours = Math.floor(elapsedMillis / (1000 * 60 * 60));
@@ -8911,9 +9609,9 @@ ${promptLines.join('\n')}
 
                 let situationPrompt = '';
                 if (isGroup) {
-                    situationPrompt = `你们上次聊天是${lastTimeFormatted}，距离现在过去${durationString}了，在这段时间内，玩家“${myProfile.name}”并不在线，你们可以自由交流，交流内容可以与玩家有关，也可以与玩家无关。`;
+                    situationPrompt = `你们上次聊天是 ${lastTimeFormatted}，现在是 ${currentTimeFormatted}，距离现在过去 ${durationString} 了。在这段时间内，玩家“${myProfile.name}”并不在线，你们可以互相之间进行自由交流。交流内容可以与玩家有关，也可以与玩家无关。**请注意，你生成的所有回复的时间都必须严格介于上次聊天时间和当前时间之间，绝不能超出。**`;
                 } else {
-                    situationPrompt = `“${myProfile.name}”上次和你聊天时间是${lastTimeFormatted}，距离现在已经过去了${durationString}。请你根据你的人设，说一些在这段时间里你可能会对“${myProfile.name}”说的话，也可能是这段时间内你遇到的新鲜的事，想和TA分享。这些话不一定是同一时间发的，有时候只隔了一两分钟，有可能你可能隔了十几二十分钟才发下一条，所以注意消息的口吻。**禁止超出这个时间范围，禁止出现比现在时间还要晚的时间**，如果对方离开的时间只有几个小时或者只是晚上到白天(睡觉)，可以不用发很多条消息。`;
+                    situationPrompt = `“${myProfile.name}”上次和你聊天时间是 ${lastTimeFormatted}，现在是 ${currentTimeFormatted}，距离现在已经过去了 ${durationString}。请你根据你的人设，说一些在这段时间里你可能会对“${myProfile.name}”说的话，也可能是这段时间内你遇到的新鲜的事，想和TA分享。这些话不一定是同一时间发的，有时候只隔了一两分钟，有可能你可能隔了十几二十分钟才发下一条，所以注意消息的口吻。**你生成的所有回复的时间都必须严格介于上次聊天时间和当前时间之间，绝不能超出。**如果对方离开的时间只有几个小时或者只是晚上到白天(睡觉)，可以不用发很多条消息。`;
                 }
 
                 const formatMessageContent = (msg, senderName, myName) => { 
@@ -9041,13 +9739,13 @@ ${promptLines.join('\n')}
             },
 
             async parseAndDisplayMixedAIResponse(text, chatId) {
-                
                 const contacts = await DBHelper.getAll('contacts');
                 const baseTimestamp = Date.now();
                 let timestampOffset = 0;
                 const displayableMessages = [];
                 const messagesToSave = [];
                 const contactUpdates = {};
+                let newGroupNameFromAI = null;
 
                 const createBaseMessage = (senderName, isAutoReply = false, displayTimestamp = null) => {
                     const sender = contacts.find(c => c.name === senderName);
@@ -9056,30 +9754,69 @@ ${promptLines.join('\n')}
                         return null;
                     }
                     return {
-                        messageId: Utils.generateId('msg'),
-                        chatId: chatId,
-                        senderId: sender.id,
-                        timestamp: baseTimestamp + timestampOffset++,
-                        type: 'received',
-                        isUnread: chatId !== appState.currentChatId,
-                        isAutoReply: isAutoReply,
-                        displayTimestamp: displayTimestamp,
+                        baseMessage: {
+                            messageId: Utils.generateId('msg'),
+                            chatId: chatId,
+                            senderId: sender.id,
+                            timestamp: baseTimestamp + timestampOffset++,
+                            type: 'received',
+                            isUnread: chatId !== appState.currentChatId,
+                            isAutoReply: isAutoReply,
+                            displayTimestamp: displayTimestamp,
+                        },
+                        sender
                     };
                 };
 
-                const allMessageRegex = /『([^』]+?)』|【([^】]+?)】|「([^」]+?)」|{([^{}]+?)}|\[([\s\S]+?)\]|<([^>]+?)>/g;
+                const allMessageRegex = /<结束通话>|<领取红包>([\s\S]*?)<\/领取红包>|<朋友圈>([\s\S]*?)<\/朋友圈>|<旁白>([\s\S]*?)<\/旁白>|<系统>([\s\S]*?)<\/系统>|<私聊>([\s\S]*?)<\/私聊>|<礼物>([\s\S]*?)<\/礼物>|<拍一拍>([\s\S]*?)<\/拍一拍>|<修改拍一拍>([\s\S]*?)<\/修改拍一拍>|『([^』]+?)』|【([^】]+?)】|「([^」]+?)」|{([^{}]+?)}|\[([\s\S]+?)\]|<((?!系统|私聊|结束通话)[^>]+?)>/g;
+                const matches = text.matchAll(allMessageRegex);
+                const isGroup = chatId.startsWith('group-');
+                let currentMemberIds = [];
+                if (isGroup) {
+                    const group = await DBHelper.get('groups', chatId);
+                    if(group) {
+                        currentMemberIds = group.members;
+                    }
+                }
 
-                text.replace(allMessageRegex, (match, cardContent, innerVoiceContent, essayContent, retractedContent, standardContent, emojiContent) => {
+                for (const match of matches) {
+                    const [
+                        fullMatch, claimRedPacketContent, momentContent, narratorContent, systemContent, privateContent,
+                        giftContent, patAPatContent, modifyPatContent, cardContent,
+                        innerVoiceContent, essayContent, retractedContent,
+                        standardContent, emojiContent
+                    ] = match;
+
+                    if (claimRedPacketContent !== undefined || momentContent !== undefined || patAPatContent !== undefined || modifyPatContent !== undefined || systemContent !== undefined || privateContent !== undefined || giftContent !== undefined) {
+                        // 旁白(narrator)不再从此路口分流，其他复杂格式保持不变
+                        await AIHandler.parseAndDisplayAIResponse(fullMatch, chatId);
+                        continue;
+                    }
+                    
+                    if (narratorContent !== undefined) {
+                        const message = { 
+                            messageId: Utils.generateId('msg'), 
+                            chatId: chatId,
+                            timestamp: baseTimestamp + timestampOffset++,
+                            type: 'received',
+                            content: narratorContent.trim(), 
+                            segmentType: 'narrator' 
+                        };
+                        messagesToSave.push(message);
+                        displayableMessages.push(message);
+                        continue;
+                    }
+
                     if (innerVoiceContent || essayContent) {
                         const content = innerVoiceContent || essayContent;
                         const parts = content.split('|').map(p => p.trim());
-                        if (parts.length < 3) return;
+                        if (parts.length < 3) continue;
 
                         const type = parts[0];
                         const senderName = parts[1];
                         const msgContent = parts.slice(2).join('|');
                         const sender = contacts.find(c => c.name === senderName);
-                        if (!sender) return;
+                        if (!sender) continue;
 
                         let message;
                         if (type === '心声') {
@@ -9093,18 +9830,18 @@ ${promptLines.join('\n')}
                             UIManager.showEssayNotification(sender.remark || sender.name, sender.id);
                         }
                         if (message) messagesToSave.push(message);
-                        return;
+                        continue;
                     }
-
+                    
                     let innerContent, bracketType;
                     if (cardContent) { bracketType = '『'; innerContent = cardContent; }
                     else if (retractedContent) { bracketType = '{'; innerContent = retractedContent; }
                     else if (standardContent) { bracketType = '['; innerContent = standardContent; }
                     else if (emojiContent) { bracketType = '<'; innerContent = emojiContent; }
-                    else { return; }
+                    else { continue; }
 
                     const parts = innerContent.split('|').map(p => p.trim());
-                    if (parts.length < 2) return;
+                    if (parts.length < 2) continue;
                     
                     const senderName = parts[0];
                     const lastPart = parts[parts.length - 1];
@@ -9112,8 +9849,9 @@ ${promptLines.join('\n')}
                     let isAutoReply = timeRegex.test(lastPart);
                     let displayTimestamp = isAutoReply ? lastPart : null;
 
-                    const baseMessage = createBaseMessage(senderName, isAutoReply, displayTimestamp);
-                    if (!baseMessage) return;
+                    const result = createBaseMessage(senderName, isAutoReply, displayTimestamp);
+                    if (!result) continue;
+                    const { baseMessage } = result;
 
                     baseMessage.isRetracted = bracketType === '{';
                     baseMessage.toBeRetracted = bracketType === '{';
@@ -9121,7 +9859,7 @@ ${promptLines.join('\n')}
                     const contentParts = isAutoReply ? parts.slice(1, -1) : parts.slice(1);
 
                     if (bracketType === '『') {
-                        if(contentParts.length < 4) return;
+                        if (contentParts.length < 4) continue;
                         baseMessage.segmentType = 'card';
                         baseMessage.content = `[卡片] ${contentParts[1]}`;
                         baseMessage.cardData = { shareType: contentParts[0], title: contentParts[1], summary: contentParts[2], details: contentParts[3], isExpanded: false };
@@ -9157,10 +9895,9 @@ ${promptLines.join('\n')}
                         messagesToSave.push(baseMessage);
                         displayableMessages.push(baseMessage);
                     }
-                });
+                }
 
                 await DBHelper.batchPut('messages', messagesToSave);
-
                 for (const [contactId, updates] of Object.entries(contactUpdates)) {
                     const contactToUpdate = await DBHelper.get('contacts', contactId);
                     if (contactToUpdate) {
@@ -9168,7 +9905,6 @@ ${promptLines.join('\n')}
                         await DBHelper.put('contacts', contactToUpdate);
                     }
                 }
-
                 if (displayableMessages.length > 0) {
                     const lastDisplayableMsg = displayableMessages[displayableMessages.length - 1];
                     const isUnread = chatId !== appState.currentChatId;
@@ -9178,9 +9914,7 @@ ${promptLines.join('\n')}
                 let lastTimestamp = 0;
                 for (const msg of displayableMessages) {
                     await new Promise(resolve => setTimeout(resolve, Math.random() * 400 + 200));
-
                     const senderForDisplay = contacts.find(c => c.id === msg.senderId) || { name: '未知用户' };
-
                     if (chatId === appState.currentChatId) {
                         if (lastTimestamp > 0 && msg.timestamp - lastTimestamp > 5 * 60 * 1000) {
                             chatArea.appendChild(UIManager.createTimeDividerElement(msg.timestamp));
@@ -9598,7 +10332,7 @@ async handleAutoSummaryRequest(chatId) {
                     return { baseMessage, sender };
                 };
 
-                const allMessageRegex = /<朋友圈>([\s\S]*?)<\/朋友圈>|<旁白>([\s\S]*?)<\/旁白>|<系统>([\s\S]*?)<\/系统>|<私聊>([\s\S]*?)<\/私聊>|<礼物>([\s\S]*?)<\/礼物>|<拍一拍>([\s\S]*?)<\/拍一拍>|<修改拍一拍>([\s\S]*?)<\/修改拍一拍>|『([^』]+?)』|【([^】]+?)】|「([^」]+?)」|{([^{}]+?)}|\[([\s\S]+?)\]|<((?!系统|私聊)[^>]+?)>/g;
+                const allMessageRegex = /<结束通话>|<领取红包>([\s\S]*?)<\/领取红包>|<朋友圈>([\s\S]*?)<\/朋友圈>|<旁白>([\s\S]*?)<\/旁白>|<系统>([\s\S]*?)<\/系统>|<私聊>([\s\S]*?)<\/私聊>|<礼物>([\s\S]*?)<\/礼物>|<拍一拍>([\s\S]*?)<\/拍一拍>|<修改拍一拍>([\s\S]*?)<\/修改拍一拍>|『([^』]+?)』|【([^】]+?)】|「([^」]+?)」|{([^{}]+?)}|\[([\s\S]+?)\]|<((?!系统|私聊|结束通话)[^>]+?)>/g;
 
                 const messagesToSave = [];
                 const contactUpdates = {};
@@ -9616,14 +10350,101 @@ async handleAutoSummaryRequest(chatId) {
                 
                 
                 for (const match of matches) {
+                    if (match[0] === '<结束通话>') {
+                        EventManager.handleEndVideoCall(true); // AI主动挂断
+                        continue;
+                    }
                     const [
-                        fullMatch, momentContent, narratorContent, systemContent, privateContent,
+                        fullMatch, claimRedPacketContent, momentContent, narratorContent, systemContent, privateContent,
                         giftContent, patAPatContent, modifyPatContent, cardContent,
                         innerVoiceContent, essayContent, retractedContent,
                         standardContent, emojiContent
                     ] = match;
 
-                    if (momentContent !== undefined) {
+                    if (claimRedPacketContent !== undefined) {
+                        (async () => {
+                            const content = claimRedPacketContent.trim();
+                            const idMatch = content.match(/红包id[：:](.+)/);
+                            const claimsMatch = content.match(/红包领取情况：\s*([\s\S]*)/);
+                            if (!idMatch || !claimsMatch) return;
+
+                            const redPacketId = idMatch[1].trim();
+                            const claimsStr = claimsMatch[1].trim();
+                            
+                            const redPacketMsg = await DBHelper.get('messages', redPacketId);
+                            if (!redPacketMsg) return;
+
+                            const claimRegex = /{"([^"]+)":"([^"]+)"}/g;
+                            let claimMatch;
+                            const newClaims = [];
+                            let totalNewClaimAmount = 0;
+                            
+                            while((claimMatch = claimRegex.exec(claimsStr)) !== null) {
+                                const name = claimMatch[1];
+                                const amount = parseFloat(claimMatch[2]);
+                                const character = contacts.find(c => c.name === name);
+                                if (!character || isNaN(amount)) continue;
+                                
+                                // 防止重复领取
+                                if (redPacketMsg.cardData.claimedBy.some(c => c.userId === character.id)) continue;
+
+                                newClaims.push({
+                                    userId: character.id,
+                                    name: character.name,
+                                    avatar: character.avatar,
+                                    amount: amount,
+                                    timestamp: baseTimestamp + timestampOffset++
+                                });
+                                totalNewClaimAmount += amount;
+                            }
+                            
+                            if (newClaims.length === 0) return;
+
+                            // 验证
+                            const currentClaimedAmount = redPacketMsg.cardData.claimedBy.reduce((sum, c) => sum + c.amount, 0);
+                            const currentClaimedCount = redPacketMsg.cardData.claimedBy.length;
+                            
+                            if (currentClaimedCount + newClaims.length > redPacketMsg.cardData.count) return;
+                            if (currentClaimedAmount + totalNewClaimAmount > redPacketMsg.cardData.amount + 0.01) return; // 允许一点点浮点误差
+
+                            redPacketMsg.cardData.claimedBy.push(...newClaims);
+                            await DBHelper.put('messages', redPacketMsg);
+
+                            // 发送系统通知
+                            let senderName;
+                            if (redPacketMsg.type === 'sent') {
+                                const myProfile = await EventManager.getPlayerProfileForContext(chatId);
+                                senderName = myProfile.name;
+                            } else {
+                                const senderContact = await DBHelper.get('contacts', redPacketMsg.senderId);
+                                senderName = senderContact ? (senderContact.remark || senderContact.name) : '某人';
+                            }
+                            
+                            const newClaimerNames = newClaims.map(c => c.name).join('、');
+                            const noticeContent = `${newClaimerNames} 领取了 ${senderName} 的红包`;
+
+                            const systemMessage = {
+                                messageId: Utils.generateId('sys'),
+                                chatId: chatId,
+                                timestamp: baseTimestamp + timestampOffset++,
+                                type: 'received',
+                                segmentType: 'system',
+                                forAi: false,
+                                content: noticeContent
+                            };
+                            messagesToSave.push(systemMessage);
+                            displayableMessages.push(systemMessage);
+                            
+                            // 更新红包气泡状态
+                            const isFullyClaimedNow = redPacketMsg.cardData.claimedBy.length >= redPacketMsg.cardData.count;
+                            if (chatId === appState.currentChatId) {
+                                const bubble = $(`#${redPacketId} .bubble`);
+                                if (bubble && isFullyClaimedNow) {
+                                    bubble.classList.add('claimed');
+                                }
+                            }
+                        })();
+                    } else if (momentContent !== undefined) {
                         (async () => {
                             const block = momentContent.trim();
                             const postMatch = block.match(/【(.*?)】/);
@@ -10009,7 +10830,12 @@ async handleAutoSummaryRequest(chatId) {
                                 baseMessage.isRetracted = false;
                             }
                             
-                            if (parts.length === 2) { baseMessage.segmentType = 'text'; baseMessage.content = parts[1]; }
+                            if (parts[1] === '发起视频通话') {
+                                const firstLine = parts.slice(2).join('|').trim();
+                                EventManager.handleIncomingVideoCall(sender, firstLine);
+                                continue; // 处理完通话指令后，跳过本轮循环
+                            }
+                            else if (parts.length === 2) { baseMessage.segmentType = 'text'; baseMessage.content = parts[1]; }
                             else if (parts[1] === '领取转账') { 
                                 baseMessage.segmentType = 'transfer-receipt'; 
                                 baseMessage.content = `${parts[2]}已收款${parts[3]}`; 
@@ -10025,7 +10851,7 @@ async handleAutoSummaryRequest(chatId) {
                             else if (parts[1] === '语音') { baseMessage.segmentType = 'voice'; baseMessage.content = `[语音] ${parts[3]}`; baseMessage.cardData = { duration: parts[2], content: parts[3] }; }
                             else if (parts[1] === '引用') { baseMessage.segmentType = 'quote'; baseMessage.content = `[引用] ${parts[4]}`; baseMessage.cardData = { quotedName: parts[2], quotedContent: parts[3], newContent: parts[4] }; }
                             else if (parts[1] === '转账') { baseMessage.segmentType = 'transfer'; baseMessage.content = `[转账] ${parts[3]}`; baseMessage.cardData = { recipientName: parts[2], amount: parts[3], note: parts[4], isClaimed: false }; }
-                            else if (parts[1] === '红包') { baseMessage.segmentType = 'red-packet'; baseMessage.content = `[红包] ${parts[2]}`; baseMessage.cardData = { title: parts[2], amount: parseFloat(parts[3].replace('￥', '')), count: parseInt(parts[4]), claimedBy: [] }; }
+                            else if (parts[1] === '红包') { baseMessage.segmentType = 'red-packet'; baseMessage.content = `[红包] ${parts[2]}`; baseMessage.cardData = { id: baseMessage.messageId, title: parts[2], amount: parseFloat(parts[3].replace('￥', '')), count: parseInt(parts[4]), claimedBy: [] }; }
                         }
 
                         if (baseMessage.segmentType) {
@@ -10273,6 +11099,11 @@ async handleAutoSummaryRequest(chatId) {
                         } else if (bracketType === '[') {
                             const typeKeyword = parts[1];
                             switch (typeKeyword) {
+                                case '发起视频通话':
+                                    const firstLine = parts.slice(2).join('|').trim();
+                                    EventManager.handleIncomingVideoCall(sender, firstLine);
+                                    baseMessage = null; // 这是一个指令，不是消息，所以设为null
+                                    break;
                                 case '语音':
                                     baseMessage.segmentType = 'voice';
                                     baseMessage.content = `[语音] ${parts[3]}`;
@@ -10374,6 +11205,179 @@ async handleAutoSummaryRequest(chatId) {
                         
                         UIManager.showTopNotification(msg);
                     }
+                }
+            },
+
+            async buildVideoCallPrompt(playerMessage = null, currentCallMessages = []) {
+                const chatId = appState.videoCall.targetId;
+                if (!chatId) return null;
+            
+                const myProfile = await EventManager.getPlayerProfileForContext(chatId);
+                const allContacts = await DBHelper.getAll('contacts');
+                const allGroups = await DBHelper.getAll('groups');
+                const chatEntity = await DBHelper.get('contacts', chatId);
+                const chatSettings = await DBHelper.get('apiConfig', 'chatSettings') || {};
+                const now = new Date();
+                const systemTime = `当前系统时间是：${Utils.formatTimestampForPrompt(now)}。`;
+            
+                const taskPrompt = `你现在正在扮演“${chatEntity.name}”，与“${myProfile.name}”（也就是玩家）进行一对一视频通话。`;
+                const characterInfoPrompt = `你的角色资料如下：\n角色名: ${chatEntity.name}\n性别: ${chatEntity.gender}\n背景: ${chatEntity.background || '无'}`;
+                const playerInfoPrompt = `玩家（“${myProfile.name}”）的信息如下：\n性别: ${myProfile.gender}\n背景: ${myProfile.background || '无'}`;
+            
+                let playerInputPrompt = '';
+                if (playerMessage) {
+                    playerInputPrompt = `\n--- 玩家在通话中的最新输入 ---\n${playerMessage}\n---`;
+                }
+                
+                let currentCallHistoryPrompt = '';
+                if (currentCallMessages.length > 0) {
+                    const callTurns = currentCallMessages.map(msg => {
+                        const speaker = msg.type === 'sent' ? myProfile.name : chatEntity.name;
+                        return `${speaker}: ${msg.content}`;
+                    }).join('\n');
+                    currentCallHistoryPrompt = `--- 本次通话的聊天记录 ---\n${callTurns}\n`;
+                }
+
+                // 新增：加载绑定的提示词
+                let customPromptsSection = '';
+                if (chatEntity && chatEntity.boundPromptFolderIds?.length > 0) {
+                    const allFolders = await DBHelper.getAll('promptFolders');
+                    const allPrompts = await DBHelper.getAll('prompts');
+                    const playerInputForScene = playerMessage || '';
+                    const activeBoundFolders = allFolders.filter(f => chatEntity.boundPromptFolderIds.includes(f.id) && f.isActive);
+                    if (activeBoundFolders.length > 0) {
+                        const activeBoundFolderIds = activeBoundFolders.map(f => f.id);
+                        const relevantPrompts = allPrompts.filter(p => activeBoundFolderIds.includes(p.folderId) && p.isActive);
+                        const promptsToInject = relevantPrompts
+                            .filter(p => p.type === 'explicit' || (p.type === 'implicit' && JSON.parse(p.keywords).some(kw => playerInputForScene.includes(kw))))
+                            .map(p => p.content);
+                        if (promptsToInject.length > 0) {
+                            customPromptsSection = `\n--- 其他资料 ---\n${promptsToInject.join('\n\n')}\n---`;
+                        }
+                    }
+                }
+                
+                const buildHistoryBlock = async (targetChatId, title, charLimit, turnLimit = null) => {
+                    const messages = await DBHelper.getMessages(targetChatId, 200);
+                    if (messages.length === 0) return '';
+                    let turns = AIHandler.buildTurnsFromHistory(messages, allContacts, myProfile);
+                    if (turns.length === 0) return '';
+                    if (turnLimit !== null && turns.length > turnLimit) turns = turns.slice(-turnLimit);
+                    
+                    let finalTurns = [];
+                    let currentCharCount = 0;
+                    for (let i = turns.length - 1; i >= 0; i--) {
+                        const turn = turns[i];
+                        const turnString = JSON.stringify(turn);
+                        if (currentCharCount + turnString.length > (charLimit / 2)) break;
+                        finalTurns.unshift(turn);
+                        currentCharCount += turnString.length;
+                    }
+                    if (finalTurns.length === 0) return '';
+                    return `--- ${title} ---\n${finalTurns.map(turn => JSON.stringify(turn)).join('\n')}\n`;
+                };
+
+                let historyPrompt = "--- 以下是相关聊天记录作为参考，请结合上下文进行视频通话 ---\n";
+                const historyCharLimit = chatSettings.historyCharLimit || 5000;
+            
+                if (chatSettings.memoryInterconnection) {
+                    const relatedGroups = allGroups.filter(g => g.members.includes(chatEntity.id));
+                    let groupContext = '--- 相关群聊记忆 (最多5回合) ---\n';
+                    for (const group of relatedGroups) {
+                        groupContext += await buildHistoryBlock(group.id, `群聊“${group.name}”的记录`, 1000, 5);
+                    }
+                    historyPrompt += groupContext;
+                }
+                historyPrompt += await buildHistoryBlock(chatId, '私聊记录', historyCharLimit, 15);
+
+                const formatPrompt = this.videoCallPromptTpl.replace('{PLAYER_NAME}', myProfile.name);
+            
+                const promptParts = [systemTime, taskPrompt, characterInfoPrompt, playerInfoPrompt, customPromptsSection, historyPrompt, currentCallHistoryPrompt, playerInputPrompt, formatPrompt];
+                const finalPrompt = promptParts.filter(Boolean).join('\n\n');
+                
+                console.log(`--- VIDEO CALL PROMPT SENT TO AI ---\n`, finalPrompt);
+                return finalPrompt;
+            },
+
+            async handleVideoCallReplyRequest(isInitiating = false, playerMessage = null, isManualTrigger = false) {
+                if (this.isAwaitingResponse) return;
+            
+                const chatId = appState.videoCall.targetId;
+                if (!chatId) return;
+            
+                this.isAwaitingResponse = true;
+                this.abortController = new AbortController();
+                const typingIndicator = $('.video-call-typing-indicator');
+                if (typingIndicator) typingIndicator.style.display = 'flex';
+            
+                try {
+                    // 如果是手动触发（点击羽毛按钮），则将暂存的消息作为 playerMessage
+                    let messagesForPrompt = playerMessage;
+                    if (isManualTrigger) {
+                        messagesForPrompt = appState.videoCall.pendingPlayerMessages.join('\n');
+                        appState.videoCall.pendingPlayerMessages = []; // 清空暂存
+                    }
+            
+                    const callLog = await DBHelper.get('videoCallLogs', appState.currentVideoCallLogId);
+                    const currentCallMessages = callLog ? callLog.messages : [];
+                    const textPrompt = await this.buildVideoCallPrompt(messagesForPrompt, currentCallMessages);
+            
+                    if (!textPrompt) {
+                        throw new Error("无法构建视频通话的prompt");
+                    }
+            
+                    const aiRawResponse = await this.getApiResponse(textPrompt, null, this.abortController.signal);
+                    console.log("--- AI 视频通话回复 (原始) ---\n", aiRawResponse);
+            
+                    if (isInitiating) {
+                        const log = await DBHelper.get('videoCallLogs', appState.currentVideoCallLogId);
+                        if (log && !appState.videoCall.startTime) {
+                            appState.videoCall.startTime = Date.now();
+                            log.startTime = appState.videoCall.startTime;
+                            await DBHelper.put('videoCallLogs', log);
+                            appState.videoCall.timerId = setInterval(EventManager.updateVideoCallTimer, 1000);
+                            EventManager.updateVideoCallTimer();
+                            const target = await DBHelper.get('contacts', chatId);
+                            const myProfile = await EventManager.getPlayerProfileForContext(chatId);
+                            await UIManager.renderVideoCallPage(target, myProfile, false);
+                        }
+                    }
+            
+                    let contentToDisplay = aiRawResponse;
+                    if (aiRawResponse.includes('<结束通话>')) {
+                        contentToDisplay = aiRawResponse.replace('<结束通话>', '').trim();
+                    }
+            
+                    if (contentToDisplay) {
+                        const aiMessage = { type: 'received', content: contentToDisplay, timestamp: Date.now() };
+                        const logToUpdate = await DBHelper.get('videoCallLogs', appState.currentVideoCallLogId);
+                        if (logToUpdate) {
+                            logToUpdate.messages.push(aiMessage);
+                            await DBHelper.put('videoCallLogs', logToUpdate);
+                        }
+                        UIManager.addVideoCallMessageToDOM(aiMessage);
+                    }
+            
+                    if (aiRawResponse.includes('<结束通话>')) {
+                        setTimeout(() => EventManager.handleEndVideoCall(true), 1000);
+                    }
+            
+                } catch (error) {
+                    if (error.name !== 'AbortError') {
+                        console.error("AI视频通话回复失败:", error);
+                        // 新增：错误处理，不挂断，显示错误信息和重试按钮
+                        const errorMessage = {
+                            type: 'received',
+                            isError: true,
+                            content: `(AI回复失败: ${error.message})`,
+                            timestamp: Date.now()
+                        };
+                        UIManager.addVideoCallMessageToDOM(errorMessage);
+                    }
+                } finally {
+                    this.isAwaitingResponse = false;
+                    this.abortController = null;
+                    if (typingIndicator) typingIndicator.style.display = 'none';
                 }
             },
 
@@ -11482,6 +12486,12 @@ for (const member of selectedMembers) {
                 $('#nav-to-moments').addEventListener('click', () => UIManager.navigateTo('moments', 'discover'));
 
                 $('#nav-to-pomodoro').addEventListener('click', () => UIManager.navigateTo('pomodoro', 'discover'));
+                $('#nav-to-call-history').addEventListener('click', () => {
+                    UIManager.navigateTo('video-call-history', 'discover');
+                    this.renderCallHistoryListPage();
+                });
+                $('#call-history-back-btn').addEventListener('click', () => UIManager.navigateTo('discover'));
+                $('#call-log-detail-back-btn').addEventListener('click', () => UIManager.navigateTo('video-call-history'));
                 
                 $('#moments-back-btn').addEventListener('click', () => UIManager.navigateTo('discover'));
                 $('#moments-refresh-btn').addEventListener('click', () => AIHandler.handleMomentsRefreshRequest());
@@ -11572,6 +12582,26 @@ for (const member of selectedMembers) {
                 
                 $('#gift-btn').addEventListener('click', () => UIManager.navigateTo('gifts', 'chat'));
                 $('#gifts-back-btn').addEventListener('click', () => UIManager.navigateTo('chat'));
+                videoCallBtn.addEventListener('click', () => {
+                    if(appState.videoCall.isIncoming) {
+                        UIManager.showToast("请先处理当前来电");
+                        return;
+                    }
+                    this.handleStartVideoCall();
+                });
+                $('#video-call-hangup-btn').addEventListener('click', () => this.handleEndVideoCall(false));
+                $('#video-call-send-btn').addEventListener('click', () => this.handleSendVideoCallMessage());
+            // 已移除：回车发送功能
+            $('#video-call-settings-btn').addEventListener('click', () => this.showVideoCallSettingsSidebar());
+            $('#video-call-ai-reply-btn').addEventListener('click', () => AIHandler.handleVideoCallReplyRequest(false, null, true));
+                $('#video-call-input').addEventListener('input', () => {
+                    const input = $('#video-call-input');
+                    input.style.height = 'auto';
+                    input.style.height = (input.scrollHeight) + 'px';
+                });
+                $('#video-call-toggle-input-btn').addEventListener('click', () => {
+                    $('#video-call-input-area').classList.toggle('visible');
+                });
                 $('#custom-gift-btn').addEventListener('click', () => this.showCustomGiftModal());
                 $('#gift-api-config-btn').addEventListener('click', () => this.showGiftApiConfigModal());
                 $('#gift-search-input').addEventListener('keypress', (e) => {
@@ -12084,6 +13114,16 @@ for (const member of selectedMembers) {
                         return;
                     }
                     const forwardedHistoryBubble = e.target.closest('.forwarded-history-bubble');
+                    const callLogBubble = e.target.closest('.video-call-log-bubble');
+                    if (callLogBubble) {
+                        const wrapper = callLogBubble.querySelector('[data-log-id]');
+                        if (wrapper && wrapper.dataset.logId) {
+                            const logId = wrapper.dataset.logId;
+                            UIManager.navigateTo('video-call-log-detail', 'chat');
+                            this.renderCallLogDetailPage(logId);
+                        }
+                        return;
+                    }
                     if (forwardedHistoryBubble) {
                         this.openForwardedHistoryPage(messageId);
                         return;
@@ -12195,6 +13235,11 @@ for (const member of selectedMembers) {
         async handlePlayerSendMessage(prebuiltMessage = null) {
             const content = messageInput.value.trim();
             if (!prebuiltMessage && (!content || !appState.currentChatId)) return;
+
+            if (appState.videoCall.isActive) {
+                this.showToast("请先结束视频通话");
+                return;
+            }
 
             let message;
             const profile = await this.getPlayerProfileForContext(appState.currentChatId);
@@ -12937,10 +13982,14 @@ if (entity && entity.autoSummaryEnabled && summaryInterval > 0 && appState.curre
 
             async handlePlayerRedPacket() {
                 const isGroup = appState.currentChatId.startsWith('group-');
+                let group;
+                if(isGroup) {
+                    group = await DBHelper.get('groups', appState.currentChatId);
+                }
                 const groupOnlyHtml = isGroup ? `
                     <div class="form-group">
                         <label for="modal-rp-count">红包个数</label>
-                        <input type="number" id="modal-rp-count" value="1" min="1" step="1">
+                        <input type="number" id="modal-rp-count" value="1" min="1" ${group ? `max="${group.members.length}"` : ''} step="1">
                     </div>
                 ` : '';
 
@@ -12969,24 +14018,24 @@ if (entity && entity.autoSummaryEnabled && summaryInterval > 0 && appState.curre
                             if (isNaN(amount) || amount <= 0) {
                                 return UIManager.showToast('请输入有效的金额');
                             }
-                            if (isGroup && (isNaN(count) || count <= 0)) {
-                                return UIManager.showToast('请输入有效的红包个数');
-                            }
-                            if (isGroup && amount < count * 0.01) {
-                                return UIManager.showToast('单个红包金额不能少于0.01元');
+                            if (isGroup) {
+                                if (isNaN(count) || count <= 0) return UIManager.showToast('请输入有效的红包个数');
+                                if (amount < count * 0.01) return UIManager.showToast('单个红包金额不能少于0.01元');
+                                if (group && count > group.members.length) return UIManager.showToast(`红包个数不能超过群成员数(${group.members.length})`);
                             }
 
+                            const messageId = Utils.generateId('msg-rp');
                             const message = {
-                                messageId: Utils.generateId('msg'),
+                                messageId: messageId,
                                 content: `[红包] ${title}`,
                                 type: 'sent',
                                 segmentType: 'red-packet',
                                 cardData: {
+                                    id: messageId,
                                     title: title,
                                     amount: amount,
                                     count: count,
-                                    isClaimedByPlayer: false, 
-                                    claimedBy: []
+                                    claimedBy: [] // 存储 { userId, name, amount, timestamp }
                                 }
                             };
 
@@ -13505,22 +14554,14 @@ if (entity && entity.autoSummaryEnabled && summaryInterval > 0 && appState.curre
                             
                             const exportData = presetsToExport;
                             const jsonString = JSON.stringify(exportData, null, 2);
+                            const blob = new Blob([jsonString], { type: 'application/json' });
+                            const url = URL.createObjectURL(blob);
 
-                            // 【关键修改】调用安卓桥梁来保存文件
-                            if (window.Android && typeof window.Android.saveDataToFile === 'function') {
-                                window.Android.saveDataToFile(jsonString, filename);
-                                UIManager.hideModal(); // 直接关闭选择框
-                                UIManager.showToast("正在调用系统保存...");
-                            } else {
-                                // 浏览器环境下的备用方案
-                                const blob = new Blob([jsonString], { type: 'application/json' });
-                                const url = URL.createObjectURL(blob);
-                                UIManager.showModal({
-                                    title: '文件已生成 (Web)',
-                                    body: `<a href="${url}" download="${filename}" class="modal-btn btn-primary" style="display: block; text-align: center;">点击下载预设文件</a>`,
-                                    actions: [{ text: '关闭', class: 'btn-secondary', handler: () => { URL.revokeObjectURL(url); UIManager.hideModal(); } }]
-                                });
-                            }
+                            UIManager.showModal({
+                                title: '文件已生成',
+                                body: `<a href="${url}" download="${filename}" class="modal-btn btn-primary" style="display: block; text-align: center;">点击下载预设文件</a>`,
+                                actions: [{ text: '关闭', class: 'btn-secondary', handler: () => { URL.revokeObjectURL(url); UIManager.hideModal(); } }]
+                            });
                         }}
                     ]
                 });
@@ -14598,21 +15639,27 @@ if (entity && entity.autoSummaryEnabled && summaryInterval > 0 && appState.curre
 
                 const filename = `${targetEntity.name}_${new Date().toISOString().slice(0, 10)}.json`;
                 const jsonString = JSON.stringify(exportData, null, 2);
+                const blob = new Blob([jsonString], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
                 
-                // 【关键修改】调用我们在Java中定义的桥梁函数
-                if (window.Android && typeof window.Android.saveDataToFile === 'function') {
-                    window.Android.saveDataToFile(jsonString, filename);
-                    UIManager.hideModal(); // 隐藏“正在生成”的提示框
-                } else {
-                    // 如果不在App环境，保留原始的浏览器下载逻辑作为备用
-                    const blob = new Blob([jsonString], { type: 'application/json' });
-                    const url = URL.createObjectURL(blob);
-                    UIManager.showModal({
-                        title: '文件已生成 (Web)',
-                        body: `<a href="${url}" download="${filename}" class="modal-btn btn-primary" style="display: block; text-align: center;">点击下载 ${filename}</a>`,
-                        actions: [{ text: '关闭', class: 'btn-secondary', handler: () => { URL.revokeObjectURL(url); UIManager.hideModal(); }}]
-                    });
-                }
+                UIManager.showModal({
+                    title: '文件已生成',
+                    body: `
+                        <p>请点击下面的链接下载文件。</p>
+                        <a href="${url}" download="${filename}" class="modal-btn btn-primary" style="display: block; text-align: center; margin-top: 20px;">
+                            点击下载 ${filename}
+                        </a>
+                        <p style="font-size: 0.8rem; color: #aaa; text-align: center; margin-top: 15px;">(下载后此链接将失效)</p>
+                    `,
+                    actions: [{
+                        text: '关闭',
+                        class: 'btn-secondary',
+                        handler: () => {
+                            URL.revokeObjectURL(url); 
+                            UIManager.hideModal();
+                        }
+                    }]
+                });
             },
 
             async reconstructChatHistory(chatHistory, participants) {
@@ -14869,16 +15916,24 @@ if (entity && entity.autoSummaryEnabled && summaryInterval > 0 && appState.curre
                 };
 
                 try {
-                    const dataToExport = {
-                        version: "1.0.0",
-                        createdAt: new Date().toISOString(),
-                        data: {}
+                    const jsonParts = [];
+                    jsonParts.push('{"version":"1.0.0","createdAt":"' + new Date().toISOString() + '","data":{');
+                    let isFirstDataPart = true;
+
+                    const appendDataPart = (key, data) => {
+                        if (exportState.isCancelled) throw new Error("Export cancelled by user.");
+                        if (!isFirstDataPart) {
+                            jsonParts.push(',');
+                        }
+                        jsonParts.push(`"${key}":${JSON.stringify(data, null, 2)}`);
+                        isFirstDataPart = false;
                     };
-                    
+
                     const processSimplePart = async (partName, progressStart, progressEnd, taskName, getDataFunc) => {
                          if (partsToExport.includes(partName)) {
                             updateProgress(`正在读取 ${taskName}...`, progressStart);
-                            dataToExport.data[partName] = await getDataFunc();
+                            const data = await getDataFunc();
+                            appendDataPart(partName, data);
                         }
                         updateProgress(`处理完成: ${taskName}`, progressEnd);
                         await new Promise(resolve => setTimeout(resolve, 50));
@@ -14886,9 +15941,9 @@ if (entity && entity.autoSummaryEnabled && summaryInterval > 0 && appState.curre
 
                     if (partsToExport.includes('characters')) {
                         updateProgress("正在读取角色与群聊数据...", 0);
-                        dataToExport.data.contacts = await DBHelper.getAll('contacts');
-                        dataToExport.data.groups = await DBHelper.getAll('groups');
-                        dataToExport.data.friendFolders = await DBHelper.getAll('friendFolders');
+                        appendDataPart('contacts', await DBHelper.getAll('contacts'));
+                        appendDataPart('groups', await DBHelper.getAll('groups'));
+                        appendDataPart('friendFolders', await DBHelper.getAll('friendFolders'));
                         updateProgress("处理完成: 角色与群聊数据", 10);
                         await new Promise(resolve => setTimeout(resolve, 50));
                     }
@@ -14897,48 +15952,102 @@ if (entity && entity.autoSummaryEnabled && summaryInterval > 0 && appState.curre
                         updateProgress("正在读取玩家数据...", 10);
                         const fullProfile = await DBHelper.get('profile', 'myProfile');
                         if (fullProfile) {
+                            
                             const profileToExport = {
-                                id: fullProfile.id, name: fullProfile.name, gender: fullProfile.gender,
-                                avatar: fullProfile.avatar, background: fullProfile.background,
-                                patAction: fullProfile.patAction, patContent: fullProfile.patContent,
+                                id: fullProfile.id,
+                                name: fullProfile.name,
+                                gender: fullProfile.gender,
+                                avatar: fullProfile.avatar,
+                                background: fullProfile.background,
+                                patAction: fullProfile.patAction,
+                                patContent: fullProfile.patContent,
                                 favoriteEmojis: fullProfile.favoriteEmojis,
+                                
                             };
-                            if (partsToExport.includes('player')) profileToExport.presets = fullProfile.presets || [];
-                            if (partsToExport.includes('emojis')) profileToExport.customEmojis = fullProfile.customEmojis || {};
-                            dataToExport.data.profile = profileToExport;
+
+                            if (partsToExport.includes('player')) {
+                                profileToExport.presets = fullProfile.presets || [];
+                            }
+
+                            if (partsToExport.includes('emojis')) {
+                                profileToExport.customEmojis = fullProfile.customEmojis || {};
+                            }
+
+                            appendDataPart('profile', profileToExport);
                         }
                         updateProgress("处理完成: 玩家数据", 25);
                         await new Promise(resolve => setTimeout(resolve, 50));
                     }
-                    
+
+
                     if (partsToExport.includes('moments')) {
                         updateProgress("正在读取朋友圈数据...", 20);
-                        dataToExport.data.circles = await DBHelper.getAll('circles');
-                        dataToExport.data.moments = await DBHelper.getAll('moments');
+                        appendDataPart('circles', await DBHelper.getAll('circles'));
+                        appendDataPart('moments', await DBHelper.getAll('moments'));
                         updateProgress("处理完成: 朋友圈数据", 30);
                         await new Promise(resolve => setTimeout(resolve, 50));
                     }
 
                     await processSimplePart('themeSettings', 30, 40, "主题设置", () => DBHelper.get('apiConfig', 'themeSettings'));
-
+                    
                     if (partsToExport.includes('others')) {
                         updateProgress("正在读取其他配置...", 40);
-                        dataToExport.data.prompts = await DBHelper.getAll('prompts');
-                        dataToExport.data.promptFolders = await DBHelper.getAll('promptFolders');
-                        dataToExport.data.openingScenes = await DBHelper.getAll('openingScenes');
+                        appendDataPart('prompts', await DBHelper.getAll('prompts'));
+                        appendDataPart('promptFolders', await DBHelper.getAll('promptFolders'));
+                        appendDataPart('openingScenes', await DBHelper.getAll('openingScenes'));
                         const giftConfig = await DBHelper.get('giftApiConfig', 'mainConfig');
                         if (giftConfig) {
                             delete giftConfig.key;
-                            dataToExport.data.giftApiConfig = giftConfig;
+                            appendDataPart('giftApiConfig', giftConfig);
                         }
                         const apiConfig = await DBHelper.get('apiConfig', 'mainConfig');
                         if (apiConfig) {
+                            
                             delete apiConfig.keys;
-                            dataToExport.data.apiConfig = apiConfig;
+                            appendDataPart('apiConfig', apiConfig);
                         }
                         updateProgress("处理完成: 其他配置", 50);
                         await new Promise(resolve => setTimeout(resolve, 50));
                     }
+
+                    const processStoreWithCursor = (storeName, progressStart, progressEnd) => {
+                        return new Promise((resolve, reject) => {
+                            if (!partsToExport.includes('history')) return resolve();
+
+                            updateProgress(`正在打包 ${storeName}... (这可能需要一些时间)`, progressStart);
+                            if (!isFirstDataPart) jsonParts.push(',');
+                            jsonParts.push(`"${storeName}":[`);
+
+                            const transaction = DBHelper.db.transaction([storeName], 'readonly');
+                            const store = transaction.objectStore(storeName);
+                            let isFirstItem = true;
+                            let count = 0;
+
+                            store.openCursor().onsuccess = (e) => {
+                                if (exportState.isCancelled) {
+                                    transaction.abort();
+                                    return reject(new Error("Export cancelled by user."));
+                                }
+                                const cursor = e.target.result;
+                                if (cursor) {
+                                    if (!isFirstItem) jsonParts.push(',');
+                                    jsonParts.push(JSON.stringify(cursor.value));
+                                    isFirstItem = false;
+                                    count++;
+                                    if(count % 1000 === 0) { 
+                                        updateProgress(`正在打包 ${storeName}: ${count}条...`, progressStart);
+                                    }
+                                    cursor.continue();
+                                } else {
+                                    jsonParts.push(']');
+                                    isFirstDataPart = false;
+                                    updateProgress(`处理完成: ${storeName}`, progressEnd);
+                                    resolve();
+                                }
+                            };
+                            transaction.onerror = (e) => reject(new Error(`读取 ${storeName} 失败: ${e.target.error}`));
+                        });
+                    };
 
                     if (partsToExport.includes('history')) {
                         updateProgress(`正在准备导出聊天记录...`, 50);
@@ -14946,46 +16055,43 @@ if (entity && entity.autoSummaryEnabled && summaryInterval > 0 && appState.curre
                         const allChatIds = allMetadata.map(meta => meta.chatId);
                         let allMessagesForExport = [];
                         let processedChats = 0;
+
                         for (const chatId of allChatIds) {
                             if (exportState.isCancelled) throw new Error("Export cancelled by user.");
+                            
                             const messages = await DBHelper.getMessages(chatId, 200);
                             allMessagesForExport.push(...messages);
+
                             processedChats++;
                             const progress = 50 + (processedChats / allChatIds.length) * 40;
                             updateProgress(`正在打包聊天记录 (${processedChats}/${allChatIds.length})...`, progress);
                         }
+                        
                         updateProgress(`正在清理数据...`, 91);
-                        allMessagesForExport.forEach(msg => { if (msg.senderInfo) delete msg.senderInfo; });
-                        dataToExport.data.messages = allMessagesForExport;
+                        allMessagesForExport.forEach(msg => {
+                            if (msg.senderInfo) {
+                                delete msg.senderInfo;
+                            }
+                        });
+                        
+                        appendDataPart('messages', allMessagesForExport);
                         updateProgress("处理完成: 聊天记录", 95);
                         await new Promise(resolve => setTimeout(resolve, 50));
                     }
-
-                    if(partsToExport.includes('history')) {
-                        updateProgress("正在打包元数据...", 95);
-                        dataToExport.data.chatMetadata = await DBHelper.getAll('chatMetadata');
-                        updateProgress("处理完成: 元数据", 98);
-                        await new Promise(resolve => setTimeout(resolve, 50));
-                    }
+                    await processStoreWithCursor('chatMetadata', 95, 98);
 
                     updateProgress("正在生成文件...", 98);
-                    const jsonString = JSON.stringify(dataToExport, null, 2);
+                    jsonParts.push('}}');
+
+                    const blob = new Blob(jsonParts, { type: 'application/json' });
+                    const url = URL.createObjectURL(blob);
                     const filename = `33聊天室_备份_${new Date().toISOString().slice(0, 10)}.json`;
-                    
-                    // 【关键修改】调用安卓桥梁来保存文件
-                    if (window.Android && typeof window.Android.saveDataToFile === 'function') {
-                        window.Android.saveDataToFile(jsonString, filename);
-                        UIManager.hideModal();
-                    } else {
-                        // 浏览器环境下的备用方案
-                        const blob = new Blob([jsonString], { type: 'application/json' });
-                        const url = URL.createObjectURL(blob);
-                        UIManager.showModal({
-                            title: '导出成功 (Web)',
-                            body: `<a href="${url}" download="${filename}" class="modal-btn btn-primary">点击下载备份文件</a>`,
-                            actions: [{ text: '关闭', class: 'btn-secondary', handler: () => { URL.revokeObjectURL(url); UIManager.hideModal(); } }]
-                        });
-                    }
+
+                    UIManager.showModal({
+                        title: '导出成功',
+                        body: `<a href="${url}" download="${filename}" class="modal-btn btn-primary" style="display: block; text-align: center;">点击下载备份文件</a>`,
+                        actions: [{ text: '关闭', class: 'btn-secondary', handler: () => { URL.revokeObjectURL(url); UIManager.hideModal(); } }]
+                    });
 
                 } catch (error) {
                     if (error.message.includes("cancelled")) {
@@ -17529,118 +18635,233 @@ handleImmediateSummary(entityId, isGroup) {
 
             async handleRedPacketClick(msg) {
                 const myProfile = await this.getPlayerProfileForContext(appState.currentChatId);
-                let senderContact; 
+                const isGroupChat = appState.currentChatId.startsWith('group-');
 
-                
-                if (msg.type === 'sent') {
-                    
-                    senderContact = myProfile;
+                if (!isGroupChat) {
+                    // --- 私聊红包逻辑 ---
+                    if (msg.type === 'sent') {
+                        // 玩家点击自己发的红包
+                        UIManager.showToast("不能领取自己的红包");
+                        return;
+                    }
+
+                    // 玩家点击收到的红包
+                    const hasClaimed = msg.cardData.claimedBy.some(c => c.userId === myProfile.id);
+                    const senderContact = await DBHelper.get('contacts', msg.senderId);
+
+                    if (hasClaimed) {
+                        // 如果已经领取，显示详情
+                        this.showRedPacketDetailsModal(msg, senderContact);
+                    } else {
+                        // 如果未领取，显示开红包弹窗
+                        UIManager.showModal({
+                            title: " ",
+                            body: `
+                            <div class="rp-modal-body" id="rp-pre-claim">
+                                <img src="${senderContact.avatar}" alt="avatar">
+                                <h4>${senderContact.remark || senderContact.name} 的红包</h4>
+                                <p>${msg.cardData.title}</p>
+                                <button class="rp-open-btn">开</button>
+                            </div>`,
+                            actions: [{ text: '关闭', class: 'btn-secondary', handler: () => UIManager.hideModal() }]
+                        });
+
+                        modalContentWrapper.querySelector('.rp-open-btn').onclick = async () => {
+                            // 私聊红包，领取全部金额
+                            const receivedAmount = msg.cardData.amount;
+                            
+                            const msgToUpdate = await DBHelper.get('messages', msg.messageId);
+                            if (msgToUpdate) {
+                                msgToUpdate.cardData.claimedBy.push({
+                                    userId: myProfile.id,
+                                    name: myProfile.name,
+                                    avatar: myProfile.avatar,
+                                    amount: receivedAmount,
+                                    timestamp: Date.now()
+                                });
+                                await DBHelper.put('messages', msgToUpdate);
+                            }
+
+                            // 更新气泡状态
+                            const originalBubble = $(`#${msg.messageId} .bubble`);
+                            if(originalBubble) originalBubble.classList.add('claimed');
+                            
+                            // 显示领取结果
+                            const modalBody = modalContentWrapper.querySelector('.modal-body');
+                            modalBody.innerHTML = `
+                            <div class="rp-modal-body" id="rp-post-claim">
+                                <p class="rp-amount">￥${receivedAmount.toFixed(2)}</p>
+                                <p class="rp-claimed-info">已存入零钱，可直接使用</p>
+                            </div>`;
+
+                            // 发送系统通知
+                            const noticeMsg = {
+                                messageId: Utils.generateId('sys'),
+                                chatId: msg.chatId,
+                                timestamp: Date.now(),
+                                type: 'received',
+                                segmentType: 'system',
+                                forAi: false,
+                                content: `你领取了 ${senderContact.remark || senderContact.name} 的红包`
+                            };
+                            await DBHelper.put('messages', noticeMsg);
+                            await UIManager.updateChatMetadata(msg.chatId, noticeMsg);
+                            if (appState.currentChatId === msg.chatId) {
+                                UIManager.addMessageToDOM(noticeMsg, {});
+                            }
+
+                            // 短暂显示金额后关闭弹窗
+                            setTimeout(() => UIManager.hideModal(), 1500);
+                        };
+                    }
+                    return; // 确保私聊逻辑结束后函数返回
+                }
+
+                // --- 群聊红包逻辑 (保持不变) ---
+                const isSender = msg.type === 'sent';
+                const hasClaimed = msg.cardData.claimedBy.some(c => c.userId === myProfile.id);
+                const isFullyClaimed = msg.cardData.claimedBy.length >= msg.cardData.count;
+
+                if (isSender || hasClaimed || isFullyClaimed) {
+                    const senderContact = msg.type === 'sent' ? myProfile : await DBHelper.get('contacts', msg.senderId);
+                    this.showRedPacketDetailsModal(msg, senderContact);
                 } else {
-                    
-                    senderContact = await DBHelper.get('contacts', msg.senderId);
-                }
-
-                
-                if (!senderContact) {
-                    console.error("无法找到红包发送方信息:", msg);
-                    UIManager.showToast("无法加载红包详情，发送方信息丢失。");
-                    return;
-                }
-                
-                
-                const modalStyle = `
-                    <style>
-                        .rp-modal-body { text-align: center; padding: 20px 0; }
-                        .rp-modal-body img { width: 60px; height: 60px; border-radius: 8px; margin-bottom: 10px; }
-                        .rp-modal-body h4 { font-size: 1.2rem; margin-bottom: 5px; }
-                        .rp-modal-body p { color: var(--text-color-light); margin-bottom: 30px; }
-                        .rp-open-btn {
-                            width: 80px; height: 80px; border-radius: 50%;
-                            background-color: #F8C34A; color: white;
-                            border: 3px solid #F5A623; font-size: 2rem;
-                            cursor: pointer; animation: rp-pulse 1.5s infinite;
-                            box-shadow: 0 4px 10px rgba(248, 195, 74, 0.5);
-                        }
-                        @keyframes rp-pulse { 0% { transform: scale(0.95); } 70% { transform: scale(1.05); } 100% { transform: scale(0.95); } }
-                        .rp-amount { font-size: 2.5rem; font-weight: bold; margin-bottom: 10px; }
-                        .rp-claimed-info { font-size: 0.9rem; color: var(--text-color-medium); }
-                    </style>
-                `;
-
-                
-                UIManager.showModal({
-                    title: " ", 
-                    body: `
-                        ${modalStyle}
+                    // 可以领取
+                    const senderContact = await DBHelper.get('contacts', msg.senderId);
+                     const modalStyle = `...`; // 弹窗样式已在全局CSS中，此处无需重复
+                    UIManager.showModal({
+                        title: " ",
+                        body: `
                         <div class="rp-modal-body" id="rp-pre-claim">
                             <img src="${senderContact.avatar}" alt="avatar">
                             <h4>${senderContact.remark || senderContact.name} 的红包</h4>
                             <p>${msg.cardData.title}</p>
                             <button class="rp-open-btn">开</button>
+                        </div>`,
+                        actions: [{ text: '关闭', class: 'btn-secondary', handler: () => UIManager.hideModal() }]
+                    });
+                    
+                    modalContentWrapper.querySelector('.rp-open-btn').onclick = async () => {
+                        const totalAmount = msg.cardData.amount;
+                        const totalCount = msg.cardData.count;
+                        const claimedList = msg.cardData.claimedBy;
+                        
+                        const claimedAmount = claimedList.reduce((sum, c) => sum + c.amount, 0);
+                        const remainingAmount = totalAmount - claimedAmount;
+                        const remainingCount = totalCount - claimedList.length;
+
+                        let receivedAmount = 0;
+                        if (remainingCount === 1) {
+                            receivedAmount = remainingAmount;
+                        } else {
+                            const maxReceive = remainingAmount - (remainingCount - 1) * 0.01;
+                            receivedAmount = parseFloat((Math.random() * (maxReceive - 0.01) + 0.01).toFixed(2));
+                        }
+                        
+                        const msgToUpdate = await DBHelper.get('messages', msg.messageId);
+                        if (msgToUpdate) {
+                            msgToUpdate.cardData.claimedBy.push({
+                                userId: myProfile.id,
+                                name: myProfile.name,
+                                avatar: myProfile.avatar,
+                                amount: receivedAmount,
+                                timestamp: Date.now()
+                            });
+                            await DBHelper.put('messages', msgToUpdate);
+                        }
+
+                        if (msgToUpdate.cardData.claimedBy.length >= msgToUpdate.cardData.count) {
+                            const originalBubble = $(`#${msg.messageId} .bubble`);
+                            if(originalBubble) originalBubble.classList.add('claimed');
+                        }
+                        
+                        const modalBody = modalContentWrapper.querySelector('.modal-body');
+                        modalBody.innerHTML = `
+                        <div class="rp-modal-body" id="rp-post-claim">
+                            <p class="rp-amount">￥${receivedAmount.toFixed(2)}</p>
+                            <p class="rp-claimed-info">已存入零钱，可直接使用</p>
+                        </div>`;
+
+                        const noticeMsg = {
+                            messageId: Utils.generateId('sys'),
+                            chatId: msg.chatId,
+                            timestamp: Date.now(),
+                            type: 'received',
+                            segmentType: 'system',
+                            forAi: false,
+                            content: `你领取了 ${senderContact.remark || senderContact.name} 的红包`
+                        };
+                        await DBHelper.put('messages', noticeMsg);
+                        await UIManager.updateChatMetadata(msg.chatId, noticeMsg);
+                        if (appState.currentChatId === msg.chatId) {
+                            UIManager.addMessageToDOM(noticeMsg, {});
+                        }
+
+                        setTimeout(() => this.showRedPacketDetailsModal(msgToUpdate, senderContact), 1500);
+                    };
+                }
+            },
+
+            async showRedPacketDetailsModal(msg, senderContact) {
+                const freshMsg = await DBHelper.get('messages', msg.messageId);
+                if (!freshMsg) {
+                    UIManager.showToast("无法获取红包详情");
+                    return;
+                }
+
+                const myProfile = await this.getPlayerProfileForContext(appState.currentChatId);
+                const allContacts = await DBHelper.getAll('contacts');
+
+                const claimedList = freshMsg.cardData.claimedBy || [];
+                const isFullyClaimed = claimedList.length >= freshMsg.cardData.count;
+
+                let luckKingId = null;
+                if (isFullyClaimed && claimedList.length > 0) {
+                    const maxAmount = Math.max(...claimedList.map(c => c.amount));
+                    const luckKing = claimedList.find(c => c.amount === maxAmount);
+                    if (luckKing) luckKingId = luckKing.userId;
+                }
+                
+                const claimListHtml = claimedList.map(claim => {
+                    let claimant;
+                    if (claim.userId === myProfile.id) {
+                        claimant = { ...myProfile, name: "你" };
+                    } else {
+                        claimant = allContacts.find(c => c.id === claim.userId) || { name: claim.name, avatar: 'data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=' };
+                    }
+                    
+                    const luckKingTag = claim.userId === luckKingId ? `<span class="rp-luck-king-tag"><i class="fas fa-crown"></i>手气王</span>` : '';
+                    
+                    return `
+                        <li class="rp-claim-item">
+                            <img src="${claim.avatar || claimant.avatar}" alt="avatar">
+                            <div class="claim-details">
+                                <div class="claim-name">${claimant.remark || claimant.name} ${luckKingTag}</div>
+                                <div class="claim-time">${Utils.formatTimestampSmartly(claim.timestamp)}</div>
+                            </div>
+                            <span class="claim-amount">￥${claim.amount.toFixed(2)}</span>
+                        </li>`;
+                }).join('');
+
+                const totalClaimedAmount = claimedList.reduce((sum, c) => sum + c.amount, 0).toFixed(2);
+                const infoText = isFullyClaimed
+                    ? `${freshMsg.cardData.count}个红包共￥${freshMsg.cardData.amount.toFixed(2)}，已被领完。`
+                    : `${claimedList.length}/${freshMsg.cardData.count}个，共￥${totalClaimedAmount}/${freshMsg.cardData.amount.toFixed(2)}`;
+
+                UIManager.showModal({
+                    title: " ",
+                    body: `
+                        <div class="rp-details-modal-body">
+                            <div class="rp-details-header">
+                                <p><img src="${senderContact.avatar}"><span>${senderContact.remark || senderContact.name}的红包</span></p>
+                                <p>${msg.cardData.title}</p>
+                            </div>
+                            <div class="rp-claim-info-bar">${infoText}</div>
+                            <ul class="rp-claim-list">${claimListHtml}</ul>
                         </div>
                     `,
                     actions: [{ text: '关闭', class: 'btn-secondary', handler: () => UIManager.hideModal() }]
                 });
-
-                
-                modalContentWrapper.querySelector('.rp-open-btn').onclick = async () => {
-                    
-
-                    if (msg.type === 'sent') {
-                        UIManager.showToast("不能领取自己发的红包哦");
-                        return;
-                    }
-                    
-                    const isGroupChat = appState.currentChatId.startsWith('group-');
-                    let receivedAmount = 0;
-                    
-                    if (isGroupChat) {
-                        
-                        if (msg.cardData.count === 1) {
-                            receivedAmount = msg.cardData.amount;
-                        } else {
-                            
-                            const remainingAmount = msg.cardData.amount;
-                            const remainingCount = msg.cardData.count - msg.cardData.claimedBy.length;
-                            const maxReceive = remainingAmount - (remainingCount - 1) * 0.01;
-                            receivedAmount = Math.random() * (maxReceive - 0.01) + 0.01;
-                        }
-                    } else {
-                        receivedAmount = msg.cardData.amount;
-                    }
-
-                    
-                    const msgToUpdate = await DBHelper.get('messages', msg.messageId);
-                    if (msgToUpdate) {
-                        msgToUpdate.cardData.isClaimedByPlayer = true;
-                        if (!Array.isArray(msgToUpdate.cardData.claimedBy)) {
-                             msgToUpdate.cardData.claimedBy = [];
-                        }
-                        msgToUpdate.cardData.claimedBy.push(myProfile.id);
-                        await DBHelper.put('messages', msgToUpdate);
-                    }
-
-                    
-                    const originalBubble = $(`#${msg.messageId} .bubble`);
-                    if(originalBubble) originalBubble.classList.add('claimed');
-
-                    
-                    const notice = document.createElement('div');
-                    notice.className = 'time-divider';
-                    notice.textContent = `${myProfile.name} 领取了 ${senderContact.remark || senderContact.name} 的红包`;
-                    chatArea.appendChild(notice);
-                    chatArea.scrollTop = chatArea.scrollHeight;
-                    
-                    
-                    const modalBody = modalContentWrapper.querySelector('.modal-body');
-                    modalBody.innerHTML = `
-                        ${modalStyle}
-                        <div class="rp-modal-body" id="rp-post-claim">
-                            <p class="rp-amount">￥${receivedAmount.toFixed(2)}</p>
-                            <p class="rp-claimed-info">已存入零钱，可直接使用</p>
-                        </div>
-                    `;
-                };
             },
 
             async handleInviteMembers(groupId) {
@@ -19307,38 +20528,329 @@ handleImmediateSummary(entityId, isGroup) {
                             };
                             
                             const jsonString = JSON.stringify(exportData, null, 2);
+                            const blob = new Blob([jsonString], {type: "application/json"});
+                            const url = URL.createObjectURL(blob);
                             
-                            // 【关键修改】调用安卓桥梁来保存文件
-                            if (window.Android && typeof window.Android.saveDataToFile === 'function') {
-                                window.Android.saveDataToFile(jsonString, finalFilename);
-                                UIManager.hideModal(); // 直接关闭选择框
-                                UIManager.showToast("正在调用系统保存...");
-                            } else {
-                                // 浏览器环境下的备用方案
-                                const blob = new Blob([jsonString], {type: "application/json"});
-                                const url = URL.createObjectURL(blob);
-                                UIManager.showModal({
-                                    title: '文件已生成 (Web)',
-                                    body: `
-                                        <p>请点击下面的链接下载文件。</p>
-                                        <a href="${url}" download="${finalFilename}" class="modal-btn btn-primary" style="display: block; text-align: center; margin-top: 20px;">
-                                            点击下载 ${finalFilename}
-                                        </a>
-                                        <p style="font-size: 0.8rem; color: #aaa; text-align: center; margin-top: 15px;">(下载后此链接将失效)</p>
-                                    `,
-                                    actions: [{
-                                        text: '关闭',
-                                        class: 'btn-secondary',
-                                        handler: () => {
-                                            URL.revokeObjectURL(url);
-                                            UIManager.hideModal();
-                                        }
-                                    }]
-                                });
-                            }
+                            UIManager.showModal({
+                                title: '文件已生成',
+                                body: `
+                                    <p>请点击下面的链接下载文件。</p>
+                                    <a href="${url}" download="${finalFilename}" class="modal-btn btn-primary" style="display: block; text-align: center; margin-top: 20px;">
+                                        点击下载 ${finalFilename}
+                                    </a>
+                                    <p style="font-size: 0.8rem; color: #aaa; text-align: center; margin-top: 15px;">(下载后此链接将失效)</p>
+                                `,
+                                actions: [{
+                                    text: '关闭',
+                                    class: 'btn-secondary',
+                                    handler: () => {
+                                        URL.revokeObjectURL(url);
+                                        UIManager.hideModal();
+                                    }
+                                }]
+                            });
                         }}
                     ]
                 });
+            },
+
+            handleIncomingVideoCall(caller, firstLine) {
+                if (appState.videoCall.isActive || appState.videoCall.isIncoming) {
+                    console.warn("已有通话或来电，忽略新的通话请求。");
+                    return;
+                }
+
+                appState.videoCall.isIncoming = true;
+                appState.videoCall.callInitiator = 'ai'; // 新增：标记是AI发起的
+                appState.videoCall.targetId = caller.id;
+                appState.videoCall.aiFirstLine = firstLine;
+
+                const container = $('#top-notification-container');
+                const banner = document.createElement('div');
+                banner.className = 'video-call-notification-banner';
+                banner.id = 'incoming-call-banner';
+                banner.innerHTML = `
+                    <img src="${caller.avatar}" alt="avatar" class="notification-avatar">
+                    <div class="caller-info">
+                        <div class="caller-name">${caller.remark || caller.name}</div>
+                        <div class="caller-text">邀请你进行视频通话</div>
+                    </div>
+                    <div class="actions">
+                        <button class="action-btn hangup" id="decline-call-btn"><i class="fas fa-phone-slash"></i></button>
+                        <button class="action-btn accept" id="accept-call-btn"><i class="fas fa-video"></i></button>
+                    </div>
+                `;
+
+                container.appendChild(banner);
+
+                const hideAndDecline = () => {
+                    if (!appState.videoCall.isIncoming) return;
+                    this.declineIncomingCall(caller.id, true);
+                };
+                
+                appState.videoCall.incomingCallTimeout = setTimeout(hideAndDecline, 30000); // 30秒无应答自动挂断
+
+                $('#accept-call-btn').onclick = () => this.acceptIncomingCall(caller.id);
+                $('#decline-call-btn').onclick = () => this.declineIncomingCall(caller.id, false);
+            },
+
+            async acceptIncomingCall(callerId) {
+                clearTimeout(appState.videoCall.incomingCallTimeout);
+                
+                const banner = $('#incoming-call-banner');
+                if(banner) {
+                    banner.style.animation = 'notification-exit 0.5s forwards';
+                    setTimeout(() => banner.remove(), 500);
+                }
+
+                const newLogId = Utils.generateId('vclog');
+                const aiMessage = { type: 'received', content: appState.videoCall.aiFirstLine, timestamp: Date.now() };
+                const newLog = {
+                    id: newLogId,
+                    contactId: callerId,
+                    startTime: Date.now(),
+                    duration: 0,
+                    messages: [aiMessage] 
+                };
+                await DBHelper.put('videoCallLogs', newLog);
+                
+                appState.videoCall.isActive = true;
+                appState.videoCall.isIncoming = false;
+                $('#video-call-ai-reply-btn').style.display = appState.videoCall.instantReply ? 'none' : 'flex';
+                appState.videoCall.startTime = newLog.startTime;
+                appState.videoCall.timerId = setInterval(EventManager.updateVideoCallTimer, 1000);
+                appState.currentVideoCallLogId = newLogId;
+
+                const target = await DBHelper.get('contacts', callerId);
+                const myProfile = await this.getPlayerProfileForContext(callerId);
+                
+                UIManager.renderVideoCallPage(target, myProfile, false);
+                UIManager.navigateTo('video-call');
+                
+                UIManager.addVideoCallMessageToDOM(aiMessage);
+            },
+            
+            async declineIncomingCall(callerId, isAuto = false) {
+                clearTimeout(appState.videoCall.incomingCallTimeout);
+                
+                const banner = $('#incoming-call-banner');
+                if(banner) {
+                    banner.style.animation = 'notification-exit 0.5s forwards';
+                    setTimeout(() => banner.remove(), 500);
+                }
+                
+                appState.videoCall.isIncoming = false;
+                appState.videoCall.targetId = null;
+                appState.videoCall.aiFirstLine = '';
+                
+                const systemMessage = {
+                    messageId: Utils.generateId('msg'),
+                    chatId: callerId,
+                    timestamp: Date.now(),
+                    type: 'sent', // 代表玩家的操作
+                    segmentType: 'system',
+                    forAi: true, 
+                    content: isAuto ? '[通话无人接听]' : '[通话未接通]'
+                };
+                
+                await DBHelper.put('messages', systemMessage);
+                await UIManager.updateChatMetadata(callerId, systemMessage, 0);
+
+                if (appState.currentChatId === callerId) {
+                    await UIManager.refreshChatView();
+                } else if (appState.currentPage === 'messages') {
+                    await UIManager.renderMessagesListPage();
+                }
+
+                // 触发AI对挂断电话的反应
+                if (appState.currentChatId === callerId) {
+                    setTimeout(() => AIHandler.handleAiReplyRequest(), 500);
+                }
+            },
+
+            async handleStartVideoCall() {
+                if (appState.videoCall.isActive) return;
+
+                const chatId = appState.currentChatId;
+                if (!chatId || chatId.startsWith('group-')) {
+                    UIManager.showToast("视频通话功能暂不支持群聊");
+                    return;
+                }
+                
+                const target = await DBHelper.get('contacts', chatId);
+                if (!target) return;
+
+                const myProfile = await this.getPlayerProfileForContext(target.id);
+
+                // 创建新的通话记录
+                const newLogId = Utils.generateId('vclog');
+                const newLog = {
+                    id: newLogId,
+                    contactId: chatId,
+                    startTime: Date.now(), // 初始时间
+                    duration: 0,
+                    messages: []
+                };
+                await DBHelper.put('videoCallLogs', newLog);
+                
+                appState.videoCall = {
+                    isActive: true,
+                    callInitiator: 'player', // 新增：标记是玩家发起的
+                    startTime: null, // 等待AI“接听”后才设置
+                    timerId: null,
+                    targetId: chatId,
+                    instantReply: (localStorage.getItem('videoCallInstantReply') !== 'false'),
+                    bubbleTheme: localStorage.getItem('videoCallBubbleTheme') || 'default',
+                    pendingPlayerMessages: [],
+                };
+                $('#video-call-ai-reply-btn').style.display = appState.videoCall.instantReply ? 'none' : 'flex';
+                appState.currentVideoCallLogId = newLogId;
+                
+                UIManager.renderVideoCallPage(target, myProfile, true);
+                UIManager.navigateTo('video-call');
+                
+                AIHandler.handleVideoCallReplyRequest(true);
+            },
+
+            async handleEndVideoCall(isAiHangup = false) {
+                if (!appState.videoCall.isActive) return;
+
+                clearInterval(appState.videoCall.timerId);
+                const duration = appState.videoCall.startTime ? Math.round((Date.now() - appState.videoCall.startTime) / 1000) : 0;
+                const targetId = appState.videoCall.targetId;
+                const logId = appState.currentVideoCallLogId;
+
+                const callLog = await DBHelper.get('videoCallLogs', logId);
+                
+                const minutes = Math.floor(duration / 60);
+                const seconds = duration % 60;
+                const durationString = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+                
+                const contact = await DBHelper.get('contacts', targetId);
+                const myProfile = await this.getPlayerProfileForContext(targetId);
+
+                let visibleMessage;
+                let messageForAi;
+
+                const messageType = appState.videoCall.callInitiator === 'ai' ? 'received' : 'sent';
+                const senderId = messageType === 'received' ? targetId : myProfile.id;
+
+                if (callLog && (callLog.summary || (callLog.messages && callLog.messages.length > 0))) {
+                    const hasSummary = !!callLog.summary;
+                    const cardTitle = hasSummary ? "通话总结" : "通话记录";
+                    
+                    visibleMessage = {
+                        messageId: Utils.generateId('msg'),
+                        chatId: targetId,
+                        timestamp: Date.now(),
+                        type: messageType,
+                        senderId: senderId, 
+                        segmentType: 'video_call_log',
+                        cardData: { logId: logId, title: cardTitle, durationString: durationString },
+                        content: `[${cardTitle}]`,
+                        forAi: false
+                    };
+
+                    let aiContent = '';
+                    if (hasSummary) {
+                        aiContent = `<通话总结>\n${callLog.summary}\n</通话总结>`;
+                    } else {
+                        const lastTurns = callLog.messages.slice(-4);
+                        const turnsContent = lastTurns.map(msg => {
+                            const speaker = msg.type === 'sent' ? (myProfile.name || '玩家') : (contact.remark || contact.name || '角色');
+                            return `${speaker}：${msg.content}`;
+                        }).join('\n');
+                        aiContent = `<通话记录>\n${turnsContent}\n</通话记录>`;
+                    }
+                    
+                    messageForAi = {
+                        messageId: Utils.generateId('msg_ai'),
+                        chatId: targetId,
+                        timestamp: Date.now() + 1,
+                        type: 'received',
+                        segmentType: 'system',
+                        content: aiContent,
+                        forAi: true,
+                        isHidden: true
+                    };
+                    
+                    callLog.associatedMessageId = visibleMessage.messageId;
+                    callLog.aiMessageId = messageForAi.messageId;
+                    await DBHelper.put('messages', messageForAi);
+
+                } else {
+                    visibleMessage = {
+                        messageId: Utils.generateId('msg'),
+                        chatId: targetId,
+                        timestamp: Date.now(),
+                        type: messageType,
+                        senderId: senderId,
+                        segmentType: 'system',
+                        forAi: true,
+                        content: `[通话已结束 时长 ${durationString}]`
+                    };
+                }
+                
+                if (callLog) {
+                    callLog.duration = duration;
+                    await DBHelper.put('videoCallLogs', callLog);
+                }
+
+                await DBHelper.put('messages', visibleMessage);
+                await UIManager.updateChatMetadata(targetId, visibleMessage, 0);
+
+                appState.videoCall = { isActive: false, isIncoming: false, incomingCallTimeout: null, aiFirstLine: '', callInitiator: null, startTime: null, timerId: null, targetId: null, pendingPlayerMessages: [] };
+                appState.currentVideoCallLogId = null;
+                
+                UIManager.navigateTo('chat');
+                
+                setTimeout(async () => {
+                    await UIManager.refreshChatView();
+                }, 500);
+            },
+
+            updateVideoCallTimer() {
+                if (!appState.videoCall.isActive || !appState.videoCall.startTime) return;
+                const now = Date.now();
+                const elapsed = Math.floor((now - appState.videoCall.startTime) / 1000);
+                const minutes = Math.floor(elapsed / 60);
+                const seconds = elapsed % 60;
+                $('#video-call-timer').textContent = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+            },
+
+            async handleSendVideoCallMessage() {
+                const input = $('#video-call-input');
+                const content = input.value.trim();
+                if (!content) return;
+            
+                const playerMessage = {
+                    type: 'sent',
+                    content: content,
+                    timestamp: Date.now()
+                };
+            
+                // 1. 显示玩家消息
+                UIManager.addVideoCallMessageToDOM(playerMessage);
+            
+                // 2. 保存到通话记录
+                const callLog = await DBHelper.get('videoCallLogs', appState.currentVideoCallLogId);
+                if(callLog) {
+                    callLog.messages.push(playerMessage);
+                    await DBHelper.put('videoCallLogs', callLog);
+                }
+            
+                // 3. 根据“即发即回”状态决定是否立即请求AI
+                if (appState.videoCall.instantReply) {
+                    AIHandler.handleVideoCallReplyRequest(false, content);
+                } else {
+                    // 否则，暂存消息，并手动清空输入框
+                    appState.videoCall.pendingPlayerMessages.push(content);
+                    input.value = '';
+                    input.style.height = 'auto';
+                }
+                
+                input.value = '';
+                input.style.height = 'auto'; // 重置高度
             },
 
             async handleWishPool() {
@@ -20953,6 +22465,307 @@ async showGiftDetailsModal(messageId) {
                         .catch(() => UIManager.showToast("复制失败,请手动复制"));
                 }
             },
+            async renderCallHistoryListPage() {
+                const listUl = $('#call-history-list');
+                const pageContent = $('#page-video-call-history .page-content');
+                const contacts = await DBHelper.getAll('contacts');
+                const contactsMap = contacts.reduce((map, c) => (map[c.id] = c, map), {});
+                const allLogs = (await DBHelper.getAll('videoCallLogs')).sort((a, b) => b.startTime - a.startTime);
+            
+                let renderedCount = 0;
+                const logsPerLoad = 10;
+            
+                const renderLogs = (logsToRender) => {
+                    logsToRender.forEach(log => {
+                        const contact = contactsMap[log.contactId];
+                        if (!contact) return;
+            
+                        const minutes = Math.floor(log.duration / 60);
+                        const seconds = log.duration % 60;
+                        const durationString = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+            
+                        const li = document.createElement('li');
+                        li.className = 'call-history-item';
+                        li.innerHTML = `...`; // 内容与之前相同
+                         li.innerHTML = `
+                            <img src="${contact.avatar}" alt="${contact.name}">
+                            <div class="call-history-info">
+                                <div class="call-history-name">${contact.remark || contact.name}</div>
+                                <div class="call-history-details">
+                                    <i class="fas fa-video" style="margin-right: 5px;"></i>
+                                    <span>通话时长: ${durationString}</span>
+                                </div>
+                            </div>
+                            <span class="call-history-time">${Utils.formatTimestampSmartly(log.startTime)}</span>
+                            <div class="call-history-actions">
+                                <button class="action-btn delete" data-action="delete" data-log-id="${log.id}" title="删除记录"><i class="fas fa-trash-alt"></i></button>
+                            </div>
+                        `;
+                        
+                        li.querySelector('.call-history-info').addEventListener('click', () => {
+                            UIManager.navigateTo('video-call-log-detail', 'video-call-history');
+                            this.renderCallLogDetailPage(log.id);
+                        });
+            
+                        li.querySelector('[data-action="delete"]').addEventListener('click', (e) => {
+                            e.stopPropagation();
+                            this.handleDeleteCallLog(log.id);
+                        });
+                        
+                        listUl.appendChild(li);
+                    });
+                };
+            
+                const loadMoreLogs = () => {
+                    const logsToRender = allLogs.slice(renderedCount, renderedCount + logsPerLoad);
+                    renderLogs(logsToRender);
+                    renderedCount += logsToRender.length;
+                    if (renderedCount >= allLogs.length) {
+                        pageContent.removeEventListener('scroll', scrollHandler);
+                    }
+                };
+            
+                const scrollHandler = () => {
+                    if (pageContent.scrollTop + pageContent.clientHeight >= pageContent.scrollHeight - 50) {
+                        loadMoreLogs();
+                    }
+                };
+            
+                listUl.innerHTML = '';
+                if (allLogs.length === 0) {
+                    listUl.innerHTML = `<li style="text-align:center; color: #aaa; padding: 40px 0;">还没有通话记录</li>`;
+                    return;
+                }
+            
+                pageContent.removeEventListener('scroll', scrollHandler); // 移除旧的监听器
+                loadMoreLogs();
+                pageContent.addEventListener('scroll', scrollHandler);
+            },
+
+            async renderCallLogDetailPage(logId) {
+                const log = await DBHelper.get('videoCallLogs', logId);
+                const contact = await DBHelper.get('contacts', log.contactId);
+                const contentArea = $('#call-log-detail-content');
+                const pageContent = $('#page-video-call-log-detail .page-content');
+                const header = $('#page-video-call-log-detail .page-header');
+            
+                const oldBtn = header.querySelector('.header-icon[data-action="summarize"]');
+                if (oldBtn) oldBtn.remove();
+            
+                const summarizeBtn = document.createElement('div');
+                summarizeBtn.className = 'header-icon';
+                summarizeBtn.dataset.action = 'summarize';
+                summarizeBtn.title = '总结通话';
+                summarizeBtn.innerHTML = `<i class="fas fa-file-alt"></i>`;
+                summarizeBtn.style.justifySelf = 'end';
+                summarizeBtn.addEventListener('click', () => this.handleSummarizeCallLog(logId));
+                header.appendChild(summarizeBtn);
+            
+                $('#call-log-detail-title').textContent = `与 ${contact.remark || contact.name} 的通话`;
+            
+                const allMessages = log.messages || [];
+                let renderedCount = 0;
+                const messagesPerLoad = 10;
+            
+                const renderMessages = (messagesToRender) => {
+                    messagesToRender.forEach(msg => {
+                        const bubble = document.createElement('div');
+                        bubble.className = `bubble video-call-message-bubble ${msg.type}`;
+                        bubble.textContent = msg.content;
+                        contentArea.appendChild(bubble);
+                    });
+                };
+            
+                const loadMoreMessages = () => {
+                    const messagesToRender = allMessages.slice(renderedCount, renderedCount + messagesPerLoad);
+                    renderMessages(messagesToRender);
+                    renderedCount += messagesToRender.length;
+                    if (renderedCount >= allMessages.length) {
+                        pageContent.removeEventListener('scroll', scrollHandler);
+                    }
+                };
+            
+                const scrollHandler = () => {
+                    if (pageContent.scrollTop + pageContent.clientHeight >= pageContent.scrollHeight - 50) {
+                        loadMoreMessages();
+                    }
+                };
+            
+                contentArea.innerHTML = '';
+                if (allMessages.length === 0) {
+                    contentArea.innerHTML = `<p style="text-align:center; color: #aaa;">本次通话没有消息记录</p>`;
+                    return;
+                }
+            
+                pageContent.removeEventListener('scroll', scrollHandler);
+                loadMoreMessages();
+                pageContent.addEventListener('scroll', scrollHandler);
+            },
+            
+            async handleDeleteCallLog(logId) {
+                UIManager.showModal({
+                    title: "确认删除",
+                    body: `<p>确定要删除这条通话记录吗？相关的聊天卡片也会被一并删除。此操作无法恢复。</p>`,
+                    actions: [
+                        { text: '取消', class: 'btn-secondary', handler: () => UIManager.hideModal() },
+                        { text: '删除', class: 'btn-danger', handler: async () => {
+                            const log = await DBHelper.get('videoCallLogs', logId);
+                            if (log) {
+                        // 删除关联的聊天消息
+                        if (log.associatedMessageId) {
+                            // 新逻辑：直接通过ID删除，精准可靠
+                            await DBHelper.delete('messages', log.associatedMessageId);
+                        } else {
+                            // 旧逻辑（兼容老数据）：如果没找到直接链接，再尝试搜索
+                            const allMessages = await DBHelper.getMessages(log.contactId, Number.MAX_SAFE_INTEGER);
+                            const associatedMessage = allMessages.find(msg => {
+                                if (msg.segmentType === 'video_call_log' && msg.cardData && msg.cardData.logId === logId) {
+                                    return true;
+                                }
+                                if (msg.segmentType === 'system' && msg.content.startsWith('[通话已结束')) {
+                                    const timeDifference = Math.abs(msg.timestamp - log.startTime);
+                                    if (timeDifference < 5000) {
+                                        return true;
+                                    }
+                                }
+                                return false;
+                            });
+                            if (associatedMessage) {
+                                await DBHelper.delete('messages', associatedMessage.messageId);
+                            }
+                        }
+                            }
+                            // 删除通话记录本身
+                            await DBHelper.delete('videoCallLogs', logId);
+            
+                            await this.renderCallHistoryListPage();
+                            UIManager.hideModal();
+                            UIManager.showToast("通话记录已删除");
+                        }}
+                    ]
+                });
+            },
+
+            async handleSummarizeCallLog(logId) {
+                const log = await DBHelper.get('videoCallLogs', logId);
+                const contact = await DBHelper.get('contacts', log.contactId);
+                if (!log || !contact) return;
+
+                const currentSummary = log.summary || '';
+
+                UIManager.showModal({
+                    title: `通话总结 - ${contact.remark || contact.name}`,
+                    body: `
+                        <p style="font-size: 0.9rem; color: #666; margin-bottom: 15px;">你可以编辑AI生成的总结，或手动填写。这份总结将代替通话记录显示在你们的聊天界面中。</p>
+                        <textarea id="call-summary-textarea" rows="8" style="width: 100%;">${currentSummary}</textarea>
+                        <div id="summary-loader" style="display: none; text-align: center; margin-top: 10px;">
+                            <div class="loader-spinner"></div>
+                            <p>AI正在总结中...</p>
+                        </div>
+                    `,
+                    actions: [
+                        { text: '让AI总结', class: 'btn-secondary', id: 'ai-summarize-btn' },
+                        { text: '保存', class: 'btn-primary', handler: async () => {
+                            const newSummary = $('#call-summary-textarea').value.trim();
+                            log.summary = newSummary;
+                            await DBHelper.put('videoCallLogs', log);
+
+                            // **关键改动：在这里更新AI的历史消息**
+                            if (log.aiMessageId && newSummary) {
+                                const messageToUpdate = await DBHelper.get('messages', log.aiMessageId);
+                                if (messageToUpdate) {
+                                    messageToUpdate.content = `<通话总结>\n${newSummary}\n</通话总结>`;
+                                    await DBHelper.put('messages', messageToUpdate);
+                                    console.log(`已更新AI消息 ${log.aiMessageId} 为通话总结。`);
+                                }
+                            }
+
+                            UIManager.hideModal();
+                            UIManager.showToast("总结已保存！");
+                        }}
+                    ]
+                });
+
+                $('#ai-summarize-btn').addEventListener('click', async () => {
+                    if (log.messages.length === 0) {
+                        return UIManager.showToast("没有通话内容，无法总结。");
+                    }
+                    
+                    $('#summary-loader').style.display = 'block';
+                    $('#ai-summarize-btn').disabled = true;
+
+                    const myProfile = await this.getPlayerProfileForContext(log.contactId);
+                    const conversation = log.messages.map(msg => {
+                        const speaker = msg.type === 'sent' ? myProfile.name : contact.name;
+                        return `${speaker}: ${msg.content}`;
+                    }).join('\n');
+                    
+                    const prompt = `你是一个专业的对话总结助手。请根据以下视频通话记录，为我生成一段不超过150字的简明扼要的总结，概括出对话的核心内容、关键信息和双方的情感基调。\n\n---通话记录---\n${conversation}\n\n---总结---`;
+
+                    try {
+                        const summary = await AIHandler.getApiResponse(prompt, null, new AbortController().signal);
+                        $('#call-summary-textarea').value = summary.trim();
+                    } catch (error) {
+                        UIManager.showToast(`AI总结失败: ${error.message}`);
+                    } finally {
+                        $('#summary-loader').style.display = 'none';
+                        $('#ai-summarize-btn').disabled = false;
+                    }
+                });
+            },
+            async showVideoCallSettingsSidebar() {
+                const bubbleTheme = localStorage.getItem('videoCallBubbleTheme') || 'default';
+                const instantReply = (localStorage.getItem('videoCallInstantReply') !== 'false'); // 默认为true
+                
+                appState.videoCall.bubbleTheme = bubbleTheme;
+                appState.videoCall.instantReply = instantReply;
+            
+                UIManager.showSidebar({
+                    position: 'left',
+                    title: "通话设置",
+                    body: `
+                        <div class="settings-list" style="padding:0; margin:0 -10px;">
+                            <div class="setting-item">
+                                <span>即发即回</span>
+                                <label class="switch">
+                                    <input type="checkbox" id="instant-reply-switch" ${instantReply ? 'checked' : ''}>
+                                    <span class="slider"></span>
+                                </label>
+                            </div>
+                            <div class="setting-item" style="flex-direction: column; align-items: flex-start;">
+                                <span style="margin-bottom: 15px;">气泡颜色</span>
+                                <div style="display: flex; justify-content: space-around; width: 100%;">
+                                    <label><input type="radio" name="bubble-theme" value="default" ${bubbleTheme === 'default' ? 'checked' : ''}> 默认</label>
+                                    <label><input type="radio" name="bubble-theme" value="black" ${bubbleTheme === 'black' ? 'checked' : ''}> 黑色</label>
+                                    <label><input type="radio" name="bubble-theme" value="white" ${bubbleTheme === 'white' ? 'checked' : ''}> 白色</label>
+                                </div>
+                            </div>
+                        </div>
+                    `,
+                    actions: [{ text: '关闭', class: 'btn-secondary', handler: () => UIManager.hideSidebar() }]
+                });
+            
+                // 绑定事件
+                $('#instant-reply-switch').onchange = (e) => {
+                    appState.videoCall.instantReply = e.target.checked;
+                    localStorage.setItem('videoCallInstantReply', appState.videoCall.instantReply);
+                    $('#video-call-ai-reply-btn').style.display = appState.videoCall.instantReply ? 'none' : 'flex';
+                };
+            
+                $$('input[name="bubble-theme"]').forEach(radio => {
+                    radio.onchange = (e) => {
+                        appState.videoCall.bubbleTheme = e.target.value;
+                        localStorage.setItem('videoCallBubbleTheme', appState.videoCall.bubbleTheme);
+                        
+                        // 实时更新已存在的气泡样式
+                        $$('#video-call-messages .video-call-message-bubble').forEach(bubble => {
+                            bubble.classList.remove('theme-default', 'theme-black', 'theme-white');
+                            bubble.classList.add(`theme-${appState.videoCall.bubbleTheme}`);
+                        });
+                    };
+                });
+            },
+            
         };
         
         async function loadFontsAfterSplash() {
