@@ -2313,6 +2313,7 @@
         .member-nickname-edit-btn:hover {
             color: var(--accent-color);
         }
+        
         .member-list-modal-item:last-child {
             border-bottom: none;
         }
@@ -4727,7 +4728,7 @@
     <div id="splash-screen">
         <div class="splash-logo">33聊天室</div>
         <div class="splash-loader"></div>
-        <p style="position: absolute; bottom: 20px; font-size: 12px; color: #aaa; user-select: none;">此聊天室(v2.0.4)由33制作，xhs:@回风</p>
+        <p style="position: absolute; bottom: 20px; font-size: 12px; color: #aaa; user-select: none;">此聊天室(v2.1.0)由33制作，xhs:@回风</p>
     </div>
     <div id="app-container">
         <!-- 顶部浮窗通知容器 -->
@@ -6878,8 +6879,10 @@
 
                 if (isGroup) {
                     const memberNicknames = chatEntity.memberNicknames || {};
-                    const nickname = memberNicknames[msg.senderId];
-                    // For player, nickname is also checked
+                    const myProfile = await EventManager.getPlayerProfileForContext(appState.currentChatId);
+                    const memberIdForNickname = isMyMessage ? myProfile.id : msg.senderId;
+                    const nickname = memberNicknames[memberIdForNickname];
+                    
                     const finalName = isMyMessage 
                         ? (nickname || senderInfo.name)
                         : (nickname || senderInfo.remark || senderInfo.name);
@@ -8056,17 +8059,21 @@
                 const finalOrderedList = owner ? [owner, ...otherMembers] : otherMembers;
 
                 
-                const membersHtml = finalOrderedList.map(member => `
+                const membersHtml = finalOrderedList.map(member => {
+                    const nickname = (group.memberNicknames && group.memberNicknames[member.id]) || '';
+                    const displayName = nickname ? `${nickname} (${member.name})` : member.name;
+                    
+                    return `
                     <div class="member-list-modal-item">
                         <img src="${member.avatar}" alt="${member.name}">
-                        <div class="member-list-modal-info" style="flex-grow: 1; display: flex; align-items: center; gap: 8px;">
-                           <span>${member.name}</span>
+                        <div class="member-list-modal-info" style="flex-grow: 1; display: flex; align-items: center; gap: 8px; overflow: hidden;">
+                           <span title="${displayName}" style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${displayName}</span>
                            ${member.id === group.creatorId ? '<span class="owner-tag">群主</span>' : ''}
                            ${member.isPlayer ? '<span class="owner-tag" style="background-color: var(--accent-color);">你</span>' : ''}
                         </div>
                         <i class="fas fa-pencil-alt member-nickname-edit-btn" data-member-id="${member.id}" title="修改群昵称"></i>
                     </div>
-                `).join('');
+                `}).join('');
 
                 this.showModal({
                     title: `群成员 (${finalOrderedList.length})`,
@@ -9188,7 +9195,7 @@ ${promptLines.join('\n\n')}
                 const pendingRedPacketsPrompt = await this.getPendingRedPacketsPrompt(chatId, aiCharactersInChat);
 
                 const playerNicknameInGroup = (isGroup && chatEntity.memberNicknames && chatEntity.memberNicknames[myProfile.id]) || '未设置';
-                const playerNicknamePrompt = isGroup ? `你的本群群昵称: ${playerNicknameInGroup}\n` : '';
+                const playerNicknamePrompt = isGroup ? `本群群昵称: ${playerNicknameInGroup}\n` : '';
 
                 const playerInfoPrompt = `玩家（“${myProfile.name}”）的信息如下：\n性别: ${myProfile.gender}\n${playerNicknamePrompt}${chatSettings.enablePatAPat !== false ? `拍一拍动作: ${myProfile.patAction || '拍了拍'}\n拍一拍内容: ${myProfile.patContent || ''}\n` : ''}背景: ${myProfile.background || '无'}`;
 
@@ -10487,36 +10494,34 @@ async handleAutoSummaryRequest(chatId) {
                             }
                         })();
                     } else if (nicknameChangerBracket !== undefined || nicknameChangerAngle !== undefined) {
-                        (async () => {
-                            const changerName = (nicknameChangerBracket || nicknameChangerAngle).trim();
-                            const newNickname = (newNicknameBracket || newNicknameAngle).trim();
-                            
-                            const contact = contacts.find(c => c.name === changerName);
-                            if (!contact || !isGroup || !currentMemberIds.includes(contact.id)) {
-                                console.warn(`忽略昵称修改：角色 "${changerName}" 不存在或不在当前群聊中。`);
-                                return;
-                            }
+                        const changerName = (nicknameChangerBracket || nicknameChangerAngle).trim();
+                        const newNickname = (newNicknameBracket || newNicknameAngle).trim();
+                        
+                        const contact = contacts.find(c => c.name === changerName);
+                        if (!contact || !isGroup || !currentMemberIds.includes(contact.id)) {
+                            console.warn(`忽略昵称修改：角色 "${changerName}" 不存在或不在当前群聊中。`);
+                            continue;
+                        }
 
-                            const group = await DBHelper.get('groups', chatId);
-                            if (!group) return;
+                        const group = await DBHelper.get('groups', chatId);
+                        if (!group) continue;
 
-                            if (!group.memberNicknames) group.memberNicknames = {};
-                            
-                            group.memberNicknames[contact.id] = newNickname;
-                            await DBHelper.put('groups', group);
-                            
-                            const systemMessage = {
-                                messageId: Utils.generateId('sys'),
-                                chatId: chatId,
-                                timestamp: baseTimestamp + timestampOffset++,
-                                type: 'received',
-                                segmentType: 'system',
-                                forAi: false,
-                                content: `${changerName} 将自己的群昵称修改为 “${newNickname}”`
-                            };
-                            messagesToSave.push(systemMessage);
-                            displayableMessages.push(systemMessage);
-                        })();
+                        if (!group.memberNicknames) group.memberNicknames = {};
+                        
+                        group.memberNicknames[contact.id] = newNickname;
+                        await DBHelper.put('groups', group);
+                        
+                        const systemMessage = {
+                            messageId: Utils.generateId('sys'),
+                            chatId: chatId,
+                            timestamp: baseTimestamp + timestampOffset++,
+                            type: 'received',
+                            segmentType: 'system',
+                            forAi: false,
+                            content: `${changerName} 将自己的群昵称修改为 “${newNickname}”`
+                        };
+                        messagesToSave.push(systemMessage);
+                        displayableMessages.push(systemMessage);
                     } else if (momentContent !== undefined) {
                         (async () => {
                             const block = momentContent.trim();
@@ -20962,7 +20967,12 @@ handleImmediateSummary(entityId, isGroup) {
 
                             await DBHelper.put('groups', group);
                             UIManager.hideModal();
-                            UIManager.showToast('群昵称修改成功，重新进入聊天生效');
+                            UIManager.showGroupMemberListModal(group.id);
+                            
+                            if (appState.currentChatId === groupId) {
+                                await UIManager.refreshChatView();
+                            }
+                            UIManager.showToast('群昵称修改成功');
                         }}
                     ]
                 });
