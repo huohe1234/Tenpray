@@ -2997,7 +2997,8 @@
         #app-container[class*="app-bubble-style-"] .chat-area .message-content .bubble.forwarded-moment-bubble,
         #app-container[class*="app-bubble-style-"] .chat-area .message-content .bubble.gift-bubble,
         #app-container[class*="app-bubble-style-"] .chat-area .message-content .bubble.forwarded-history-bubble,
-        #app-container[class*="app-bubble-style-"] .chat-area .message-content .bubble.bubble-emoji {
+        #app-container[class*="app-bubble-style-"] .chat-area .message-content .bubble.bubble-emoji,
+        #app-container[class*="app-bubble-style-"] .chat-area .message-content .bubble.bubble-html-card {
             background: none !important;
             border: none !important;
             box-shadow: none !important;
@@ -3019,7 +3020,9 @@
         #app-container[class*="app-bubble-style-"] .chat-area .message-content .bubble.forwarded-history-bubble::before,
         #app-container[class*="app-bubble-style-"] .chat-area .message-content .bubble.forwarded-history-bubble::after,
         #app-container[class*="app-bubble-style-"] .chat-area .message-content .bubble.bubble-emoji::before,
-        #app-container[class*="app-bubble-style-"] .chat-area .message-content .bubble.bubble-emoji::after {
+        #app-container[class*="app-bubble-style-"] .chat-area .message-content .bubble.bubble-emoji::after,
+        #app-container[class*="app-bubble-style-"] .chat-area .message-content .bubble.bubble-html-card::before,
+        #app-container[class*="app-bubble-style-"] .chat-area .message-content .bubble.bubble-html-card::after {
             content: none !important;
         }
         
@@ -4762,6 +4765,22 @@
             gap: 15px;
         }
 
+        /* --- HTML卡片消息样式 (新增) --- */
+        .bubble.bubble-html-card {
+            padding: 0 !important;
+            background: none !important;
+            border: none !important;
+            box-shadow: none !important;
+            max-width: 100%; /* 允许iframe撑满宽度 */
+            overflow: visible; /* 允许内容溢出 */
+        }
+        .html-card-iframe {
+            width: 100%;
+            border: none;
+            border-radius: 10px; /* 给iframe本身一个圆角 */
+            vertical-align: bottom; /* 修复iframe底部可能出现的空隙 */
+        }
+
 </style>
 <script>
 // 智能禁用右键菜单，保留输入框功能
@@ -6210,6 +6229,16 @@ document.addEventListener('contextmenu', function(e) {
                     chatInfo.avatar = entity.avatar;
 
                     switch (lastMessage.segmentType) {
+                    
+                        case 'text':
+                            const isHtmlContent = lastMessage.content.trim().toLowerCase().startsWith('<!doctype html') || /<div/i.test(lastMessage.content);
+                            if (isHtmlContent) {
+                                chatInfo.lastMessageContent = '[html卡片]';
+                            } else {
+                                // 如果不是HTML，保持原样
+                                chatInfo.lastMessageContent = lastMessage.content;
+                            }
+                            break;
                         case 'pat_a_pat': chatInfo.lastMessageContent = '[拍一拍]'; break;
                         case 'emoji-image':
                             const emojiDesc = appState.playerEmojiMap[lastMessage.content] || appState.aiEmojiMap[lastMessage.content];
@@ -6946,7 +6975,15 @@ document.addEventListener('contextmenu', function(e) {
                         break;
                     case 'text':
                     default:
-                        bubbleContent = msg.content;
+                        // 新增：检测内容是否为HTML
+                        const isTextHtmlContent = msg.content.trim().toLowerCase().startsWith('<!doctype html') || /<div/i.test(msg.content);
+                        if (isTextHtmlContent) {
+                            bubbleClass += ' bubble-html-card'; // 使用一个特殊的class来移除气泡样式
+                            // iframe的srcdoc将在后面通过JS属性设置，以避免HTML转义问题
+                            bubbleContent = `<iframe class="html-card-iframe" scrolling="no"></iframe>`;
+                        } else {
+                            bubbleContent = msg.content;
+                        }
                         break;
                 }
             }
@@ -7049,7 +7086,27 @@ document.addEventListener('contextmenu', function(e) {
                         wrapper.appendChild(timestampEl);
                     }
                 }
-            
+
+                // 新增：为HTML卡片设置内容并调整高度
+                if (messageRow.querySelector('.bubble-html-card')) {
+                    const iframe = messageRow.querySelector('.html-card-iframe');
+                    if (iframe) {
+                        // 直接设置srcdoc属性可以更好地处理HTML内容，避免转义问题
+                        iframe.srcdoc = msg.content;
+                        // onload事件确保在内容加载后调整高度
+                        iframe.onload = function() {
+                            try {
+                                const body = iframe.contentWindow.document.body;
+                                const html = iframe.contentWindow.document.documentElement;
+                                const height = Math.max(body.scrollHeight, body.offsetHeight, html.clientHeight, html.scrollHeight, html.offsetHeight);
+                                iframe.style.height = height + 'px';
+                            } catch (e) {
+                                console.error("无法调整iframe高度:", e);
+                            }
+                        };
+                    }
+                }
+
                 return messageRow;
             },
 
@@ -8188,7 +8245,7 @@ document.addEventListener('contextmenu', function(e) {
             async showGroupMemberListModal(groupId) {
                 const group = await DBHelper.get('groups', groupId);
                 const allContacts = await DBHelper.getAll('contacts');
-                const myProfile = await DBHelper.get('profile', 'myProfile');
+                const myProfile = await EventManager.getPlayerProfileForContext(groupId);
 
                 
                 const aiMembers = group.members
@@ -8949,18 +9006,21 @@ async showAutoSummaryModal(entityId, isGroup) {
                 const formattedRules = ruleTexts.map((text, index) => `${index + 1}.  ${text}`).join('\n');
                 return `\n---\n群聊专属规则：\n${formattedRules}\n---`;
             },
-            formatPromptTpl: `\n---
+            formatPromptTpl: `
+---
 回复规则（非常重要！请严格遵守！）：
 1.  你的所有回复都必须严格遵循以下格式，使用**角色名**，而不是其他昵称/称呼，每一句话都是一个独立的单元。
 2.  **普通文本消息**：请将你的普通回复拆分成多个通畅的短句，并使用格式：[角色名|消息内容]。例如：[陈奚楷|你好啊]。
-3.  **表情包消息**：<角色名|表情包ID>，**禁止在<>外面包裹[]**。你必须在< >中使用冒号左边的ID，而不是文字描述。可用表情包ID及其含义：\n{EMOJI_LIST}。一次回复内一般最多使用2个表情包。
+3.  **表情包消息**：<角色名|表情包ID>，**禁止在<>外面包裹[]**。你必须在< >中使用冒号左边的ID，而不是文字描述。可用表情包ID及其含义：
+{EMOJI_LIST}。一次回复内一般最多使用2个表情包。
 4.  **撤回消息**：如果你想表达某种情绪或者说出一些角色会后悔的话或者不小心发出来的话，请将该短句用英文大括号包裹，格式为：{角色名|已经发送然后立刻撤回的原始消息内容}。例如：例如：{孟祁年|装货，你以为老子不知道你什么心思吗}。不要发送一条正常消息再发送一条“撤回”的指令。
 5.  **语音消息**：[角色名|语音|语音时长|语音内容]。语音时长最长不超过60s。例如：[三三|语音|13s|太好了！那我们下午三点在公司会议室详细讨论]。
 6.  **引用消息**: [角色名|引用|被引用人ID|被引用的消息内容|你的新消息内容]。不要滥用。例如: [陈奚楷|引用|楚寻|你哪里不会?|关于最后一题我还有点疑问。]。禁止引用转账/红包消息
 7.  **转账消息**: [角色名|转账|被转账角色名|金额|备注]。金额格式为 "￥XX.XX"。例如: [孟祁年|转账|商时序|￥520.00|给你的惊喜]。
 8.  **红包消息**: [角色名|红包|红包名称|金额|红包个数]。私聊时红包个数必须为1。例如: [孟祁年|红包|请大家喝奶茶|￥88.88|4]。
-9. **卡片消息**: 当你想分享一类卡片消息（如：地点分享、文件分享、歌曲分享、或者其他有趣的可以用卡片发出来的分享内容）时，使用这种格式：『角色名|分享类型|分享标题|简介15字以内|详细内容30-60字』，举例：『角色名|图片分享|夏日海滩|一张记录美好瞬间的照片|照片里是蔚蓝的大海和金色的沙滩，充满了夏日的活力与惬意。』
-10. **礼物消息**: 当某个角色基于人物设定/聊天记录内容想赠送礼物时，使用以下格式，并确保每个字段都填写完整：
+9. **图片消息**: [角色名|图片|图片文字描述] 或 [角色名|图片|http开头的图片链接]。禁止虚构链接，没有可用链接就使用文字描述。
+10. **卡片消息**: 当你想分享一类卡片消息（如：地点分享、文件分享、歌曲分享、或者其他有趣的可以用卡片发出来的分享内容）时，使用这种格式：『角色名|分享类型|分享标题|简介15字以内|详细内容30-60字』，举例：『角色名|图片分享|夏日海滩|一张记录美好瞬间的照片|照片里是蔚蓝的大海和金色的沙滩，充满了夏日的活力与惬意。』
+11. **礼物消息**: 当某个角色基于人物设定/聊天记录内容想赠送礼物时，使用以下格式，并确保每个字段都填写完整：
 <礼物>
 发送方：角色名
 接收方：玩家名或另一角色名
@@ -8969,12 +9029,12 @@ async showAutoSummaryModal(entityId, isGroup) {
 礼物介绍：xxx（不超过50字）
 寄语：xxx（简单一句话）
 </礼物>
-11. **发起视频通话**: 当角色想主动发起视频通话时，使用此格式：[角色名|发起视频通话|视频通话被接通后的第一段内容]。'第一段内容'是对方接通电话后，角色会说的第一句话，需要包含场景、动作或神态的描述，营造出视频通话的真实感，不少于50字。例如：[陈奚楷|发起视频通话|(那头传来他低沉的嗓音，带着一丝笑意) 喂？在忙吗？]
+12. **发起视频通话**: 当角色想主动发起视频通话时，使用此格式：[角色名|发起视频通话|视频通话被接通后的第一段内容]。'第一段内容'是对方接通电话后，角色会说的第一句话，需要包含场景、动作或神态的描述，营造出视频通话的真实感，不少于50字。例如：[陈奚楷|发起视频通话|(那头传来他低沉的嗓音，带着一丝笑意) 喂？在忙吗？]
 {PAT_A_PAT_RULES}
-13. **心声 (强制要求)**: 在你本次所有消息内容之后，你必须以【心声|角色名|你的心声内容】的格式来结束你的整个回复。**字数不超过30字，人称使用第一人称指代角色自己，禁止使用第三人称称呼自己。**
-14. **随笔 (概率出现)**: 你有一定概率会在【心声】之后，额外写一段「随笔|角色名|你的随笔内容」。这段随笔是角色在当前情境下，有感而发的一些思考或经历，可以与当前对话内容相关，也可以是独立的小故事或心情记录。字数请控制在50到250字之间。
-15. **严禁事项(1)**：绝不允许你代入玩家（“{PLAYER_NAME}”）的角色发言或为其生成心声。
-16. **严禁事项(2)**：你的回复内容中，不要使用括号 ()、星号 ** 或其他任何符号来描述角色的动作、表情或内心活动。
+14. **心声 (强制要求)**: 在你本次所有消息内容之后，你必须以【心声|角色名|你的心声内容】的格式来结束你的整个回复。**字数不超过30字，人称使用第一人称指代角色自己，禁止使用第三人称称呼自己。**
+15. **随笔 (概率出现)**: 你有一定概率会在【心声】之后，额外写一段「随笔|角色名|你的随笔内容」。这段随笔是角色在当前情境下，有感而发的一些思考或经历，可以与当前对话内容相关，也可以是独立的小故事或心情记录。字数请控制在50到250字之间。
+16. **严禁事项(1)**：绝不允许你代入玩家（“{PLAYER_NAME}”）的角色发言或为其生成心声。
+17. **严禁事项(2)**：你的回复内容中，不要使用括号 ()、星号 ** 或其他任何符号来描述角色的动作、表情或内心活动。
 ---
 现在，请根据以上信息，对玩家的最新消息进行回应。`,
 
@@ -9017,7 +9077,8 @@ async showAutoSummaryModal(entityId, isGroup) {
 ---
 现在，请根据以上信息和聊天记录，开始或继续视频通话。`,
 
-            activeReplyPromptTpl: `\n---
+            activeReplyPromptTpl: `
+---
 主动回复规则（非常重要！请严格遵守！）：
 1.  你现在需要主动发送一些消息。你的所有回复都必须严格遵循以下格式，在每条消息的末尾附带消息时间，使用 | 分隔。
 2.  **普通文本消息**：请将你的普通回复拆分成多个通畅的短句，并使用格式：[角色名|消息内容|消息时间]。例如：[陈奚楷|下午去看电影吗|14:50]。
@@ -9027,8 +9088,9 @@ async showAutoSummaryModal(entityId, isGroup) {
 6.  **引用消息**: [角色名|引用|被引用人ID|被引用的消息内容|你的新消息内容|消息时间]。不要滥用。例如: [陈奚楷|引用|楚寻|你哪里不会?|关于最后一题我还有点疑问。|9:46]。禁止引用转账/红包消息
 7.  **转账消息**: [角色名|转账|收款人角色名|金额|备注]。金额格式为 "￥XX.XX"。例如: [孟祁年|转账|商时序|￥520.00|给你的惊喜]。
 8.  **红包消息**: [角色名|红包|红包名称|金额|红包个数]。金额必须大于等于“红包个数 * 0.01”。私聊时红包个数必须为1。例如: [孟祁年|红包|请大家喝奶茶|￥88.88|4]。
-9. **卡片消息**: 当你想分享一类卡片消息（如：地点分享、文件分享、歌曲分享、或者其他有趣的可以用卡片发出来的分享内容）时，使用这种格式：『角色名|分享类型|分享标题|简介15字以内|详细内容30-60字|消息时间』，举例：『角色名|图片分享|夏日海滩|一张记录美好瞬间的照片|照片里是蔚蓝的大海和金色的沙滩，充满了夏日的活力与惬意。|7/2 12:36』
-10. **礼物消息**: 当你想主动赠送礼物时，使用以下格式：
+9. **图片消息**: [角色名|图片|图片文字描述|消息时间] 或 [角色名|图片|http开头的图片链接|消息时间]。禁止虚构链接，没有可用链接就使用文字描述。
+10. **卡片消息**: 当你想分享一类卡片消息（如：地点分享、文件分享、歌曲分享、或者其他有趣的可以用卡片发出来的分享内容）时，使用这种格式：『角色名|分享类型|分享标题|简介15字以内|详细内容30-60字|消息时间』，举例：『角色名|图片分享|夏日海滩|一张记录美好瞬间的照片|照片里是蔚蓝的大海和金色的沙滩，充满了夏日的活力与惬意。|7/2 12:36』
+11. **礼物消息**: 当你想主动赠送礼物时，使用以下格式：
 <礼物>
 发送方：角色名
 接收方：玩家名或另一角色名
@@ -9038,10 +9100,10 @@ async showAutoSummaryModal(entityId, isGroup) {
 寄语：xxx（简单一句话）
 </礼物>
 {PAT_A_PAT_RULES}
-13. **心声 (强制要求)**: 在你本次所有消息内容之后，你必须以【心声|角色名|你的心声内容】的格式来结束你的整个回复。字数不超过30字，人称使用第一人称指代角色自己，禁止使用第三人称称呼自己。
-14. **随笔 (概率出现)**: 你有一定概率会在【心声】之后，额外写一段「随笔|角色名|你的随笔内容」。这段随笔是角色在当前情境下，有感而发的一些思考或经历，可以与当前对话内容相关，也可以是独立的小故事或心情记录。字数请控制在50到250字之间。
-15. **严禁事项(1)**：绝不允许你代入玩家（“{PLAYER_NAME}”）的角色发言或为其生成心声。
-16. **严禁事项(2)**：你的回复内容中，不要使用括号 ()、星号 ** 或其他任何符号来描述角色的动作、表情或内心活动。
+14. **心声 (强制要求)**: 在你本次所有消息内容之后，你必须以【心声|角色名|你的心声内容】的格式来结束你的整个回复。字数不超过30字，人称使用第一人称指代角色自己，禁止使用第三人称称呼自己。
+15. **随笔 (概率出现)**: 你有一定概率会在【心声】之后，额外写一段「随笔|角色名|你的随笔内容」。这段随笔是角色在当前情境下，有感而发的一些思考或经历，可以与当前对话内容相关，也可以是独立的小故事或心情记录。字数请控制在50到250字之间。
+16. **严禁事项(1)**：绝不允许你代入玩家（“{PLAYER_NAME}”）的角色发言或为其生成心声。
+17. **严禁事项(2)**：你的回复内容中，不要使用括号 ()、星号 ** 或其他任何符号来描述角色的动作、表情或内心活动。
 ---
 现在，请根据以上信息，开始你的主动发言。`,
 
@@ -9069,7 +9131,7 @@ async showAutoSummaryModal(entityId, isGroup) {
                             return `[${receiptRecipient.name}|领取转账|${receiptSender.name}|${msg.cardData.amount}]`;
                         case 'transfer-return': return `[${senderName}|退还转账|${recipientName}|${msg.cardData.amount}]`;
                         case 'red-packet': return `[${senderName}|红包|${msg.cardData.title}|￥${msg.cardData.amount.toFixed(2)}|${msg.cardData.count}]`;
-                        case 'image_simulated': return `[${senderName}|图片描述|${msg.cardData.description}]`;
+                        case 'image_simulated': return `[${senderName}|图片|${msg.cardData.description}]`;
                         case 'image_vision':
                             const promptText = msg.cardData.prompt ? ` ${msg.cardData.prompt}` : '';
                             return `[${senderName}|[图片]${promptText}]`;
@@ -9888,7 +9950,7 @@ ${promptLines.join('\n\n')}
                         case 'transfer-return': return `[${senderName}|退还转账|${msg.cardData.recipientName}|${msg.cardData.amount}]`;
                         case 'transfer': return `[${senderName}|转账|${msg.cardData.recipientName}|${msg.cardData.amount}|${msg.cardData.note || ''}]`;
                         case 'red-packet': return `[${senderName}|红包|${msg.cardData.title}|￥${msg.cardData.amount.toFixed(2)}|${msg.cardData.count}]`;
-                        case 'image_simulated': return `[${senderName}|图片描述|${msg.cardData.description}]`;
+                        case 'image_simulated': return `[${senderName}|图片|${msg.cardData.description}]`;
                         case 'gift': return `<礼物>\n发送方：${senderName}\n接收方：${recipientName}\n礼物名称：${msg.cardData.name}\n礼物价格：${msg.cardData.price}\n礼物介绍：${msg.cardData.description || '无'}\n寄语：${msg.cardData.message}\n</礼物>`;
                         case 'pat_a_pat':
                             const pat = msg.content;
@@ -10135,6 +10197,16 @@ ${promptLines.join('\n\n')}
                         } else {
                             const typeKeyword = contentParts[0];
                             switch (typeKeyword) {
+                                case '图片':
+                                    baseMessage.segmentType = 'image_simulated';
+                                    const imageContent = contentParts[1];
+                                    const isUrl = imageContent.startsWith('http');
+                                    baseMessage.content = `[图片] ${imageContent}`;
+                                    baseMessage.cardData = {
+                                        imageSrc: isUrl ? imageContent : 'https://pb.nichi.co/dilemma-team-flower',
+                                        description: imageContent
+                                    };
+                                    break;
                                 case '语音':
                                     baseMessage.segmentType = 'voice';
                                     baseMessage.content = `[语音] ${contentParts[2]}`;
@@ -10144,6 +10216,23 @@ ${promptLines.join('\n\n')}
                                     baseMessage.segmentType = 'quote';
                                     baseMessage.content = `[引用] ${contentParts[3]}`;
                                     baseMessage.cardData = { quotedName: contentParts[1], quotedContent: contentParts[2], newContent: contentParts[3] };
+                                    break;
+                                case '转账':
+                                    baseMessage.segmentType = 'transfer';
+                                    baseMessage.content = `[转账] ${contentParts[2]}`;
+                                    baseMessage.cardData = { recipientName: parts[2], amount: parts[3], note: parts[4] || '', isClaimed: false };
+                                    break;
+                                case '领取转账':
+                                    baseMessage.segmentType = 'transfer-receipt';
+                                    baseMessage.content = `${parts[2]}已收款${parts[3]}`;
+                                    baseMessage.cardData = { recipientName: parts[0], senderName: parts[2], amount: parts[3] };
+                                    this.findAndClaimTransfer(parts[2], parts[0], parseFloat(parts[3].replace('￥', '')), chatId);
+                                    break;
+                                case '退还转账':
+                                    baseMessage.segmentType = 'transfer-return';
+                                    baseMessage.content = `${parts[0]}退还了转账${parts[3]}`;
+                                    baseMessage.cardData = { recipientName: parts[2], senderName: parts[0], amount: parts[3] };
+                                    this.findAndClaimTransfer(parts[2], parts[0], parseFloat(parts[3].replace('￥', '')), chatId);
                                     break;
                                 default:
                                     baseMessage.segmentType = 'text';
@@ -11128,6 +11217,16 @@ async handleAutoSummaryRequest(chatId) {
                                 EventManager.handleIncomingVideoCall(sender, firstLine);
                                 continue; // 处理完通话指令后，跳过本轮循环
                             }
+                            else if (parts[1] === '图片') {
+                                baseMessage.segmentType = 'image_simulated';
+                                const imageContent = parts[2];
+                                const isUrl = imageContent.startsWith('http');
+                                baseMessage.content = `[图片] ${imageContent}`;
+                                baseMessage.cardData = {
+                                    imageSrc: isUrl ? imageContent : 'https://pb.nichi.co/dilemma-team-flower',
+                                    description: imageContent
+                                };
+                            }
                             else if (parts.length === 2) { baseMessage.segmentType = 'text'; baseMessage.content = parts[1]; }
                             else if (parts[1] === '领取转账') { 
                                 baseMessage.segmentType = 'transfer-receipt'; 
@@ -11392,6 +11491,16 @@ async handleAutoSummaryRequest(chatId) {
                         } else if (bracketType === '[') {
                             const typeKeyword = parts[1];
                             switch (typeKeyword) {
+                                case '图片':
+                                    baseMessage.segmentType = 'image_simulated';
+                                    const imageContent = parts[2];
+                                    const isUrl = imageContent.startsWith('http');
+                                    baseMessage.content = `[图片] ${imageContent}`;
+                                    baseMessage.cardData = {
+                                        imageSrc: isUrl ? imageContent : 'https://pb.nichi.co/dilemma-team-flower',
+                                        description: imageContent
+                                    };
+                                    break;
                                 case '发起视频通话':
                                     const firstLine = parts.slice(2).join('|').trim();
                                     EventManager.handleIncomingVideoCall(sender, firstLine);
@@ -11850,8 +11959,14 @@ async handleAutoSummaryRequest(chatId) {
 
                 
                 const shuffled = validMemberIds.sort(() => 0.5 - Math.random());
-                const numToSelect = Math.floor(Math.random() * 3) + 1;
-                const selectedMemberIds = shuffled.slice(0, Math.min(numToSelect, validMemberIds.length));
+                let numToSelect;
+                if (validMemberIds.length > 3) {
+                    const maxSelection = Math.min(validMemberIds.length, 5); 
+                    numToSelect = Math.floor(Math.random() * (maxSelection - 3 + 1)) + 3;
+                } else {
+                    numToSelect = validMemberIds.length;
+                }
+                const selectedMemberIds = shuffled.slice(0, numToSelect);
                 const selectedMembers = selectedMemberIds.map(id => allContacts.find(c => c.id === id));
                 
                 const baseProfile = await DBHelper.get('profile', 'myProfile');
@@ -11961,38 +12076,41 @@ for (const member of selectedMembers) {
                 const allGroups = await DBHelper.getAll('groups'); 
 
                 
-                const momentAuthor = allContacts.find(c => c.id === moment.authorId);
                 const circleMembers = allContacts.filter(c => circle.memberIds.includes(c.id));
-                const otherMembers = circleMembers.filter(c => c.id !== moment.authorId);
-                const shuffled = otherMembers.sort(() => 0.5 - Math.random());
-                const numToSelect = Math.floor(Math.random() * 3) + 1;
-                const selectedRandomMembers = shuffled.slice(0, Math.min(numToSelect, otherMembers.length));
-
-                let membersToProvideInfo = [];
-                if (momentAuthor) { 
-                    membersToProvideInfo.push(momentAuthor);
+                
+                const shuffled = circleMembers.sort(() => 0.5 - Math.random());
+                let numToSelect;
+                if (circleMembers.length > 3) {
+                    const maxSelection = Math.min(circleMembers.length, 5); 
+                    numToSelect = Math.floor(Math.random() * (maxSelection - 3 + 1)) + 3;
+                } else {
+                    numToSelect = circleMembers.length;
                 }
-                membersToProvideInfo.push(...selectedRandomMembers);
-                membersToProvideInfo = [...new Set(membersToProvideInfo)]; 
+                const selectedMembers = shuffled.slice(0, numToSelect);
+
+                let membersToProvideInfo = [...selectedMembers];
 
                 const membersInfo = membersToProvideInfo.map(m => `角色名: ${m.name}\n性别: ${m.gender}\n喜好: ${m.likes || '无'}\n厌恶: ${m.dislikes || '无'}\n习惯: ${m.habits || '无'}\n背景: ${m.background || '无'}`).join('\n---\n');
                 
                 
                 let contextHistory = '';
                 for (const member of membersToProvideInfo) {
-                    const privateChat = await DBHelper.get('chats', member.id);
-                    if (privateChat && privateChat.history.length > 0) {
-                        const turns = this.buildTurnsFromHistory(privateChat.history, allContacts, myProfile);
+                    
+                    const privateChatHistory = await DBHelper.getMessages(member.id, 10); 
+                    if (privateChatHistory && privateChatHistory.length > 0) {
+                        const turns = this.buildTurnsFromHistory(privateChatHistory, allContacts, myProfile);
                         const lastTwoTurns = turns.slice(-2);
                         if (lastTwoTurns.length > 0) {
                             contextHistory += `与 ${member.name} 的最新私聊 (最多2轮):\n${lastTwoTurns.map(t => JSON.stringify(t)).join('\n')}\n`;
                         }
                     }
+                    
+                    
                     const groupsWithMember = allGroups.filter(g => g.members.includes(member.id));
                     for (const group of groupsWithMember) {
-                        const groupChat = await DBHelper.get('chats', group.id);
-                        if (groupChat && groupChat.history.length > 0) {
-                            const turns = this.buildTurnsFromHistory(groupChat.history, allContacts, myProfile);
+                        const groupChatHistory = await DBHelper.getMessages(group.id, 10); 
+                        if (groupChatHistory && groupChatHistory.length > 0) {
+                            const turns = this.buildTurnsFromHistory(groupChatHistory, allContacts, myProfile);
                             const lastTwoTurns = turns.slice(-2);
                             if (lastTwoTurns.length > 0) {
                                 contextHistory += `在群聊 ${group.name} 中 ${member.name} 的相关动态 (最多2轮):\n${lastTwoTurns.map(t => JSON.stringify(t)).join('\n')}\n`;
@@ -12060,30 +12178,60 @@ for (const member of selectedMembers) {
                     }
                 }
                 const allContacts = await DBHelper.getAll('contacts');
+                const allGroups = await DBHelper.getAll('groups'); 
                 
                 
                 let membersToProvideInfo = [];
                 const circleMembers = allContacts.filter(c => circle.memberIds.includes(c.id));
-                
                 
                 const repliedToContact = playerComment.replyTo ? circleMembers.find(c => c.name === playerComment.replyTo) : null;
                 if (repliedToContact) {
                     membersToProvideInfo.push(repliedToContact);
                 }
 
-                
                 const otherMembers = circleMembers.filter(c => c.name !== playerComment.replyTo);
                 const shuffled = otherMembers.sort(() => 0.5 - Math.random());
-                const numToSelect = Math.floor(Math.random() * 3) + 1;
-                const selectedRandomMembers = shuffled.slice(0, Math.min(numToSelect, otherMembers.length));
-                membersToProvideInfo.push(...selectedRandomMembers);
+                let numToSelect;
+                if (otherMembers.length > 3) {
+                    const maxSelection = Math.min(otherMembers.length, 4); 
+                    numToSelect = Math.floor(Math.random() * (maxSelection - 2 + 1)) + 2; 
+                } else {
+                    numToSelect = otherMembers.length;
+                }
 
-                membersToProvideInfo = [...new Set(membersToProvideInfo)]; 
+                const selectedRandomMembers = shuffled.slice(0, numToSelect);
+                membersToProvideInfo.push(...selectedRandomMembers);
+                membersToProvideInfo = [...new Set(membersToProvideInfo)];
 
                 const membersInfo = membersToProvideInfo.length > 0
                     ? membersToProvideInfo.map(m => `角色名: ${m.name}\n性别: ${m.gender}\n喜好: ${m.likes || '无'}\n厌恶: ${m.dislikes || '无'}\n习惯: ${m.habits || '无'}\n背景: ${m.background || '无'}`).join('\n---\n')
                     : '无';
 
+                let contextHistory = '';
+                for (const member of membersToProvideInfo) {
+                    
+                    const privateChatHistory = await DBHelper.getMessages(member.id, 10); 
+                    if (privateChatHistory && privateChatHistory.length > 0) {
+                        const turns = this.buildTurnsFromHistory(privateChatHistory, allContacts, myProfile);
+                        const lastTwoTurns = turns.slice(-2);
+                        if (lastTwoTurns.length > 0) {
+                            contextHistory += `与 ${member.name} 的最新私聊 (最多2轮):\n${lastTwoTurns.map(t => JSON.stringify(t)).join('\n')}\n`;
+                        }
+                    }
+                    
+                    
+                    const groupsWithMember = allGroups.filter(g => g.members.includes(member.id));
+                    for (const group of groupsWithMember) {
+                        const groupChatHistory = await DBHelper.getMessages(group.id, 10); 
+                        if (groupChatHistory && groupChatHistory.length > 0) {
+                            const turns = this.buildTurnsFromHistory(groupChatHistory, allContacts, myProfile);
+                            const lastTwoTurns = turns.slice(-2);
+                            if (lastTwoTurns.length > 0) {
+                                contextHistory += `在群聊 ${group.name} 中 ${member.name} 的相关动态 (最多2轮):\n${lastTwoTurns.map(t => JSON.stringify(t)).join('\n')}\n`;
+                            }
+                        }
+                    }
+                }
                 
                 let momentAuthor = moment.authorId === myProfile.id ? myProfile : allContacts.find(c => c.id === moment.authorId) || { name: moment.authorId };
                 let postAndCommentsHistory = `这是“${momentAuthor.name}”发布的动态：“${moment.content}”\n目前的评论有：\n` + 
@@ -12126,6 +12274,7 @@ for (const member of selectedMembers) {
                     `--- 玩家最新动作 ---\n${playerActionText}`,
                     playerInfo, 
                     `--- 其他角色资料参考 ---\n${membersInfo}`,
+                    `--- 最近的聊天记录参考 ---\n${contextHistory}`,
                     customPromptsSection,
                     privateChatRules,
                     formatRules
@@ -12152,7 +12301,13 @@ for (const member of selectedMembers) {
                     const postMatch = block.match(/【(.*?)】/);
                     if (!postMatch) continue;
 
-                    const [authorPart, timePart] = postMatch[1].split('|');
+                    const innerContent = postMatch[1];
+                    const lastPipeIndex = innerContent.lastIndexOf('|');
+                    if (lastPipeIndex === -1) continue; 
+
+                    const authorPart = innerContent.substring(0, lastPipeIndex);
+                    const timePart = innerContent.substring(lastPipeIndex + 1);
+
                     const [authorName, ...contentParts] = authorPart.split('：');
                     const content = contentParts.join('：');
 
@@ -13379,6 +13534,26 @@ chatArea.addEventListener('contextmenu', (e) => {
                 $('#confirm-forward-btn').addEventListener('click', () => this.showForwardTargetModal());
 
                 chatArea.addEventListener('click', async (e) => {
+                
+                    const imageBubble = e.target.closest('.image-with-desc-bubble img');
+                    if (imageBubble) {
+                        const bubble = imageBubble.closest('.image-with-desc-bubble');
+                        const descriptionEl = bubble.querySelector('.description-text');
+                        if (descriptionEl && descriptionEl.textContent) {
+                            const description = descriptionEl.textContent;
+                            const isLink = description.startsWith('http');
+                            UIManager.showModal({
+                                title: isLink ? "图片链接" : "图片描述",
+                                body: `
+                                    <div style="text-align:center;">
+                                        <p style="word-break: break-all; padding: 15px; line-height: 1.6;">${description}</p>
+                                    </div>
+                                `,
+                                actions: [{ text: '关闭', class: 'btn-primary', handler: () => UIManager.hideModal() }]
+                            });
+                        }
+                        return;
+                    }
                     
                     if (appState.selectionMode.active) {
                         const messageElement = e.target.closest('[data-message-id]');
