@@ -5118,10 +5118,31 @@ document.addEventListener('contextmenu', function(e) {
                     </div>
                 </div>
                 <div class="page-content" id="prompts-page-content">
+                
                     <!-- 文件夹和提示词将由JS动态生成 -->
                 </div>
                 <div class="page-footer" style="padding: 10px; text-align: center; border-top: 1px solid var(--border-color); background: rgba(255,255,255,0.5);">
                     <button id="add-new-prompt-btn" class="modal-btn btn-primary" style="width: 90%;"><i class="fas fa-plus-circle"></i> 新建提示词</button>
+                </div>
+            </div>
+
+            <!-- 全局提示词页面 (新) -->
+            <div id="page-global-prompts" class="page">
+                <div class="page-header">
+                    <div id="global-prompts-back-btn" class="header-icon"><i class="fas fa-chevron-left"></i></div>
+                    <h1>全局提示词</h1>
+                    <div class="header-icon-group">
+                        <label class="switch" style="transform: scale(0.8);">
+                            <input type="checkbox" id="global-prompts-master-switch">
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                </div>
+                <div class="page-content" id="global-prompts-page-content">
+                    <!-- 全局提示词卡片将由JS动态生成 -->
+                </div>
+                <div class="page-footer" style="padding: 10px; text-align: center; border-top: 1px solid var(--border-color); background: rgba(255,255,255,0.5);">
+                    <button id="add-new-global-prompt-btn" class="modal-btn btn-primary" style="width: 90%;"><i class="fas fa-plus-circle"></i> 新建全局提示词</button>
                 </div>
             </div>
 
@@ -5520,6 +5541,7 @@ document.addEventListener('contextmenu', function(e) {
             'bubble-settings': $('#page-bubble-settings'),
             chat: $('#page-chat'),
             prompts: $('#page-prompts'),
+            'global-prompts': $('#page-global-prompts'),
             'forwarded-history': $('#page-forwarded-history'),
             'video-call-history': $('#page-video-call-history'),
             'video-call-log-detail': $('#page-video-call-log-detail'),
@@ -5626,7 +5648,7 @@ document.addEventListener('contextmenu', function(e) {
 
             async init() {
                 
-                this.DB_VERSION = 21;
+                this.DB_VERSION = 22;
 
                 return new Promise((resolve, reject) => {
                     if (this.db) {
@@ -5803,7 +5825,14 @@ document.addEventListener('contextmenu', function(e) {
                             }
                         }
                         
-
+                        
+                        if (event.oldVersion < 22) {
+                            console.log("数据库升级至版本 22: 创建 globalPrompts 表...");
+                            if (!db.objectStoreNames.contains('globalPrompts')) {
+                                const store = db.createObjectStore('globalPrompts', { keyPath: 'id' });
+                                store.createIndex('by_order', 'order', { unique: false });
+                            }
+                        }
                         console.log("数据库升级完成");
                     };
                 });
@@ -6178,6 +6207,10 @@ document.addEventListener('contextmenu', function(e) {
                 case 'theme-settings': await EventManager.renderThemeSettingsPage(); break;
                 case 'bubble-settings': await EventManager.renderBubbleSettingsPage(); break;
                 case 'prompts': await EventManager.renderPromptsPage(); break;
+                case 'global-prompts': 
+                            await EventManager.renderGlobalPromptsPage(); 
+                            EventManager.bindGlobalPromptsPageEvents(); 
+                            break;
             }
         },
 
@@ -9006,7 +9039,28 @@ async showAutoSummaryModal(entityId, isGroup) {
                 const formattedRules = ruleTexts.map((text, index) => `${index + 1}.  ${text}`).join('\n');
                 return `\n---\n群聊专属规则：\n${formattedRules}\n---`;
             },
+
+            async getGlobalPromptsForContext(context) {
+                const chatSettings = await DBHelper.get('apiConfig', 'chatSettings') || {};
+                if (chatSettings.globalPromptsEnabled !== true) {
+                    return '';
+                }
+
+                const allGlobalPrompts = await DBHelper.getAll('globalPrompts');
+                const activePrompts = allGlobalPrompts
+                    .filter(p => p.isActive && !(p.exclusions && p.exclusions.includes(context)))
+                    .sort((a, b) => a.order - b.order);
+
+                if (activePrompts.length === 0) {
+                    return '';
+                }
+                
+                const content = activePrompts.map(p => p.content).join('\n\n');
+                return `--- 全局提示词 ---\n${content}\n---`;
+            },
+            
             formatPromptTpl: `
+            
 ---
 回复规则（非常重要！请严格遵守！）：
 1.  你的所有回复都必须严格遵循以下格式，使用**角色名**，而不是其他昵称/称呼，每一句话都是一个独立的单元。
@@ -9610,7 +9664,10 @@ ${promptLines.join('\n\n')}
                 }
 
                 
+                const globalPromptsSection = await this.getGlobalPromptsForContext('chat');
+
                 const promptParts = [
+                    globalPromptsSection,
                     systemTime, 
                     taskPrompt, 
                     characterInfoPrompt, 
@@ -10049,7 +10106,10 @@ ${promptLines.join('\n\n')}
 </修改拍一拍>`;
                 }
                 
+                const globalPromptsSection = await this.getGlobalPromptsForContext('chat');
+
                 const finalPrompt = [
+                    globalPromptsSection,
                     situationPrompt,
                     taskPrompt,
                     characterInfoPrompt,
@@ -10451,7 +10511,9 @@ async buildSummaryPrompt(chatId) {
     const defaultSummaryPrompt = `你是一个聊天记录总结助手。请根据“最新聊天记录”，为我生成一段不超过350个字的新总结。新的总结需要融合旧总结的核心内容和新聊天记录的要点，保持故事的连贯性。请重点关注时间的发生时间、人物关系的变化、关键事件的进展、以及重要信息的交换。内容应客观、信息丰富且凝练。`;
     const userSummaryPrompt = chatSettings.summaryPrompt || defaultSummaryPrompt;
 
-    let prompt = `${userSummaryPrompt}\n\n`;
+    const globalPromptsSection = await this.getGlobalPromptsForContext('summary');
+
+    let prompt = `${globalPromptsSection}\n\n${userSummaryPrompt}\n\n`;
     prompt += `--- 最新聊天记录 (最近30轮) ---\n${last30turns.map(turn => `${turn.role}: ${turn.content}`).join('\n')}\n\n`;
 
     return prompt;
@@ -11713,7 +11775,9 @@ async handleAutoSummaryRequest(chatId) {
                 }
                 historyPrompt += await buildHistoryBlock(chatId, '私聊记录', historyCharLimit, 15);
             
-                const promptParts = [systemTime, taskPrompt, characterInfoPrompt, playerInfoPrompt, customPromptsSection, historyPrompt, currentCallHistoryPrompt, playerInputPrompt, formatPrompt];
+                const globalPromptsSection = await this.getGlobalPromptsForContext('videoCall');
+            
+                const promptParts = [globalPromptsSection, systemTime, taskPrompt, characterInfoPrompt, playerInfoPrompt, customPromptsSection, historyPrompt, currentCallHistoryPrompt, playerInputPrompt, formatPrompt];
                 const finalPrompt = promptParts.filter(Boolean).join('\n\n');
                 
                 console.log(`--- VIDEO CALL PROMPT SENT TO AI ---\n`, finalPrompt);
@@ -12044,7 +12108,10 @@ for (const member of selectedMembers) {
                 
                 const customPromptsSection = await this._getBoundPromptsForMoments(circle);
 
+                const globalPromptsSection = await this.getGlobalPromptsForContext('moments');
+
                 const finalPrompt = [
+                    globalPromptsSection,
                     timePrompt,
                     playerInfo,
                     `--- 圈子里的AI角色 ---\n${membersInfo}`,
@@ -12149,7 +12216,10 @@ for (const member of selectedMembers) {
 
                 const customPromptsSection = await this._getBoundPromptsForMoments(circle, moment.content);
 
+                const globalPromptsSection = await this.getGlobalPromptsForContext('moments');
+
                 const finalPrompt = [
+                    globalPromptsSection,
                     postContentText,
                     playerInfo, 
                     `--- 参与评论的角色资料参考 ---\n${membersInfo}`,
@@ -12269,7 +12339,10 @@ for (const member of selectedMembers) {
 
                 const customPromptsSection = await this._getBoundPromptsForMoments(circle, playerComment.content);
 
+                const globalPromptsSection = await this.getGlobalPromptsForContext('moments');
+
                 const finalPrompt = [
+                    globalPromptsSection,
                     `--- 动态与历史评论 ---\n${postAndCommentsHistory}`,
                     `--- 玩家最新动作 ---\n${playerActionText}`,
                     playerInfo, 
@@ -12696,7 +12769,10 @@ for (const member of selectedMembers) {
                 } catch(e) { console.error("获取礼物绑定提示词失败", e); }
 
 
+                const globalPromptsSection = await this.getGlobalPromptsForContext('giftSearch');
+                
                 const prompt = `请你扮演一位专业的电商商品文案策划，为我推荐8个与关键词“${keyword}”同类或相关的创意礼物。
+${globalPromptsSection}
 要求：
 1. 礼物名称要生动有趣，可以包含虚构的品牌名或系列名。
 2. 礼物简介要精炼且有吸引力，20字以内，突出礼物的特点或寓意。
@@ -19638,17 +19714,31 @@ handleImmediateSummary(entityId, isGroup) {
 
             
 
+            
+
             async renderPromptsPage() {
                 const contentArea = $('#prompts-page-content');
                 contentArea.innerHTML = ''; 
+                
+                // --- 新增代码开始 ---
+                const globalPromptsButton = document.createElement('div');
+                globalPromptsButton.className = 'setting-item';
+                globalPromptsButton.id = 'nav-to-global-prompts';
+                globalPromptsButton.style.margin = '0 0 20px 0';
+                globalPromptsButton.innerHTML = `
+                    <i class="fas fa-globe"></i>
+                    <span>全局提示词设置</span>
+                    <i class="fas fa-chevron-right"></i>
+                `;
+                contentArea.appendChild(globalPromptsButton);
+                // --- 新增代码结束 ---
+
                 const folders = await DBHelper.getAll('promptFolders');
                 const prompts = await DBHelper.getAll('prompts');
 
-                
                 let unclassifiedFolder = folders.find(f => f.id === 'unclassified');
                 if (!unclassifiedFolder) {
                     unclassifiedFolder = { id: 'unclassified', name: '未分类', isActive: true, createdAt: 0 };
-                    
                 }
                 
                 const sortedFolders = [unclassifiedFolder, ...folders.filter(f => f.id !== 'unclassified').sort((a,b) => a.createdAt - b.createdAt)];
@@ -19695,147 +19785,78 @@ handleImmediateSummary(entityId, isGroup) {
                 return folderDiv;
             },
 
-            createPromptCardHtml(prompt, index) {
-                let keywordsText = '';
-                if (prompt.type === 'implicit') {
-                    try {
-                        const keywords = JSON.parse(prompt.keywords);
-                        keywordsText = `<div class="prompt-tag tag-keywords" title="${keywords.join(', ')}">${keywords.join(', ')}</div>`;
-                    } catch(e) {  }
+            async renderGlobalPromptsPage() {
+                const contentArea = $('#global-prompts-page-content');
+                const masterSwitch = $('#global-prompts-master-switch');
+                contentArea.innerHTML = '';
+
+                const chatSettings = await DBHelper.get('apiConfig', 'chatSettings') || {};
+                masterSwitch.checked = chatSettings.globalPromptsEnabled === true;
+
+                const globalPrompts = await DBHelper.getAll('globalPrompts');
+                globalPrompts.sort((a, b) => a.order - b.order);
+
+                if (globalPrompts.length === 0) {
+                    contentArea.innerHTML = `<p style="text-align:center; color: #aaa; padding: 40px 0;">还没有全局提示词，快来创建一个吧！</p>`;
+                } else {
+                    globalPrompts.forEach(prompt => {
+                        const card = this.createGlobalPromptCardHtml(prompt);
+                        contentArea.appendChild(card);
+                    });
                 }
-                
-                return `
-                    <div class="prompt-card ${prompt.isActive ? '' : 'inactive'}" data-prompt-id="${prompt.id}">
-                        <div class="prompt-card-header">
-                            <div class="prompt-card-name">
-                                <span class="prompt-index">${index}</span>
-                                <span>${prompt.name}</span>
-                            </div>
-                             <label class="switch">
-                                <input type="checkbox" class="prompt-toggle-switch" ${prompt.isActive ? 'checked' : ''}>
-                                <span class="slider"></span>
-                            </label>
-                        </div>
-                        <div class="prompt-card-tags">
-                            <div class="prompt-tag ${prompt.type === 'explicit' ? 'tag-explicit' : 'tag-implicit'}">${prompt.type === 'explicit' ? '显性' : '隐性'}</div>
-                            ${keywordsText}
-                        </div>
-                        <div class="prompt-card-actions">
-                            <button class="action-btn" data-action="view-prompt">查看</button>
-                            <button class="action-btn" data-action="edit-prompt">修改</button>
-                            <button class="action-btn" data-action="delete-prompt">删除</button>
-                        </div>
-                    </div>
-                `;
             },
-            
-            bindPromptPageEvents() {
-                
-                $('#prompts-back-btn').onclick = () => UIManager.navigateTo('settings');
-                $('#add-prompt-folder-btn').onclick = () => this.handleNewPromptFolder();
-                $('#add-new-prompt-btn').onclick = () => this.handleNewPrompt();
-                
-                $('#import-prompts-btn').onclick = () => this.handleImportPrompts();
-                $('#export-prompts-btn').onclick = () => this.handleExportPrompts();
 
-                
-                $('#prompts-page-content').onclick = async (e) => {
-                    const target = e.target;
-                    const folderHeader = target.closest('.prompt-folder-header');
-                    const folderSwitch = target.closest('.folder-toggle-switch');
-                    const deleteFolderBtn = target.closest('[data-action="delete-folder"]');
-                    const promptCard = target.closest('.prompt-card');
+            getDragAfterElement(container, y) {
+                const draggableElements = [...container.querySelectorAll('.prompt-card:not(.dragging)')];
 
-                    if (folderSwitch) {
-                        e.stopPropagation(); 
-                        const folderId = folderSwitch.closest('.prompt-folder').dataset.folderId;
-                        
-                        await this.toggleFolderState(folderId, folderSwitch.checked);
-                    } else if (deleteFolderBtn) {
-                        
-                        e.stopPropagation();
-                        const folderId = deleteFolderBtn.closest('.prompt-folder').dataset.folderId;
-                        this.confirmDeleteFolder(folderId);
-                    } else if (folderHeader) {
-                        
-                        const content = folderHeader.nextElementSibling;
-                        if (content && content.classList.contains('prompt-folder-content')) {
-                            folderHeader.classList.toggle('collapsed');
-                            content.classList.toggle('collapsed');
-                        }
-                    } else if (promptCard) {
-                        
-                        const promptId = promptCard.dataset.promptId;
-                        if (target.matches('.prompt-toggle-switch')) {
-                            await this.togglePromptState(promptId, target.checked);
-                        } else if (target.matches('[data-action="view-prompt"]')) {
-                            this.viewPrompt(promptId);
-                        } else if (target.matches('[data-action="edit-prompt"]')) {
-                            this.handleEditPrompt(promptId);
-                        } else if (target.matches('[data-action="delete-prompt"]')) {
-                            this.confirmDeletePrompt(promptId);
-                        }
+                return draggableElements.reduce((closest, child) => {
+                    const box = child.getBoundingClientRect();
+                    const offset = y - box.top - box.height / 2;
+                    if (offset < 0 && offset > closest.offset) {
+                        return { offset: offset, element: child };
+                    } else {
+                        return closest;
                     }
+                }, { offset: Number.NEGATIVE_INFINITY }).element;
+            },
+
+            createGlobalPromptCardHtml(prompt) {
+                const cardDiv = document.createElement('div');
+                cardDiv.className = `prompt-card ${prompt.isActive ? '' : 'inactive'}`;
+                cardDiv.dataset.promptId = prompt.id;
+                cardDiv.draggable = true;
+
+                const exclusionsMap = {
+                    videoCall: { icon: 'fa-video', title: '视频通话' },
+                    moments: { icon: 'fa-camera-retro', title: '朋友圈' },
+                    summary: { icon: 'fa-file-alt', title: '自动总结' },
+                    giftSearch: { icon: 'fa-gift', title: '搜索礼物' },
                 };
-            },
 
-            
+                const exclusions = prompt.exclusions || [];
+                const exclusionsHtml = Object.entries(exclusionsMap).map(([key, value]) => 
+                    `<i class="fas ${value.icon}" title="不应用于: ${value.title}" style="color: ${exclusions.includes(key) ? 'var(--accent-color)' : '#ccc'}; font-size: 0.8rem;"></i>`
+                ).join('');
 
-            async renderPromptsPage() {
-                const contentArea = $('#prompts-page-content');
-                contentArea.innerHTML = ''; 
-                const folders = await DBHelper.getAll('promptFolders');
-                const prompts = await DBHelper.getAll('prompts');
-
-                
-                let unclassifiedFolder = folders.find(f => f.id === 'unclassified');
-                if (!unclassifiedFolder) {
-                    unclassifiedFolder = { id: 'unclassified', name: '未分类', isActive: true, createdAt: 0 };
-                    
-                }
-                
-                const sortedFolders = [unclassifiedFolder, ...folders.filter(f => f.id !== 'unclassified').sort((a,b) => a.createdAt - b.createdAt)];
-                
-                for (const folder of sortedFolders) {
-                    const folderPrompts = prompts.filter(p => p.folderId === folder.id).sort((a,b) => a.createdAt - b.createdAt);
-                    const folderElement = this.createFolderElement(folder, folderPrompts);
-                    contentArea.appendChild(folderElement);
-                }
-
-                this.bindPromptPageEvents();
-            },
-
-            createFolderElement(folder, prompts) {
-                const folderDiv = document.createElement('div');
-                folderDiv.className = 'prompt-folder';
-                folderDiv.dataset.folderId = folder.id;
-
-                let promptsHtml = prompts.map((p, index) => this.createPromptCardHtml(p, index + 1)).join('');
-                if (prompts.length === 0) {
-                    promptsHtml = `<p style="color: #aaa; text-align: center; grid-column: 1 / -1; padding: 15px 0;">此文件夹为空</p>`;
-                }
-
-                
-                folderDiv.innerHTML = `
-                    <div class="prompt-folder-header collapsed">
-                        <h3>
-                            <i class="fas fa-chevron-right folder-toggle-icon"></i>
-                            <i class="fas fa-folder"></i> 
-                            ${folder.name}
-                        </h3>
-                        <div class="prompt-folder-controls">
-                            ${folder.id !== 'unclassified' ? `
-                            <label class="switch">
-                                <input type="checkbox" class="folder-toggle-switch" ${folder.isActive ? 'checked' : ''}>
-                                <span class="slider"></span>
-                            </label>
-                            <button class="folder-action-btn" data-action="delete-folder" title="删除文件夹"><i class="fas fa-trash-alt"></i></button>
-                            ` : ''}
+                cardDiv.innerHTML = `
+                    <div class="prompt-card-header">
+                        <div class="prompt-card-name">
+                            <i class="fas fa-grip-vertical" style="cursor: grab; color: #ccc; margin-right: 10px;"></i>
+                            <span>${prompt.name}</span>
                         </div>
+                         <label class="switch">
+                            <input type="checkbox" class="prompt-toggle-switch" ${prompt.isActive ? 'checked' : ''}>
+                            <span class="slider"></span>
+                        </label>
                     </div>
-                    <div class="prompt-folder-content collapsed">${promptsHtml}</div>
+                    <div class="prompt-card-tags" style="justify-content: flex-end;">${exclusionsHtml}</div>
+                    <div class="prompt-card-actions">
+                        <button class="action-btn" data-action="view-global-prompt">查看</button>
+                        <button class="action-btn" data-action="edit-global-prompt">修改</button>
+                        <button class="action-btn" data-action="delete-global-prompt">删除</button>
+                    </div>
                 `;
-                return folderDiv;
+                return cardDiv;
             },
 
             createPromptCardHtml(prompt, index) {
@@ -19872,8 +19893,185 @@ handleImmediateSummary(entityId, isGroup) {
                 `;
             },
             
-            bindPromptPageEvents() {
+            bindGlobalPromptsPageEvents() {
+                $('#global-prompts-back-btn').onclick = () => UIManager.navigateTo('prompts');
+                $('#add-new-global-prompt-btn').onclick = () => this.handleNewGlobalPrompt();
                 
+                $('#global-prompts-master-switch').onchange = async (e) => {
+                    const isEnabled = e.target.checked;
+                    const chatSettings = await DBHelper.get('apiConfig', 'chatSettings') || { id: 'chatSettings' };
+                    chatSettings.globalPromptsEnabled = isEnabled;
+                    await DBHelper.put('apiConfig', chatSettings);
+                    UIManager.showToast(`全局提示词总开关已${isEnabled ? '开启' : '关闭'}`);
+                };
+
+                $('#global-prompts-page-content').onclick = async (e) => {
+                    const promptCard = e.target.closest('.prompt-card');
+                    if (!promptCard) return;
+
+                    const promptId = promptCard.dataset.promptId;
+                    const actionBtn = e.target.closest('.action-btn');
+
+                    if (e.target.matches('.prompt-toggle-switch')) {
+                        const prompt = await DBHelper.get('globalPrompts', promptId);
+                        prompt.isActive = e.target.checked;
+                        await DBHelper.put('globalPrompts', prompt);
+                        promptCard.classList.toggle('inactive', !prompt.isActive);
+                    } else if (actionBtn) {
+                        const action = actionBtn.dataset.action;
+                        if (action === 'view-global-prompt') this.viewGlobalPrompt(promptId);
+                        else if (action === 'edit-global-prompt') this.handleEditGlobalPrompt(promptId);
+                        else if (action === 'delete-global-prompt') this.confirmDeleteGlobalPrompt(promptId);
+                    }
+                };
+            },
+
+            async handleNewGlobalPrompt() {
+                this.showEditGlobalPromptModal();
+            },
+
+            async handleEditGlobalPrompt(promptId) {
+                const prompt = await DBHelper.get('globalPrompts', promptId);
+                this.showEditGlobalPromptModal(prompt);
+            },
+
+            async showEditGlobalPromptModal(prompt = null) {
+                const isEditing = prompt !== null;
+                const exclusions = isEditing ? (prompt.exclusions || []) : [];
+
+                const exclusionsMap = {
+                    videoCall: '视频通话',
+                    moments: '朋友圈',
+                    summary: '自动总结',
+                    giftSearch: '搜索礼物',
+                };
+
+                const exclusionsHtml = Object.entries(exclusionsMap).map(([key, label]) => `
+                    <label class="exclusion-item">
+                        <input type="checkbox" name="global-prompt-exclusions" value="${key}" ${exclusions.includes(key) ? 'checked' : ''}>
+                        <span>${label}</span>
+                    </label>
+                `).join('');
+
+                UIManager.showModal({
+                    isPersistent: true,
+                    title: isEditing ? "编辑全局提示词" : "新建全局提示词",
+                    body: `
+                        <style>
+                            .exclusions-grid {
+                                display: grid;
+                                grid-template-columns: repeat(2, 1fr); /* 创建一个两列网格 */
+                                gap: 10px; /* 设置项目之间的间距 */
+                            }
+                            .exclusion-item {
+                                display: flex;
+                                align-items: center; /* 垂直居中复选框和文本 */
+                                gap: 8px; /* 复选框和文本之间的间距 */
+                                padding: 8px;
+                                border-radius: 6px;
+                                background-color: rgba(0,0,0,0.02);
+                                cursor: pointer;
+                            }
+                            .exclusion-item input[type="checkbox"] {
+                                width: 16px;
+                                height: 16px;
+                                flex-shrink: 0; /* 防止复选框被压缩 */
+                            }
+                        </style>
+                        <div class="form-group">
+                            <label for="global-prompt-name-input">名称 (不可重复)</label>
+                            <input type="text" id="global-prompt-name-input" value="${isEditing ? prompt.name : ''}">
+                        </div>
+                        <div class="form-group">
+                            <label for="global-prompt-content-input">提示词内容</label>
+                            <textarea id="global-prompt-content-input" rows="8">${isEditing ? prompt.content : ''}</textarea>
+                        </div>
+                        <div class="form-group">
+                            <label>不应用于以下场景 (可选)</label>
+                            <div class="exclusions-grid">${exclusionsHtml}</div>
+                        </div>
+                    `,
+                    actions: [
+                        { text: '取消', class: 'btn-secondary', handler: () => UIManager.hideModal() },
+                        { text: '保存', class: 'btn-primary', handler: async () => {
+                            const name = $('#global-prompt-name-input').value.trim();
+                            const content = $('#global-prompt-content-input').value.trim();
+                            if (!name || !content) return UIManager.showToast("名称和内容不能为空");
+
+                            const allPrompts = await DBHelper.getAll('globalPrompts');
+                            if (allPrompts.some(p => p.name === name && (!isEditing || p.id !== prompt.id))) {
+                                return UIManager.showToast(`名称 "${name}" 已存在`);
+                            }
+
+                            const selectedExclusions = [...$$('input[name="global-prompt-exclusions"]:checked')].map(cb => cb.value);
+
+                            if (isEditing) {
+                                prompt.name = name;
+                                prompt.content = content;
+                                prompt.exclusions = selectedExclusions;
+                                await DBHelper.put('globalPrompts', prompt);
+                            } else {
+                                const newPrompt = {
+                                    id: Utils.generateId('global-prompt'),
+                                    name: name,
+                                    content: content,
+                                    isActive: true,
+                                    order: allPrompts.length, // Add to the end
+                                    exclusions: selectedExclusions,
+                                };
+                                await DBHelper.put('globalPrompts', newPrompt);
+                            }
+
+                            UIManager.hideModal();
+                            this.renderGlobalPromptsPage();
+                        }}
+                    ]
+                });
+            },
+
+            async viewGlobalPrompt(promptId) {
+                const prompt = await DBHelper.get('globalPrompts', promptId);
+                UIManager.showModal({
+                    title: `查看: ${prompt.name}`,
+                    body: `<div class="details-section" style="margin-top:0;"><p style="max-height: 400px;">${prompt.content}</p></div>`,
+                    actions: [{text: '关闭', class: 'btn-primary', handler: () => UIManager.hideModal()}]
+                });
+            },
+
+            confirmDeleteGlobalPrompt(promptId) {
+                UIManager.showModal({
+                    title: '确认删除',
+                    body: '<p>确定要删除这个全局提示词吗？</p>',
+                    actions: [
+                        { text: '取消', class: 'btn-secondary', handler: () => UIManager.hideModal() },
+                        { text: '删除', class: 'btn-danger', handler: async () => {
+                            await DBHelper.delete('globalPrompts', promptId);
+                            UIManager.hideModal();
+                            this.renderGlobalPromptsPage();
+                        }}
+                    ]
+                });
+            },
+
+            async handleSaveGlobalPromptOrder() {
+                const cards = $$('#global-prompts-page-content .prompt-card');
+                const updatePromises = [];
+                cards.forEach((card, index) => {
+                    const promptId = card.dataset.promptId;
+                    const promise = DBHelper.get('globalPrompts', promptId).then(prompt => {
+                        if (prompt) {
+                            prompt.order = index;
+                            return DBHelper.put('globalPrompts', prompt);
+                        }
+                    });
+                    updatePromises.push(promise);
+                });
+                await Promise.all(updatePromises);
+                UIManager.showToast("顺序已保存");
+            },
+            
+            bindPromptPageEvents() {
+                $('#nav-to-global-prompts').onclick = () => UIManager.navigateTo('global-prompts', 'prompts');
                 $('#prompts-back-btn').onclick = () => UIManager.navigateTo('settings');
                 $('#add-prompt-folder-btn').onclick = () => this.handleNewPromptFolder();
                 $('#add-new-prompt-btn').onclick = () => this.handleNewPrompt();
@@ -19922,6 +20120,75 @@ handleImmediateSummary(entityId, isGroup) {
                 };
             },
 
+bindGlobalPromptsPageEvents() {
+                $('#global-prompts-back-btn').onclick = () => UIManager.navigateTo('prompts');
+                $('#add-new-global-prompt-btn').onclick = () => this.handleNewGlobalPrompt();
+                
+                $('#global-prompts-master-switch').onchange = async (e) => {
+                    const isEnabled = e.target.checked;
+                    const chatSettings = await DBHelper.get('apiConfig', 'chatSettings') || { id: 'chatSettings' };
+                    chatSettings.globalPromptsEnabled = isEnabled;
+                    await DBHelper.put('apiConfig', chatSettings);
+                    UIManager.showToast(`全局提示词总开关已${isEnabled ? '开启' : '关闭'}`);
+                };
+
+                const contentArea = $('#global-prompts-page-content');
+                contentArea.onclick = async (e) => {
+                    const promptCard = e.target.closest('.prompt-card');
+                    if (!promptCard) return;
+
+                    const promptId = promptCard.dataset.promptId;
+                    const actionBtn = e.target.closest('.action-btn');
+
+                    if (e.target.matches('.prompt-toggle-switch')) {
+                        const prompt = await DBHelper.get('globalPrompts', promptId);
+                        prompt.isActive = e.target.checked;
+                        await DBHelper.put('globalPrompts', prompt);
+                        promptCard.classList.toggle('inactive', !prompt.isActive);
+                    } else if (actionBtn) {
+                        const action = actionBtn.dataset.action;
+                        if (action === 'view-global-prompt') this.viewGlobalPrompt(promptId);
+                        else if (action === 'edit-global-prompt') this.handleEditGlobalPrompt(promptId);
+                        else if (action === 'delete-global-prompt') this.confirmDeleteGlobalPrompt(promptId);
+                    }
+                };
+
+                // Init Drag and Drop
+                let draggedItem = null;
+                contentArea.addEventListener('dragstart', (e) => {
+                    draggedItem = e.target.closest('.prompt-card');
+                    setTimeout(() => {
+                        if (draggedItem) draggedItem.style.opacity = '0.5';
+                    }, 0);
+                });
+
+                contentArea.addEventListener('dragend', (e) => {
+                    if (draggedItem) {
+                        draggedItem.style.opacity = '1';
+                        draggedItem = null;
+                    }
+                });
+
+                contentArea.addEventListener('dragover', (e) => {
+                    e.preventDefault();
+                    const afterElement = this.getDragAfterElement(contentArea, e.clientY);
+                    const container = contentArea;
+                    if (afterElement == null) {
+                        container.appendChild(draggedItem);
+                    } else {
+                        container.insertBefore(draggedItem, afterElement);
+                    }
+                });
+                
+                contentArea.addEventListener('drop', (e) => {
+                    e.preventDefault();
+                    if (draggedItem) {
+                        draggedItem.style.opacity = '1';
+                        draggedItem = null;
+                        EventManager.handleSaveGlobalPromptOrder();
+                    }
+                });
+            },
 
             async handleNewPrompt(folderId = 'unclassified') {
                 const folders = await DBHelper.getAll('promptFolders');
